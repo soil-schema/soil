@@ -3,5 +3,8 @@
   "version": "0.0.1",
   "repository": "git@github.com:niaeashes/soil.git",
   "author": "niaeashes <nia.eashes@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "bin": {
+    "soil": "src/soil.js"
+  }
 }
