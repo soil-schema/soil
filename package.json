@@ -1,10 +1,14 @@
 {
   "name": "soil",
   "version": "0.0.1",
+  "type": "module",
   "repository": "git@github.com:niaeashes/soil.git",
   "author": "niaeashes <nia.eashes@gmail.com>",
   "license": "MIT",
   "bin": {
     "soil": "src/soil.js"
+  },
+  "dependencies": {
+    "yaml": "^2.1.1"
   }
 }
