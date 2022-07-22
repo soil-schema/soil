@@ -31,10 +31,14 @@ export default class Field extends Model {
     /**
      * @type {{ define: string }}
      */
-    const { define } = this.schema
+    var { define } = this.schema
+    if (typeof define == 'undefined' && this.schema.schema) {
+      // @ts-ignore
+      define = this.name.classify()
+    }
     const tokens = define.split(/\s/)
-    const type = tokens[tokens.length - 1].replace('{schema}', (this.schema.name || this.name).classify())
     // @ts-ignore
+    const type = tokens[tokens.length - 1].replace('{schema}', (this.schema.name || this.name).classify())
     return type
   }
 
@@ -43,9 +47,13 @@ export default class Field extends Model {
      * @type {{ define: string }}
      */
     const { define } = this.schema
-    return define.split(/\s/)
-      .filter(token => token[0] == '+')
-      .map(token => token.replace(/^\+/, ''))
+    if (typeof define == 'undefined') {
+      return []
+    } else {
+      return define.split(/\s/)
+        .filter(token => token[0] == '+')
+        .map(token => token.replace(/^\+/, ''))
+    }
   }
 
   /**
