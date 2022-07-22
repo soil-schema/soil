@@ -5,10 +5,14 @@ import Model from './Model.js'
 export default class Field extends Model {
   /**
    * @param {string} name 
-   * @param {object} schema 
+   * @param {object|string} schema 
    */
   constructor(name, schema) {
-    super(name, { name, ...schema })
+    if (typeof schema == 'string') {
+      super(name, { name, define: schema })
+    } else {
+      super(name, { name, ...schema })
+    }
   }
 
   /**
