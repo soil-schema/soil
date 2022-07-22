@@ -2,6 +2,8 @@
 
 import Model from './Model.js'
 
+import '../extension.js'
+
 export default class Field extends Model {
   /**
    * @param {string} name 
@@ -31,7 +33,9 @@ export default class Field extends Model {
      */
     const { define } = this.schema
     const tokens = define.split(/\s/)
-    return tokens[tokens.length - 1]
+    const type = tokens[tokens.length - 1].replace('{schema}', (this.schema.name || this.name).classify())
+    // @ts-ignore
+    return type
   }
 
   get annotations () {

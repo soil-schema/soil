@@ -13,6 +13,8 @@ import {
   HTTP_METHOD_HEAD,
 } from "../const.js"
 
+import '../extension.js'
+
 export default class Endpoint extends Model {
 
   /**
@@ -48,7 +50,8 @@ export default class Endpoint extends Model {
    * @returns {string}
    */
   get signature () {
-    return `${this.schema.summary.replace(/\s/g, '')}Endpoint`
+    // @ts-ignore
+    return `${this.schema.summary} Endpoint`.classify()
   }
 
   /**
@@ -63,6 +66,13 @@ export default class Endpoint extends Model {
    */
   get method () {
     return this.schema.method.toUpperCase()
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  get allowBody () {
+    return this.method != 'GET'
   }
 
   /**

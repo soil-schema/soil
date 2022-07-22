@@ -49,9 +49,14 @@ class Soil {
   }
 
   async exportSwiftCode() {
+    var swiftExportDir = this.config.exportDir
+    if (typeof swiftExportDir == 'object') {
+      swiftExportDir = swiftExportDir.swift || swiftExportDir.default
+    }
+    await fs.mkdir(swiftExportDir, { recursive: true })
     this.entities.forEach(async (entity) => {
       const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
-      fs.writeFile(path.join(process.cwd(), this.config.exportDir, `${entity.name}.swift`), body, this.config.encode)
+      fs.writeFile(path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`), body, this.config.encode)
     })
   }
 

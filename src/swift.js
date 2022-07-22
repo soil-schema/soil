@@ -1,13 +1,16 @@
-import Endpoint from "./models/Endpoint.js"
-import Entity from "./models/Entity.js"
-import Field from "./models/Field.js"
-import RequestBody from "./models/RequestBody.js"
-import Response from "./models/Response.js"
-import WriteOnlyEntity from "./models/WriteOnlyEntity.js"
+import Endpoint from './models/Endpoint.js'
+import Entity from './models/Entity.js'
+import Field from './models/Field.js'
+import RequestBody from './models/RequestBody.js'
+import Response from './models/Response.js'
+import Writer from './models/Writer.js'
 
 const SWIFT_TYPE_TABLE = {
   'String': 'String',
   'Integer': 'Int',
+  'Number': 'Double',
+  'Date': 'Date',
+  'Timestamp': 'Date',
 }
 
 /*
@@ -66,19 +69,25 @@ const struct = function (_scope = null, name, ...protocols) {
 }
 
 const member = function (_scope = null, name, type, value) {
-  return `${scope(_scope)}var ${name}: ${type}${typeof value == 'undefined' ? '' : ` = ${value}`}`
+  return `${scope(_scope)}var ${name.camelize()}: ${type}${typeof value == 'undefined' ? '' : ` = ${value}`}`
 }
 
 const readOnlyMember = function (_scope = null, name, type, value) {
-  return `${scope(_scope)}let ${name}: ${type}${typeof value == 'undefined' ? '' : ` = ${value}`}`
+  return `${scope(_scope)}let ${name.camelize()}: ${type}${typeof value == 'undefined' ? '' : ` = ${value}`}`
 }
 
 const parameter = function (label = null, name, type) {
-  return `${label == null ? '' : `${label} `}${name}: ${convertType(type)}`
+  return `${label == null ? '' : `${label} `}${name.camelize()}: ${convertType(type)}`
 }
 
 const init = function (_scope = null, ...parameters) {
-  return `${scope(_scope)}init(${parameters.map(param => parameter(param.label, param.name, param.type)).join(', ')}) {`
+  return `${scope(_scope)}init(${parameters.map(param => {
+    if (typeof param == 'string') {
+      return param
+    } else {
+      return parameter(param.label, param.name, param.type)
+    }
+  }).join(', ')}) {`
 }
 
 const end = '}'
@@ -98,7 +107,7 @@ const convertType = (type) => {
   }
   if (/^List\<.+\>$/.test(type)) {
     const element = type.match(/^List\<(.+)\>$/)[1]
-    return `Array<${this.convertType(element)}>`
+    return `Array<${convertType(element)}>`
   }
   return type
 }
@@ -145,8 +154,10 @@ const pretty = (code, config) => {
   return result.join('\n')
 }
 
-const protocolMerge = (...keys) => {
-  return ''
+const protocolMerge = ({ config }, ...keys) => {
+  return keys
+    .flatMap(key => config.swift.protocols[key])
+    .filter(protocol => protocol != null && protocol != undefined)
 }
 
 Array.prototype.joinCode = function () {
@@ -159,35 +170,59 @@ Array.prototype.joinCode = function () {
  */
 
 Entity.prototype.renderSwiftFile = function (context) {
-  const nextContext = { entity: this, ...context }
   return pretty([
-    docc(this),
-    classDef('public final', this.name),
-    ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
-    defineIf(this.requireWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
-    ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
-    end,
+    'import Foundation',
+    this.renderSwiftStruct(context),
   ].joinCode(), context.config || {})
 }
 
-WriteOnlyEntity.prototype.renderSwiftStruct = function (context) {
+Entity.prototype.renderSwiftStruct = function (context) {
+  const nextContext = { entity: this, ...context }
   return [
-    struct('public', this.name),
-    ...this.fields.map(field => field.renderSwiftMember(context)),
+    docc(this),
+    classDef('public final', this.name, ...protocolMerge(context, 'entity', this.requireWritable ? null : 'writer')),
+    ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
+    ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
+    defineIf(this.requireWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
+    ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
+    end,
+  ].joinCode()
+}
+
+Writer.prototype.renderSwiftStruct = function (context) {
+  const nextContext = { ...context, writer: this }
+  return [
+    struct('public', 'Writer', ...protocolMerge(nextContext, 'writer')),
+    ...this.fields.map(field => field.renderSwiftMember(nextContext)),
     docc({ parameters: this.fields }),
-    init('public', ...this.fields),
-      ...this.fields.map(field => `this.${field.name} = ${field.name}`),
+    init('public', ...this.fields.map(field => field.renderArgumentSignature(nextContext))),
+      ...this.fields.map(field => `self.${field.name.camelize()} = ${field.name.camelize()}`),
     end,
     end,
   ].joinCode()
 }
 
 Field.prototype.renderSwiftMember = function (context) {
+  const { writer } = context
   var scope = 'public'
+  var type = this.type
+  if (writer) {
+    const reference = context.resolveReference(type)
+    if (reference instanceof Entity && reference.requireWritable) {
+      type = `${type}.Writer`
+    }
+    if (/^List\<.+\>$/.test(type)) {
+      const element = type.match(/^List\<(.+)\>$/)[1]
+      const reference = context.resolveReference(element)
+      if (reference instanceof Entity && reference.requireWritable) {
+        type = `List<${element}.Writer>`
+      }
+    }
+  }
   if (this.hasAnnotation('Immutable')) {
     return [
       docc(this),
-      readOnlyMember(scope, this.name, convertType(this.type)),
+      readOnlyMember(scope, this.name, convertType(type)),
     ].joinCode()
   }
   if (this.hasAnnotation('ReadOnly')) {
@@ -195,32 +230,49 @@ Field.prototype.renderSwiftMember = function (context) {
   }
   return [
     docc(this),
-    member(scope, this.name, convertType(this.type)),
+    member(scope, this.name, convertType(type)),
   ].joinCode()
 }
 
 Field.prototype.renderArgumentSignature = function (context) {
-  return `${this.name}: ${convertType(this.type)}`
+  const { writer } = context
+  var type = this.type
+  if (writer) {
+    const reference = context.resolveReference(type)
+    if (reference instanceof Entity && reference.requireWritable) {
+      type = `${type}.Writer`
+    }
+    if (/^List\<.+\>$/.test(type)) {
+      const element = type.match(/^List\<(.+)\>$/)[1]
+      const reference = context.resolveReference(element)
+      if (reference instanceof Entity && reference.requireWritable) {
+        type = `List<${element}.Writer>`
+      }
+    }
+  }
+  return `${this.name.camelize()}: ${convertType(type)}`
 }
 
 Endpoint.prototype.renderSwiftStruct = function (context) {
   return [
     docc(this),
-    struct('public', this.signature),
+    struct('public', this.signature, ...protocolMerge(context, 'endpoint')),
 
-    docc(`${this.signature}.path: ${this.path}`),
+    docc(`${this.signature}.path: \`${this.path}\``),
     readOnlyMember('public', 'path', 'String'),
 
-    docc(`${this.signature}.method: ${this.method}`),
+    docc(`${this.signature}.method: \`${this.method}\``),
     readOnlyMember('public', 'method', 'String', `"${this.method}"`),
+
+    defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
 
     docc({ parameters: this.resolvePathParameters(context) }),
     init('public', ...this.resolvePathParameters(context)),
-      `this.path = "${this.path}"`,
-      ...this.resolvePathParameters(context).map(field => `.replacingOccurrences(of: "{${field.name}}", with: ${stringify(field.name, field.type)})`),
+      `self.path = "${this.path}"`,
+      ...this.resolvePathParameters(context).map(field => `.replacingOccurrences(of: "{${field.name}}", with: ${stringify(field.name.camelize(), field.type)})`),
     end,
 
-    this.requestBody.renderSwiftStruct(context),
+    defineIf(this.allowBody, () => this.requestBody.renderSwiftStruct(context)),
     this.successResponse.renderSwiftStruct(context),
 
     end,
@@ -233,13 +285,13 @@ RequestBody.prototype.renderSwiftStruct = function (context) {
   const parameters = this.resolveParameters(context)
   return [
     docc(this),
-    struct('public', 'RequestBody'),
+    struct('public', 'RequestBody', ...protocolMerge(context, 'requestBody')),
 
-    ...parameters.map(parameter => readOnlyMember(null, parameter.name, parameter.type)),
+    ...parameters.map(parameter => readOnlyMember(null, parameter.name, convertType(parameter.type))),
 
     docc({ parameters }),
     init('public', ...parameters),
-      ...parameters.map(parameter => `this.${parameter.name} = ${parameter.name}`),
+      ...parameters.map(parameter => `self.${parameter.name.camelize()} = ${parameter.name.camelize()}`),
     end,
 
     end,
@@ -252,9 +304,9 @@ Response.prototype.renderSwiftStruct = function (context) {
   const parameters = this.resolveParameters(context)
   return [
     docc(this),
-    struct('public', 'Response'),
+    struct('public', 'Response', ...protocolMerge(context, 'response')),
 
-    ...parameters.map(parameter => readOnlyMember('public', parameter.name, parameter.type)),
+    ...parameters.map(parameter => readOnlyMember('public', parameter.name, convertType(parameter.type))),
 
     end,
   ].joinCode()

@@ -4,7 +4,7 @@ import Model from './Model.js'
 import Entity from './Entity.js'
 import Field from './Field.js'
 
-export default class WriteOnlyEntity extends Model {
+export default class Writer extends Model {
   /**
    * @type {Entity}
    */
@@ -22,6 +22,7 @@ export default class WriteOnlyEntity extends Model {
    * @type {Array<Field>}
    */
   get fields () {
-    return this.entity.fields.filter(field => !field.hasAnnotation('ReadOnly'))
+    return this.entity.fields
+      .filter(field => !field.hasAnnotation('ReadOnly'))
   }
 }

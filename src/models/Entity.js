@@ -3,7 +3,9 @@
 import Model from './Model.js'
 import Field from './Field.js'
 import Endpoint from './Endpoint.js'
-import WriteOnlyEntity from './WriteOnlyEntity.js'
+import Writer from './Writer.js'
+
+import '../extension.js'
 
 export default class Entity extends Model {
 
@@ -21,6 +23,15 @@ export default class Entity extends Model {
 
     Object.defineProperty(this, 'fields', { value: Field.parse(this.schema.fields) })
     Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
+
+    var subtypes = this.schema.subtypes || []
+    this.fields.forEach(field => {
+      const subschema = field.schema.schema
+      if (typeof subschema == 'undefined') { return }
+      // @ts-ignore
+      subtypes.push({ name: field.name.classify(), ...subschema })
+    })
+    Object.defineProperty(this, 'subtypes', { value: subtypes.map(subtype => new Entity(subtype)) })
   }
 
   get readableFields () {
@@ -45,9 +56,9 @@ export default class Entity extends Model {
   }
 
   /**
-   * @returns {WriteOnlyEntity}
+   * @returns {Writer}
    */
   writeOnly () {
-    return new WriteOnlyEntity(this)
+    return new Writer(this)
   }
 }

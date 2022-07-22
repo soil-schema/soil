@@ -26,7 +26,7 @@ export default class RequestBody extends Model {
 
         const reference = context.resolveReference(definition)
         if (reference instanceof Entity && reference.requireWritable) {
-          return { ...schema, name, type: reference.writeOnly().name }
+          return { ...schema, name, type: `${reference.name}.Writer` }
         }
 
         return { ...schema, name, type: definition }

@@ -7,7 +7,7 @@ export const DEFAULT_CONFIG = {
     imports: ['Foundation'],
     protocols: {
       entity: 'Decodable',
-      writeOnlyEntity: 'Encodable',
+      writer: 'Encodable',
       endpoint: null,
       requestBody: 'Encodable',
       response: 'Decodable',

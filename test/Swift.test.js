@@ -1,11 +1,13 @@
 import test from 'ava'
 import swift from '../src/swift.js'
 import { DEFAULT_CONFIG } from '../src/const.js'
+import contextUtilities from '../src/context.js'
 import Entity from '../src/models/Entity.js'
 import Field from '../src/models/Field.js'
 
 const context = {
   config: DEFAULT_CONFIG,
+  ...contextUtilities,
 }
 
 test('pretty', t => {
