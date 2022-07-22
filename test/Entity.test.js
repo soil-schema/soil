@@ -1,5 +1,6 @@
 import test from 'ava'
 import Entity from '../src/models/Entity.js'
+import Field from '../src/models/Field.js'
 
 // requireWritable
 
@@ -88,7 +89,7 @@ test('subtypes embed in fields schema', t => {
 })
 
 test('subtypes embed  with defining as list in fields schema', t => {
-  const article = new Entity({
+  const product = new Entity({
     name: 'Product',
     fields: {
       old_orders: {
@@ -101,6 +102,47 @@ test('subtypes embed  with defining as list in fields schema', t => {
       },
     },
   })
-  t.assert(article.subtypes.length > 0)
-  article.fields.forEach(field => console.log(field.schema))
+  t.assert(product.subtypes.length > 0)
+})
+
+test('resolveReference with self entity name', t => {
+  const product = new Entity({
+    name: 'Product',
+    fields: {
+      name: 'String',
+    },
+  })
+  t.is(product.resolveReference('Product'), product)
+})
+
+test('resolveReference with self field name', t => {
+  const product = new Entity({
+    name: 'Product',
+    fields: {
+      name: 'String',
+    },
+  })
+  t.is(product.resolveReference('name'), product.findField('name'))
+})
+
+test('resolveReference with subtype name', t => {
+  const product = new Entity({
+    name: 'Product',
+    fields: {
+      name: 'String',
+      orders: {
+        define: 'List<Order>',
+        schema: {
+          fields: {
+            name: 'String',
+          },
+        },
+      },
+    },
+  })
+  t.assert(product.resolveReference('Order') instanceof Entity)
+  t.is(product.resolveReference('Order').name, 'Order')
+
+  t.assert(product.resolveReference('Order.name') instanceof Field)
+  t.is(product.resolveReference('Order.name').name, 'name')
 })

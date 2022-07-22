@@ -16,6 +16,12 @@ export default class Entity extends Model {
   fields
 
   /**
+   * @type {Array<Entity>}
+   * @readonly
+   */
+  subtypes
+
+  /**
    * @param {object} schema 
    */
   constructor(schema) {
@@ -32,6 +38,13 @@ export default class Entity extends Model {
       subtypes.push({ name: field.name.classify(), ...subschema })
     })
     Object.defineProperty(this, 'subtypes', { value: subtypes.map(subtype => new Entity(subtype)) })
+  }
+
+  /**
+   * @returns {boolean}
+   */
+  get immutable () {
+    return this.schema.immutable || false
   }
 
   get readableFields () {
@@ -60,5 +73,35 @@ export default class Entity extends Model {
    */
   writeOnly () {
     return new Writer(this)
+  }
+
+  /**
+   * @param {string} reference 
+   * @returns {any}
+   */
+  resolveReference (reference) {
+    if (reference == this.name) {
+      return this
+    }
+
+    var tokens = reference.split('.')
+
+    if (tokens.length > 1) {
+      // @ts-ignore
+      const resolved = this.resolveReference(tokens.shift())
+      if (resolved instanceof Entity) {
+        return resolved.resolveReference(tokens.join('.'))
+      }
+      return resolved
+    } else {
+      const hitField = this.findField(reference)
+      if (hitField) {
+        return hitField
+      }
+      const hitSubtype = this.subtypes.find(subtype => subtype.name == reference)
+      if (hitSubtype) {
+        return hitSubtype
+      }
+    }
   }
 }

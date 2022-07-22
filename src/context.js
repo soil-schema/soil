@@ -8,17 +8,9 @@ const resolveReference = function (definition) {
   var findingCollection = entities || []
 
   if (entity) {
-    const hitSubtype = entity.subtypes.find(subtype => subtype.name == definition)
-    if (hitSubtype) {
-      return hitSubtype
-    }
-    const hitField = entity.findField(definition)
-    if (hitField) {
-      return hitField
-    }
-    if (tokens[0] == entity.name) {
-      currentEntity = entity
-      findingCollection = entity.subtypes
+    const hitReference = entity.resolveReference(definition)
+    if (hitReference) {
+      return hitReference
     }
   }
 

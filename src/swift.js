@@ -9,6 +9,7 @@ const SWIFT_TYPE_TABLE = {
   'String': 'String',
   'Integer': 'Int',
   'Number': 'Double',
+  'Boolean': 'Bool',
   'Date': 'Date',
   'Timestamp': 'Date',
 }
@@ -155,9 +156,18 @@ const pretty = (code, config) => {
 }
 
 const protocolMerge = ({ config }, ...keys) => {
-  return keys
+  var protocols = keys
     .flatMap(key => config.swift.protocols[key])
     .filter(protocol => protocol != null && protocol != undefined)
+
+  // Encodable & Decodable -> Codable
+  if (protocols.indexOf('Decodable') != -1 && protocols.indexOf('Encodable') != -1) {
+    protocols = protocols
+      .filter(protocol => protocol != 'Decodable' && protocol != 'Encodable')
+    protocols.push('Codable')
+  }
+
+  return protocols
 }
 
 Array.prototype.joinCode = function () {
@@ -180,10 +190,10 @@ Entity.prototype.renderSwiftStruct = function (context) {
   const nextContext = { entity: this, ...context }
   return [
     docc(this),
-    classDef('public final', this.name, ...protocolMerge(context, 'entity', this.requireWritable ? null : 'writer')),
+    classDef('public final', this.name, ...protocolMerge(context, 'entity', (this.requireWritable && !this.immutable) ? null : 'writer')),
     ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
     ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
-    defineIf(this.requireWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
+    defineIf(this.requireWritable && !this.immutable, () => this.writeOnly().renderSwiftStruct(nextContext)),
     ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
     end,
   ].joinCode()
@@ -203,26 +213,29 @@ Writer.prototype.renderSwiftStruct = function (context) {
 }
 
 Field.prototype.renderSwiftMember = function (context) {
-  const { writer } = context
+  const { writer, entity } = context
   var scope = 'public'
-  var type = this.type
+  var type = convertType(this.type)
   if (writer) {
     const reference = context.resolveReference(type)
     if (reference instanceof Entity && reference.requireWritable) {
       type = `${type}.Writer`
     }
-    if (/^List\<.+\>$/.test(type)) {
-      const element = type.match(/^List\<(.+)\>$/)[1]
+    if (/^Array\<.+\>$/.test(type)) {
+      const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
       if (reference instanceof Entity && reference.requireWritable) {
-        type = `List<${element}.Writer>`
+        type = `Array<${element}.Writer>`
       }
     }
   }
-  if (this.hasAnnotation('Immutable')) {
+  if (this.hasAnnotation('Optional')) {
+    type = `${type}?`
+  }
+  if (this.hasAnnotation('Immutable') || (entity || {}).immutable) {
     return [
       docc(this),
-      readOnlyMember(scope, this.name, convertType(type)),
+      readOnlyMember(scope, this.name, type),
     ].joinCode()
   }
   if (this.hasAnnotation('ReadOnly')) {
@@ -230,27 +243,30 @@ Field.prototype.renderSwiftMember = function (context) {
   }
   return [
     docc(this),
-    member(scope, this.name, convertType(type)),
+    member(scope, this.name, type),
   ].joinCode()
 }
 
 Field.prototype.renderArgumentSignature = function (context) {
   const { writer } = context
-  var type = this.type
+  var type = convertType(this.type)
   if (writer) {
     const reference = context.resolveReference(type)
     if (reference instanceof Entity && reference.requireWritable) {
       type = `${type}.Writer`
     }
-    if (/^List\<.+\>$/.test(type)) {
-      const element = type.match(/^List\<(.+)\>$/)[1]
+    if (/^Array\<.+\>$/.test(type)) {
+      const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
       if (reference instanceof Entity && reference.requireWritable) {
-        type = `List<${element}.Writer>`
+        type = `Array<${element}.Writer>`
       }
     }
   }
-  return `${this.name.camelize()}: ${convertType(type)}`
+  if (this.hasAnnotation('Optional')) {
+    type = `${type}?`
+  }
+  return `${this.name.camelize()}: ${type}`
 }
 
 Endpoint.prototype.renderSwiftStruct = function (context) {
@@ -281,6 +297,7 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
   if (this.schema == null) { return 'public typealias RequestBody = Never' }
+  if (this.schema == 'binary') { return 'public typealias RequestBody = Data' }
 
   const parameters = this.resolveParameters(context)
   return [

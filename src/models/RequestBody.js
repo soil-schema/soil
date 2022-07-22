@@ -17,6 +17,8 @@ export default class RequestBody extends Model {
    */
   resolveParameters(context) {
 
+    if (typeof this.schema == 'string') { return [] }
+
     const { entity } = context
 
     return Object.keys(this.schema.schema)
