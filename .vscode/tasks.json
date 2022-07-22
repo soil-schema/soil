@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Watch",
+      "type": "shell",
+      "command": "npx ava --watch",
+      "group": "none",
+      "presentation": {
+          "reveal": "always",
+          "panel": "new"
+      },
+      "runOptions": {
+          "runOn": "folderOpen",
+      }
+    },
+    {
+      "label": "Update Snapshot",
+      "type": "shell",
+      "command": "npx ava --update-snapshots",
+      "group": "none",
+      "presentation": {
+          "reveal": "always",
+          "panel": "new"
+      },
+      "runOptions": {
+          "runOn": "folderOpen",
+      }
+    }
+  ]
+}

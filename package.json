@@ -10,5 +10,11 @@
   },
   "dependencies": {
     "yaml": "^2.1.1"
+  },
+  "scripts": {
+    "test": "ava"
+  },
+  "devDependencies": {
+    "ava": "^4.3.1"
   }
 }
