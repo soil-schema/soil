@@ -7,11 +7,11 @@
       "command": "npx ava --watch",
       "group": "none",
       "presentation": {
-          "reveal": "always",
-          "panel": "new"
+        "reveal": "always",
+        "panel": "new"
       },
       "runOptions": {
-          "runOn": "folderOpen",
+        "runOn": "folderOpen",
       }
     },
     {
@@ -19,9 +19,17 @@
       "type": "shell",
       "command": "npx ava --update-snapshots",
       "group": "none",
-      "presentation": {
-          "reveal": "always",
-          "panel": "new"
+      "runOptions": {
+          "runOn": "folderOpen",
+      }
+    },
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "npm install",
+      "group": {
+        "kind": "build",
+        "isDefault": true
       },
       "runOptions": {
           "runOn": "folderOpen",
