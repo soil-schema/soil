@@ -1,4 +1,4 @@
 export default {
-    workingDir: "./test/mock",
-    exportDir: "./tmp/dist",
+    workingDir: ".",
+    exportDir: "../../tmp/dist",
 }

@@ -1,1 +1,5 @@
 name: Article
+fields:
+  title: String
+  overview:
+    type: String

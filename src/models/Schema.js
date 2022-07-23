@@ -1,13 +1,17 @@
-import { promises as fs } from 'fs'
-import path from 'path'
-import util from 'util'
+import { promises as fs } from 'node:fs'
+import url from "node:url";
+import path from 'node:path'
+import util from 'node:util'
 
 import chalk from 'chalk'
 import YAML from 'yaml'
+import { validate } from 'jsonschema'
 
 import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
+
+const ENTITY_SCHEMA_PATH = path.join(url.fileURLToPath(import.meta.url), '../../../json-schema/entity.yml')
 
 export default class Schema {
   constructor(config) {
@@ -16,12 +20,20 @@ export default class Schema {
 
   async prepare() {
     const workingDirPath = path.join(process.cwd(), this.config.workingDir)
+    const entitySchema = YAML.parse(await fs.readFile(ENTITY_SCHEMA_PATH, 'utf-8'))
 
     const entities = (await fs.readdir(path.join(workingDirPath, 'entity')))
       .map(async (file) => {
         const fullpath = path.join(workingDirPath, 'entity', file)
-        const schema = YAML.parse(await fs.readFile(fullpath, this.config.encoding))
-        return new Entity(schema)
+        const body = YAML.parse(await fs.readFile(fullpath, this.config.encoding))
+
+        if (soil.options.withValidate) {
+          const result = validate(body, entitySchema)
+          if (result.valid == false) {
+            console.log("Error!", result)
+          }
+        }
+        return new Entity(body)
       })
 
     Object.defineProperty(this, 'entities', { value: await Promise.all(entities), enumerable: true })
@@ -32,6 +44,7 @@ export default class Schema {
 
   async exportSwiftCode() {
     var swiftExportDir = this.config.exportDir
+
     if (typeof swiftExportDir == 'object') {
       swiftExportDir = swiftExportDir.swift || swiftExportDir.default
     }

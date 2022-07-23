@@ -1,6 +1,7 @@
 // @ts-check
 
 import Model from './Model.js'
+import Type from './Type.js'
 
 import '../extension.js'
 
@@ -25,7 +26,7 @@ export default class Field extends Model {
   }
 
   /**
-   * @returns {string}
+   * @returns {Type}
    */
   get type () {
     /**
@@ -39,7 +40,7 @@ export default class Field extends Model {
     const tokens = define.split(/\s/)
     // @ts-ignore
     const type = tokens[tokens.length - 1].replace('{schema}', (this.schema.name || this.name).classify())
-    return type
+    return new Type(type)
   }
 
   get annotations () {

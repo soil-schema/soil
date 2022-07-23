@@ -3,6 +3,7 @@ import Entity from './models/Entity.js'
 import Field from './models/Field.js'
 import RequestBody from './models/RequestBody.js'
 import Response from './models/Response.js'
+import Type from './models/Type.js'
 import Writer from './models/Writer.js'
 
 const SWIFT_TYPE_TABLE = {
@@ -103,6 +104,9 @@ const defineIf = function (condition, callback) {
  */
 
 const convertType = (type) => {
+  if (type instanceof Type) {
+    return convertType(type.definition)
+  }
   if (SWIFT_TYPE_TABLE[type]) {
     return SWIFT_TYPE_TABLE[type]
   }

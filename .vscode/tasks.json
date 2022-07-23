@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Watch",
+      "label": "Test with Watch",
       "type": "shell",
       "command": "npx ava --watch",
       "group": "none",
@@ -30,9 +30,21 @@
       }
     },
     {
-      "label": "Test Mock",
+      "label": "Run Mock",
       "type": "shell",
-      "command": "node src/soil.js --working-dir test/mock"
+      "command": "node src/soil.js --config test/mock/soil.config.js --verbose --with-validate"
+    },
+    {
+      "label": "Run Mock with Watch",
+      "type": "shell",
+      "command": "node src/soil.js --config test/mock/soil.config.js --verbose --with-validate --watch",
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "runOptions": {
+        "runOn": "folderOpen",
+      }
     }
   ]
 }

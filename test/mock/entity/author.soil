@@ -1,0 +1,13 @@
+entity Author {
+
+  name: mut String
+
+  GET /authors {
+
+    List Authors
+
+    success {
+      authors: List<Author>
+    }
+  }
+}
