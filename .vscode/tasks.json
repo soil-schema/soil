@@ -18,10 +18,7 @@
       "label": "Update Snapshot",
       "type": "shell",
       "command": "npx ava --update-snapshots",
-      "group": "none",
-      "runOptions": {
-          "runOn": "folderOpen",
-      }
+      "group": "none"
     },
     {
       "label": "Build",
@@ -30,10 +27,12 @@
       "group": {
         "kind": "build",
         "isDefault": true
-      },
-      "runOptions": {
-          "runOn": "folderOpen",
       }
+    },
+    {
+      "label": "Test Mock",
+      "type": "shell",
+      "command": "node src/soil.js --working-dir test/mock"
     }
   ]
 }

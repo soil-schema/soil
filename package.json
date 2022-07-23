@@ -9,6 +9,10 @@
     "soil": "src/soil.js"
   },
   "dependencies": {
+    "chalk": "^5.0.1",
+    "commander": "^9.4.0",
+    "jsonschema": "^1.4.1",
+    "node-watch": "^0.7.3",
     "pluralize": "^8.0.0",
     "yaml": "^2.1.1"
   },
