@@ -9,7 +9,7 @@ import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
 
-export default class Soil {
+export default class Schema {
   constructor(config) {
     Object.defineProperty(this, 'config', { value: config })
   }
@@ -48,6 +48,7 @@ export default class Soil {
   }
 
   debug () {
+    if (!soil.options.verbose) { return }
     console.log(chalk.yellow('[DEBUG] print loaded schema'))
     console.log(util.inspect(this, { depth: null, colors: true }))
   }
