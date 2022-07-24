@@ -1,4 +1,4 @@
 export default {
     workingDir: ".",
-    exportDir: "../../tmp/dist",
+    exportDir: "./tmp/dist",
 }

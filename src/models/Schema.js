@@ -23,6 +23,7 @@ export default class Schema {
     const entitySchema = YAML.parse(await fs.readFile(ENTITY_SCHEMA_PATH, 'utf-8'))
 
     const entities = (await fs.readdir(path.join(workingDirPath, 'entity')))
+      .filter(file => path.extname(file) == '.yml')
       .map(async (file) => {
         const fullpath = path.join(workingDirPath, 'entity', file)
         const body = YAML.parse(await fs.readFile(fullpath, this.config.encoding))

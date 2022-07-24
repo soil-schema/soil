@@ -1,5 +1,6 @@
 {
   "name": "soil",
+  "displayName": "soil",
   "version": "0.0.1",
   "type": "module",
   "repository": "git@github.com:niaeashes/soil.git",
@@ -16,10 +17,25 @@
     "pluralize": "^8.0.0",
     "yaml": "^2.1.1"
   },
+  "devDependencies": {
+    "ava": "^4.3.1"
+  },
   "scripts": {
     "test": "ava"
   },
-  "devDependencies": {
-    "ava": "^4.3.1"
+  "engines": {
+    "vscode": "^1.69.0"
+  },
+  "contributes": {
+    "languages": [{
+        "id": "soil",
+        "extensions": [".soil"],
+        "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+        "language": "soil",
+        "scopeName": "source.soil",
+        "path": "./syntaxes/soil.tmLanguage.json"
+    }]
   }
 }

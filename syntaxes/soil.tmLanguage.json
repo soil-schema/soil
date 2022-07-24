@@ -1,0 +1,305 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "soil",
+  "patterns": [
+    {
+      "include": "#entity-declaration"
+    },
+    {
+      "include": "#declaration"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "begin": "-\\s",
+          "end": "(?<=\\n)",
+          "name": "comment.line.hyphen.soil"
+        },
+        {
+          "begin": "(?:@(\\p{Ll}+))\\s+",
+          "beginCaptures": {
+            "1": {
+              "name": "comment.annotation.$1.soil"
+            }
+          },
+          "end": "(?<=\\n)",
+          "name": "comment.line.annotation.soil"
+        }
+      ]
+    },
+    "declaration": {
+      "patterns": [
+        {
+          "match": "\\b(entity|field|endpoint|type)\\b",
+          "name": "storage.type.declaration.$1.soil"
+        },
+        {
+          "match": "\\b(success|failure|request|schema)$",
+          "name": "storage.type.subschema.soil"
+        },
+        {
+          "match": "\\b(authorization|example|enum)\\b",
+          "name": "storage.type.attribute.soil"
+        }
+      ]
+    },
+    "entity-declaration": {
+      "begin": "\\b(entity)\\s+([\\p{L}][\\p{L}\\p{N}_]*)",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.declaration.$1.soil"
+        },
+        "2": {
+          "name": "storage.type.entity.soil"
+        }
+      },
+      "name": "meta.definition.entity.soil",
+      "end": "(?<=\\})",
+      "patterns": [
+        {
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.entity.begin.soil"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.entity.end.soil"
+            }
+          },
+          "name": "meta.definition.entity.body.soil",
+          "patterns": [
+            {
+              "include": "#field-declaration"
+            },
+            {
+              "include": "#inner-declaration"
+            },
+            {
+              "include": "#endpoint-declaration"
+            },
+            {
+              "include": "#comments"
+            }
+          ]
+        }
+      ]
+    },
+    "field-declaration": {
+      "begin": "\\b(?:(mutable)\\s+)?(field)\\s+([\\p{L}][\\p{L}\\p{N}_]*)(:)",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.modifier.mutable.soil"
+        },
+        "2": {
+          "name": "storage.type.declaration.$2.soil"
+        },
+        "3": {
+          "name": "entity.name.type.field.soil"
+        },
+        "4": {
+          "name": "punctuation.separator.field-definition.soil"
+        }
+      },
+      "name": "meta.definition.field.soil",
+      "end": "(?<=\\}|\\n|\\r|\\r\\n)",
+      "patterns": [
+        {
+          "include": "#type"
+        },
+        {
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.field.begin.soil"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.field.end.soil"
+            }
+          },
+          "name": "meta.definition.field.body.soil",
+          "patterns": [
+            {
+              "include": "#example-declaration"
+            },
+            {
+              "include": "#schema-declaration"
+            },
+            {
+              "include": "#comments"
+            }
+          ]
+        }
+      ]
+    },
+    "inner-declaration": {
+      "begin": "\\b(inner)\\s+([\\p{L}][\\p{L}\\p{N}_]*)",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.declaration.$1.soil"
+        },
+        "2": {
+          "name": "entity.name.type.inner-type.soil"
+        }
+      },
+      "name": "meta.definition.inner-type.soil",
+      "end": "(?<=\\})",
+      "patterns": [
+        {
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.inner-type.begin.soil"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.inner-type.end.soil"
+            }
+          },
+          "name": "meta.definition.inner-type.body.soil",
+          "patterns": [
+            {
+              "include": "#field-declaration"
+            },
+            {
+              "include": "#comments"
+            }
+          ]
+        }
+      ]
+    },
+    "endpoint-declaration": {
+      "begin": "\\b(endpoint)\\s+(GET|POST|PUT|PATCH|DELETE|HEAD)\\s+([\\/\\p{L}\\p{N}_\\-]+)",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.declaration.$1.soil"
+        },
+        "2": {
+          "name": "todo.http-method.soil"
+        },
+        "3": {
+          "name": "entity.name.path.soil"
+        }
+      },
+      "name": "meta.definition.endpoint.soil",
+      "end": "(?<=\\})",
+      "patterns": [
+        {
+          "begin": "\\{",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.endpoint.begin.soil"
+            }
+          },
+          "end": "\\}",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.endpoint.end.soil"
+            }
+          },
+          "name": "meta.definition.endpoint.body.soil",
+          "patterns": [
+            {
+              "include": "#schema-declaration"
+            },
+            {
+              "include": "#comments"
+            }
+          ]
+        }
+      ]
+    },
+    "example-declaration": {
+      "begin": "\\b(example)\\s+\\{",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.declaration.$1.soil"
+        }
+      },
+      "name": "meta.definition.example.soil",
+      "end": "(?<=\\})"
+    },
+    "schema-declaration": {
+      "begin": "\\b(schema|success|failure|request)\\s+\\{",
+      "beginCaptures": {
+        "1": {
+          "name": "storage.type.schema.$1.soil"
+        }
+      },
+      "name": "meta.definition.schema.soil",
+      "end": "(?<=\\})",
+      "patterns": [
+        {
+          "include": "#field-declaration"
+        }
+      ]
+    },
+    "type": {
+      "patterns": [
+        {
+          "match": "\\b(\\*)\\b",
+          "name": "support.type.wildcard.soil"
+        },
+        {
+          "match": "\\b((?:Boolean|Integer|Number|String)(\\?)?)\\b",
+          "captures": {
+            "2": {
+              "name": "support.modifier.optional.soil"
+            }
+          },
+          "name": "support.type.primitive.soil"
+        },
+        {
+          "match": "\\b(URL|Date|Timestamp)[\\?]?\\b",
+          "name": "support.type.preset.soil"
+        },
+        {
+          "begin": "\\b(List|Enum)(<)",
+          "beginCaptures": {
+            "1": {
+              "name": "support.type.modifier.soil"
+            },
+            "2": {
+              "name": "punctuation.type.reference.begin.soil"
+            }
+          },
+          "end": "(>)(\\?)?",
+          "endCaptures": {
+            "1": {
+              "name": "punctuation.type.reference.end.soil"
+            },
+            "2": {
+              "name": "support.modifier.optional.soil"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#type"
+            }
+          ]
+        },
+        {
+          "match": "\\b([\\p{L}][\\p{L}\\p{N}_]*)(\\?)?\\b",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.reference.soil"
+            },
+            "2": {
+              "name": "support.modifier.optional.soil"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "scopeName": "source.soil"
+}

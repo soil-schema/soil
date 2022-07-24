@@ -1,0 +1,12 @@
+entity Article {
+
+  title: mut String
+
+    The title of this article
+
+  overview: mut String
+
+    The overview
+
+  author: ref Author
+}
