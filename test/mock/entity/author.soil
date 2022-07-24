@@ -1,14 +1,12 @@
 entity Author {
 
-  - aaa
-
   mutable field name: String? {
 
     - Author's name
 
     - Description of name field
 
-    @todo Sample Comment
+    - @todo Sample Comment
 
     example {
       "Umeebe, Inc."
@@ -41,5 +39,3 @@ entity Author {
     }
   }
 }
-
-entity Sample { field name: String }

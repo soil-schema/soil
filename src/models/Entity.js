@@ -28,7 +28,11 @@ export default class Entity extends Model {
     super(schema.name, schema)
 
     Object.defineProperty(this, 'fields', { value: Field.parse(this.schema.fields) })
-    Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
+    if (Array.isArray(this.schema.endpoints)) {
+      Object.defineProperty(this, 'endpoints', { value: this.schema.endpoints })
+    } else {
+      Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
+    }
 
     var subtypes = this.schema.subtypes || []
     this.fields.forEach(field => {
@@ -48,7 +52,7 @@ export default class Entity extends Model {
   }
 
   get readableFields () {
-    return this.fields.filter(field => !field.hasAnnotation('WriteOnly'))
+    return this.fields.filter(field => !field.writer)
   }
 
   /**
@@ -64,7 +68,7 @@ export default class Entity extends Model {
    */
   get requireWritable () {
     return this.fields
-      .filter(field => field.hasAnnotation('ReadOnly') || field.hasAnnotation('WriteOnly'))
+      .filter(field => field.mutable || field.writer)
       .length > 0
   }
 

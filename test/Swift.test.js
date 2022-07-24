@@ -63,7 +63,7 @@ test('Entity.renderSwiftFile', t => {
     name: 'Account',
     fields: {
       name: {
-        define: 'String',
+        type: 'String',
       },
     },
   })
@@ -79,7 +79,7 @@ test('Entity.renderSwiftFile', t => {
 
 test('Field.renderSwiftMember', t => {
   const field = new Field('id', {
-    define: 'Integer',
+    type: 'Integer',
   })
   t.notThrows(() => {
     t.snapshot(field.renderSwiftMember(context))
@@ -88,7 +88,7 @@ test('Field.renderSwiftMember', t => {
 
 test('Field.renderArgumentSignature', t => {
   const field = new Field('id', {
-    define: 'Integer',
+    type: 'Integer',
   })
   t.notThrows(() => {
     t.snapshot(field.renderArgumentSignature(context))

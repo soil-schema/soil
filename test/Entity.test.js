@@ -24,13 +24,15 @@ test('requireWritable returns true when has writeonly fields', t => {
     name: 'Account',
     fields: {
       name: {
-        define: 'String',
+        type: 'String',
       },
       email: {
-        define: '+WriteOnly String',
+        type: 'String',
+        writer: true,
       },
       password: {
-        define: '+WriteOnly String',
+        type: 'String',
+        writer: true,
       },
     },
   })

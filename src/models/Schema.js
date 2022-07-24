@@ -8,6 +8,7 @@ import YAML from 'yaml'
 import { validate } from 'jsonschema'
 
 import contextUtilities from '../context.js'
+import Parser from '../parser/Parser.js'
 
 import Entity from './Entity.js'
 
@@ -23,21 +24,27 @@ export default class Schema {
     const entitySchema = YAML.parse(await fs.readFile(ENTITY_SCHEMA_PATH, 'utf-8'))
 
     const entities = (await fs.readdir(path.join(workingDirPath, 'entity')))
-      .filter(file => path.extname(file) == '.yml')
       .map(async (file) => {
         const fullpath = path.join(workingDirPath, 'entity', file)
-        const body = YAML.parse(await fs.readFile(fullpath, this.config.encoding))
+        if (path.extname(file) == '.yml') {
+          const body = YAML.parse(await fs.readFile(fullpath, this.config.encoding))
 
-        if (soil.options.withValidate) {
-          const result = validate(body, entitySchema)
-          if (result.valid == false) {
-            console.log("Error!", result)
+          if (soil.options.withValidate) {
+            const result = validate(body, entitySchema)
+            if (result.valid == false) {
+              console.log("Error!", result)
+            }
           }
+          return new Entity(body)
         }
-        return new Entity(body)
+        if (path.extname(file) == '.soil') {
+          const body = await fs.readFile(fullpath, this.config.encoding)
+          const parser = new Parser()
+          return parser.parse(body)[0]
+        }
       })
 
-    Object.defineProperty(this, 'entities', { value: await Promise.all(entities), enumerable: true })
+    Object.defineProperty(this, 'entities', { value: (await Promise.all(entities)), enumerable: true })
   }
 
   async exportOpenApiSchema() {

@@ -233,16 +233,16 @@ Field.prototype.renderSwiftMember = function (context) {
       }
     }
   }
-  if (this.hasAnnotation('Optional')) {
+  if (this.optional) {
     type = `${type}?`
   }
-  if (this.hasAnnotation('Immutable') || (entity || {}).immutable) {
+  if (!this.mutable || (entity || {}).immutable) {
     return [
       docc(this),
       readOnlyMember(scope, this.name, type),
     ].joinCode()
   }
-  if (this.hasAnnotation('ReadOnly')) {
+  if (this.mutable) {
     scope = 'public internal(set)'
   }
   return [
@@ -267,7 +267,7 @@ Field.prototype.renderArgumentSignature = function (context) {
       }
     }
   }
-  if (this.hasAnnotation('Optional')) {
+  if (this.optional) {
     type = `${type}?`
   }
   return `${this.name.camelize()}: ${type}`

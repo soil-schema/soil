@@ -12,7 +12,7 @@ export default class Field extends Model {
    */
   constructor(name, schema) {
     if (typeof schema == 'string') {
-      super(name, { name, define: schema })
+      super(name, { name, type: schema })
     } else {
       super(name, { name, ...schema })
     }
@@ -25,45 +25,20 @@ export default class Field extends Model {
     return null
   }
 
-  /**
-   * @returns {Type}
-   */
   get type () {
-    /**
-     * @type {{ define: string }}
-     */
-    var { define } = this.schema
-    if (typeof define == 'undefined' && this.schema.schema) {
-      // @ts-ignore
-      define = this.name.classify()
-    }
-    const tokens = define.split(/\s/)
-    // @ts-ignore
-    const type = tokens[tokens.length - 1].replace('{schema}', (this.schema.name || this.name).classify())
-    return new Type(type)
+    return this.schema.type
   }
 
-  get annotations () {
-    /**
-     * @type {{ define: string }}
-     */
-    const { define } = this.schema
-    if (typeof define == 'undefined') {
-      return []
-    } else {
-      return define.split(/\s/)
-        .filter(token => token[0] == '+')
-        .map(token => token.replace(/^\+/, ''))
-    }
+  get mutable () {
+    return this.schema.mutable || false
   }
 
-  /**
-   * 
-   * @param {string} annotation 
-   * @returns {boolean}
-   */
-  hasAnnotation (annotation) {
-    return this.annotations.indexOf(annotation) != -1
+  get writer () {
+    return this.schema.writer || false
+  }
+
+  get optional () {
+    return false
   }
 }
 
