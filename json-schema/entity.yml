@@ -1,0 +1,97 @@
+type: object
+properties:
+  name:
+    type: string
+  fields:
+    type: object
+    patternProperties:
+      "^[a-zA-Z0-9_]+$":
+        oneOf:
+        - $ref: '#/$defs/Field'
+        - type: string
+  subtypes:
+    type: array
+    items:
+      $ref: '#/$defs/Subtype'
+  endpoints:
+    type: object
+    patternProperties:
+      "^\/[a-zA-Z0-9_\\-\\/]+$":
+        parameters:
+          type: object
+          patternProperties:
+            "^[a-zA-Z0-9_]$":
+              $ref: '#/$defs/PathParameter'
+        get:
+          $ref: '#/$defs/Endpoint'
+        post:
+          $ref: '#/$defs/Endpoint'
+        put:
+          $ref: '#/$defs/Endpoint'
+        patch:
+          $ref: '#/$defs/Endpoint'
+        delete:
+          $ref: '#/$defs/Endpoint'
+        head:
+          $ref: '#/$defs/Endpoint'
+required: [name]
+$defs:
+  Field:
+    type: object
+    properties:
+      summary:
+        type: string
+      description:
+        type: string
+      mutable:
+        type: boolean
+        default: false
+      writer:
+        type: boolean
+        default: false
+      reference:
+        type: boolean
+        default: false
+      type:
+        type: string
+    required: [type]
+  Subtype:
+    type: object
+    properties:
+      name:
+        type: string
+      fields:
+        type: object
+        patternProperties:
+          "^[a-zA-Z0-9_]+$":
+            oneOf:
+            - $ref: '#/$defs/Field'
+            - type: string
+    required: [name]
+  Endpoint:
+    type: object
+    properties:
+      summary:
+        type: string
+        format: '^[A-Za-z0-9 ]$'
+      description:
+        type: string
+      request:
+        $ref: '#/$defs/Subschema'
+      success:
+        $ref: '#/$defs/Subschema'
+    required: [summary]
+  Subschema:
+    type: object
+    properties:
+      fields:
+        type: object
+        patternProperties:
+          "^[a-zA-Z0-9_]+$":
+            oneOf:
+            - $ref: '#/$defs/Field'
+            - type: string
+  PathParameter:
+    oneOf:
+      - type: object
+      - type: string

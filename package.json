@@ -9,13 +9,32 @@
     "soil": "src/soil.js"
   },
   "dependencies": {
+    "chalk": "^5.0.1",
+    "commander": "^9.4.0",
+    "jsonschema": "^1.4.1",
+    "node-watch": "^0.7.3",
     "pluralize": "^8.0.0",
     "yaml": "^2.1.1"
+  },
+  "devDependencies": {
+    "ava": "^4.3.1"
   },
   "scripts": {
     "test": "ava"
   },
-  "devDependencies": {
-    "ava": "^4.3.1"
+  "engines": {
+    "vscode": "^1.69.0"
+  },
+  "contributes": {
+    "languages": [{
+        "id": "soil",
+        "extensions": [".soil"],
+        "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+        "language": "soil",
+        "scopeName": "source.soil",
+        "path": "./syntaxes/soil.tmLanguage.json"
+    }]
   }
 }

@@ -1,71 +1,58 @@
 #!/usr/bin/env node
 
-import { promises as fs } from 'fs'
 import path from 'path'
-import util from 'util'
-import YAML from 'yaml'
-import { DEFAULT_CONFIG } from './const.js'
-import contextUtilities from './context.js'
+import watch from 'node-watch';
+import chalk from 'chalk'
 
-import Entity from './models/Entity.js'
 import './swift.js'
 
-const loadConfig = async function () {
-  
+import './cli.js'
+import { loadConfig } from './utils.js'
+
+import Schema from './models/Schema.js'
+import Loader from './parser/Loader.js';
+
+if (soil.options.workingDir) {
+  process.chdir(soil.options.workingDir)
+} else {
+  process.chdir(path.dirname(soil.options.config))
+}
+
+/**
+ * @param {Soil} soil 
+ */
+const run = async function(config) {
+  const soil = new Schema(config)
+  const loader = new Loader(config)
+
   try {
-    return Object.assign({}, DEFAULT_CONFIG, (await import(path.join(process.cwd(), './soil.config.js'))).default)
+    await loader.prepare()
+    await soil.prepare((await loader.load()).flatMap(c => c))
+    await soil.debug()
+    await soil.exportSwiftCode()
+    console.log(chalk.green('🍻 Done!'))
   } catch (error) {
-    return Object.assign({}, DEFAULT_CONFIG)
+    console.log(chalk.red('☄️ Crash!'))
+    throw error
   }
 }
 
-const main = async function() {
-  const config = await loadConfig()
-  const soil = new Soil(config)
-  await soil.prepare()
-  await soil.exportSwiftCode()
-  soil.debug()
-}
+loadConfig()
+  .then(config => {
+    run(config)
 
-class Soil {
-  constructor(config) {
-    Object.defineProperty(this, 'config', { value: config })
-  }
+    if (soil.options.watch) {
+      console.log(chalk.gray('watch', process.cwd()))
+      const exportDir = path.join(process.cwd(), config.exportDir)
+      watch(process.cwd(), { recursive: true }, (evt, name) => {
 
-  async prepare() {
-    const workingDirPath = path.join(process.cwd(), this.config.workingDir)
+        // Ignore in export directory.
+        if (name.startsWith(exportDir)) { return }
 
-    const entities = (await fs.readdir(path.join(workingDirPath, 'entity')))
-      .map(async (file) => {
-        const fullpath = path.join(workingDirPath, 'entity', file)
-        const schema = YAML.parse(await fs.readFile(fullpath, this.config.encoding))
-        return new Entity(schema)
+        console.log(chalk.gray(`\ndetect change: ${name}\n`))
+
+        run(config)
+          .catch(console.error)
       })
-
-    Object.defineProperty(this, 'entities', { value: await Promise.all(entities), enumerable: true })
-  }
-
-  async exportOpenApiSchema() {
-  }
-
-  async exportSwiftCode() {
-    var swiftExportDir = this.config.exportDir
-    if (typeof swiftExportDir == 'object') {
-      swiftExportDir = swiftExportDir.swift || swiftExportDir.default
     }
-    await fs.mkdir(swiftExportDir, { recursive: true })
-    this.entities.forEach(async (entity) => {
-      const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
-      fs.writeFile(path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`), body, this.config.encode)
-    })
-  }
-
-  async exportKotlinCode() {
-  }
-
-  debug () {
-    console.log(util.inspect(this, { depth: null, colors: true }))
-  }
-}
-
-main()
+  })

@@ -23,6 +23,6 @@ export default class Writer extends Model {
    */
   get fields () {
     return this.entity.fields
-      .filter(field => !field.hasAnnotation('ReadOnly'))
+      .filter(field => field.mutable)
   }
 }

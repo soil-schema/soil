@@ -9,10 +9,11 @@ test('requireWritable returns true when has readonly fields', t => {
     name: 'Order',
     fields: {
       timestamp: {
-        define: 'Timestamp',
+        type: 'Timestamp',
+        mutable: true,
       },
       id: {
-        define: '+Immutable +ReadOnly Integer',
+        type: 'Integer',
       },
     },
   })
@@ -24,13 +25,15 @@ test('requireWritable returns true when has writeonly fields', t => {
     name: 'Account',
     fields: {
       name: {
-        define: 'String',
+        type: 'String',
       },
       email: {
-        define: '+WriteOnly String',
+        type: 'String',
+        writer: true,
       },
       password: {
-        define: '+WriteOnly String',
+        type: 'String',
+        writer: true,
       },
     },
   })

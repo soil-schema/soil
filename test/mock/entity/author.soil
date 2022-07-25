@@ -1,0 +1,41 @@
+entity Author {
+
+  mutable field name: String? {
+
+    - Author's name
+
+    - Description of name field
+
+    - @todo Sample Comment
+
+    example {
+      "Umeebe, Inc."
+    }
+  }
+
+  mutable field records: List<Record>
+
+  inner Record {
+    - Author's history / biography record
+
+    field timestamp: Timestamp
+    field body: String
+  }
+
+  mutable field contact: * {
+
+    schema {
+      field tel: String?
+      field email: String?
+    }
+  }
+
+  endpoint GET /authors {
+
+    - List Authors
+
+    success {
+      field authors: List<Author>
+    }
+  }
+}

@@ -48,7 +48,7 @@ export default class Entity extends Model {
   }
 
   get readableFields () {
-    return this.fields.filter(field => !field.hasAnnotation('WriteOnly'))
+    return this.fields.filter(field => !field.writer)
   }
 
   /**
@@ -64,7 +64,7 @@ export default class Entity extends Model {
    */
   get requireWritable () {
     return this.fields
-      .filter(field => field.hasAnnotation('ReadOnly') || field.hasAnnotation('WriteOnly'))
+      .filter(field => field.mutable || field.writer)
       .length > 0
   }
 

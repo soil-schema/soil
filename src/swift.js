@@ -3,6 +3,7 @@ import Entity from './models/Entity.js'
 import Field from './models/Field.js'
 import RequestBody from './models/RequestBody.js'
 import Response from './models/Response.js'
+import Type from './models/Type.js'
 import Writer from './models/Writer.js'
 
 const SWIFT_TYPE_TABLE = {
@@ -103,6 +104,9 @@ const defineIf = function (condition, callback) {
  */
 
 const convertType = (type) => {
+  if (type instanceof Type) {
+    return convertType(type.definition)
+  }
   if (SWIFT_TYPE_TABLE[type]) {
     return SWIFT_TYPE_TABLE[type]
   }
@@ -229,21 +233,14 @@ Field.prototype.renderSwiftMember = function (context) {
       }
     }
   }
-  if (this.hasAnnotation('Optional')) {
+  if (this.optional) {
     type = `${type}?`
   }
-  if (this.hasAnnotation('Immutable') || (entity || {}).immutable) {
-    return [
-      docc(this),
-      readOnlyMember(scope, this.name, type),
-    ].joinCode()
-  }
-  if (this.hasAnnotation('ReadOnly')) {
-    scope = 'public internal(set)'
-  }
+  const immutable = (entity || {}).immutable || !this.mutable
+  console.log(this.name, immutable)
   return [
     docc(this),
-    member(scope, this.name, type),
+    immutable ? readOnlyMember(scope, this.name, type) : member(scope, this.name, type),
   ].joinCode()
 }
 
@@ -263,7 +260,7 @@ Field.prototype.renderArgumentSignature = function (context) {
       }
     }
   }
-  if (this.hasAnnotation('Optional')) {
+  if (this.optional) {
     type = `${type}?`
   }
   return `${this.name.camelize()}: ${type}`
