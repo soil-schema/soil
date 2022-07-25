@@ -236,18 +236,11 @@ Field.prototype.renderSwiftMember = function (context) {
   if (this.optional) {
     type = `${type}?`
   }
-  if (!this.mutable || (entity || {}).immutable) {
-    return [
-      docc(this),
-      readOnlyMember(scope, this.name, type),
-    ].joinCode()
-  }
-  if (this.mutable) {
-    scope = 'public internal(set)'
-  }
+  const immutable = (entity || {}).immutable || !this.mutable
+  console.log(this.name, immutable)
   return [
     docc(this),
-    member(scope, this.name, type),
+    immutable ? readOnlyMember(scope, this.name, type) : member(scope, this.name, type),
   ].joinCode()
 }
 

@@ -9,10 +9,11 @@ test('requireWritable returns true when has readonly fields', t => {
     name: 'Order',
     fields: {
       timestamp: {
-        define: 'Timestamp',
+        type: 'Timestamp',
+        mutable: true,
       },
       id: {
-        define: '+Immutable +ReadOnly Integer',
+        type: 'Integer',
       },
     },
   })

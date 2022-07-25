@@ -9,11 +9,11 @@ test('replace returns another Field', t => {
   const replaced = target.replace('author_name', { mutable: false })
 
   t.is(target.name, 'name')
-  t.is(target.type.definition, 'String')
+  t.is(target.type, 'String')
   t.is(target.mutable, true)
   
   t.is(replaced.name, 'author_name')
-  t.is(replaced.type.definition, 'String')
+  t.is(replaced.type, 'String')
   t.is(replaced.mutable, false)
 })
 
@@ -22,6 +22,6 @@ test('constructor supports string schema', t => {
     const name = new Field('name', 'String')
     t.assert(typeof name.schema == 'object')
     t.is(name.schema.name, 'name')
-    t.is(name.schema.define, 'String')
+    t.is(name.schema.type, 'String')
   })
 })
