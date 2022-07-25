@@ -3,6 +3,9 @@ fields:
   title: String
   overview:
     type: String
+  body:
+    annotation: mutable
+    type: String
 endpoints:
   '/articles/search':
     get:
