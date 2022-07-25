@@ -27,7 +27,7 @@ export default class RequestBody extends Model {
         const definition = typeof schema == 'string' ? schema : schema.define
 
         const reference = context.resolveReference(definition)
-        if (reference instanceof Entity && reference.requireWritable) {
+        if (reference instanceof Entity && reference.requireWriter) {
           return { ...schema, name, type: `${reference.name}.Writer` }
         }
 

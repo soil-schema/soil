@@ -7,15 +7,6 @@ import Response from './models/Response.js'
 import Type from './models/Type.js'
 import Writer from './models/Writer.js'
 
-const SWIFT_TYPE_TABLE = {
-  'String': 'String',
-  'Integer': 'Int',
-  'Number': 'Double',
-  'Boolean': 'Bool',
-  'Date': 'Date',
-  'Timestamp': 'Date',
-}
-
 /*
   ================================
   Render function for Swift Language Tokens
@@ -195,10 +186,10 @@ Entity.prototype.renderSwiftStruct = function (context) {
   const nextContext = { entity: this, ...context }
   return [
     docc(this),
-    classDef('public final', this.name, ...protocolMerge(context, 'entity', (this.requireWritable && !this.immutable) ? null : 'writer')),
+    classDef('public final', this.name, ...protocolMerge(context, 'entity', (this.requireWriter && !this.immutable) ? null : 'writer')),
     ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
     ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
-    defineIf(this.requireWritable && !this.immutable, () => this.writeOnly().renderSwiftStruct(nextContext)),
+    defineIf(this.requireWriter && !this.immutable, () => this.writeOnly().renderSwiftStruct(nextContext)),
     ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
     end,
   ].joinCode()
@@ -217,31 +208,40 @@ Writer.prototype.renderSwiftStruct = function (context) {
   ].joinCode()
 }
 
-Field.prototype.renderSwiftMember = function (context) {
+Field.prototype.renderSwiftMember = function (context = {}) {
   const { writer, entity } = context
   var scope = 'public'
-  var type = convertType(this.type)
-  if (writer) {
-    const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWritable) {
-      type = `${type}.Writer`
-    }
-    if (/^Array\<.+\>$/.test(type)) {
-      const element = type.match(/^Array\<(.+)\>$/)[1]
-      const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWritable) {
-        type = `Array<${element}.Writer>`
-      }
-    }
-  }
+  var type = this.type.resolveSwift(context)
   if (this.optional) {
     type = `${type}?`
   }
-  const immutable = (entity || {}).immutable || !this.mutable
+  if (this.mutable == false) {
+    return [
+      docc(this),
+      readOnlyMember(scope, this.name, type),
+    ].joinCode()
+  }
+
+  if (writer) {
+    return [
+      docc(this),
+      member(scope, this.name, type),
+    ].joinCode()
+  }
+
+  if (entity && entity.requireWriter) {
+    // If entity require writer, the user modify this field in Writer class instead Entity class.
+    return [
+      docc(this),
+      readOnlyMember(scope, this.name, type),
+    ].joinCode()
+  }
+
   return [
     docc(this),
-    immutable ? readOnlyMember(scope, this.name, type) : member(scope, this.name, type),
+    member(scope, this.name, type),
   ].joinCode()
+
 }
 
 Field.prototype.renderArgumentSignature = function (context) {
@@ -249,13 +249,13 @@ Field.prototype.renderArgumentSignature = function (context) {
   var type = convertType(this.type)
   if (writer) {
     const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWritable) {
+    if (reference instanceof Entity && reference.requireWriter) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWritable) {
+      if (reference instanceof Entity && reference.requireWriter) {
         type = `Array<${element}.Writer>`
       }
     }
@@ -352,6 +352,20 @@ Response.prototype.renderSwiftStruct = function (context) {
 
     end,
   ].joinCode()
+}
+
+const SWIFT_TYPE_TABLE = {
+  'String': 'String',
+  'Integer': 'Int',
+  'Number': 'Double',
+  'Boolean': 'Bool',
+  'URL': 'URL',
+  'Date': 'Date',
+  'Timestamp': 'Date',
+}
+
+Type.prototype.resolveSwift = function (context) {
+  return convertType(this.definition)
 }
 
 export default { docc, struct, member, pretty, end, convertType }

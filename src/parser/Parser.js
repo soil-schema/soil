@@ -123,9 +123,9 @@ export default class Parser {
     }
     this.log('start parse field in', schema.name)
     let bi = i - STEP
-    var annotations = []
+    var annotation
     while (['mutable', 'reference', 'writer', 'identifier'].indexOf(tokens[bi]) != -1) {
-      annotations.push(tokens[bi])
+      annotation = tokens[bi]
       bi -= STEP
     }
     i += STEP
@@ -141,8 +141,10 @@ export default class Parser {
     }
     i += STEP
 
-    annotations.forEach(annotation => fieldSchema[annotation] = true)
-    this.log('- annotations:', annotations.join(', '))
+    if (annotation) {
+      fieldSchema.annotation = annotation
+      this.log('- annotation:', annotation)
+    }
 
     if (tokens[i] == '{') {
       this.log('- field has block')

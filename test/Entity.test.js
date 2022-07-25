@@ -2,25 +2,25 @@ import test from 'ava'
 import Entity from '../src/models/Entity.js'
 import Field from '../src/models/Field.js'
 
-// requireWritable
+// requireWriter
 
-test('requireWritable returns true when has readonly fields', t => {
+test('requireWriter returns true with mutable field and immutable (basic) field', t => {
   const entity = new Entity({
     name: 'Order',
     fields: {
-      timestamp: {
-        type: 'Timestamp',
-        mutable: true,
-      },
       id: {
         type: 'Integer',
       },
+      timestamp: {
+        type: 'Timestamp',
+        annotation: 'mutable',
+      },
     },
   })
-  t.assert(entity.requireWritable)
+  t.assert(entity.requireWriter)
 })
 
-test('requireWritable returns true when has writeonly fields', t => {
+test('requireWriter returns true with writer fields and immutable (basic) field', t => {
   const entity = new Entity({
     name: 'Account',
     fields: {
@@ -29,18 +29,18 @@ test('requireWritable returns true when has writeonly fields', t => {
       },
       email: {
         type: 'String',
-        writer: true,
+        annotation: 'writer',
       },
       password: {
         type: 'String',
-        writer: true,
+        annotation: 'writer',
       },
     },
   })
-  t.assert(entity.requireWritable)
+  t.assert(entity.requireWriter)
 })
 
-test('requireWritable returns false when has no readonly or writeonly fields', t => {
+test('requireWriter returns false with only immutable (basic) fields', t => {
   const entity = new Entity({
     name: 'Person',
     fields: {
@@ -52,7 +52,7 @@ test('requireWritable returns false when has no readonly or writeonly fields', t
       },
     },
   })
-  t.not(entity.requireWritable)
+  t.not(entity.requireWriter)
 })
 
 // subtypes

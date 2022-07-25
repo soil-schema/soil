@@ -26,19 +26,23 @@ export default class Field extends Model {
   }
 
   get type () {
-    return this.schema.type
+    return new Type(this.schema.type.replace(/\?$/, ''))
   }
 
   get mutable () {
-    return this.schema.mutable || false
+    return this.schema.annotation == 'mutable'
   }
 
   get writer () {
-    return this.schema.writer || false
+    return this.schema.annotation == 'writer'
+  }
+
+  get reference () {
+    return this.schema.annotation == 'reference'
   }
 
   get optional () {
-    return false
+    return this.schema.type[this.schema.type.length - 1] == '?'
   }
 }
 
