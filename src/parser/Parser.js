@@ -1,6 +1,3 @@
-import Endpoint from "../models/Endpoint.js"
-import Entity from "../models/Entity.js"
-
 const STEP = 1
 
 export default class Parser {
@@ -90,7 +87,7 @@ export default class Parser {
       name: tokens[i],
       fields: {},
       subtypes: [],
-      endpoints: [],
+      endpoints: {},
     }
     this.log('start parse entity', schema.name)
     i += STEP
@@ -116,7 +113,7 @@ export default class Parser {
         break
       }
     }
-    this.entities.push(new Entity(schema))
+    this.entities.push(schema)
     return i
   }
 
@@ -288,7 +285,10 @@ export default class Parser {
       i += STEP
     }
 
-    schema.endpoints.push(new Endpoint(path, method, endpointSchema))
+    if (typeof schema.endpoints[path] == 'undefined') {
+      schema.endpoints[path] = {}
+    }
+    schema.endpoints[path][method.toLowerCase()] = endpointSchema
 
     return i
   }

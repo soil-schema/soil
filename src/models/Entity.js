@@ -28,11 +28,7 @@ export default class Entity extends Model {
     super(schema.name, schema)
 
     Object.defineProperty(this, 'fields', { value: Field.parse(this.schema.fields) })
-    if (Array.isArray(this.schema.endpoints)) {
-      Object.defineProperty(this, 'endpoints', { value: this.schema.endpoints })
-    } else {
-      Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
-    }
+    Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
 
     var subtypes = this.schema.subtypes || []
     this.fields.forEach(field => {

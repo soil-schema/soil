@@ -10,6 +10,7 @@ import './cli.js'
 import { loadConfig } from './utils.js'
 
 import Schema from './models/Schema.js'
+import Loader from './parser/Loader.js';
 
 if (soil.options.workingDir) {
   process.chdir(soil.options.workingDir)
@@ -20,9 +21,13 @@ if (soil.options.workingDir) {
 /**
  * @param {Soil} soil 
  */
-const run = async function(soil) {
+const run = async function(config) {
+  const soil = new Schema(config)
+  const loader = new Loader(config)
+
   try {
-    await soil.prepare()
+    await loader.prepare()
+    await soil.prepare((await loader.load()).flatMap(c => c))
     await soil.debug()
     await soil.exportSwiftCode()
     console.log(chalk.green('🍻 Done!'))
@@ -34,7 +39,7 @@ const run = async function(soil) {
 
 loadConfig()
   .then(config => {
-    run(new Schema(config))
+    run(config)
 
     if (soil.options.watch) {
       console.log(chalk.gray('watch', process.cwd()))
@@ -46,7 +51,7 @@ loadConfig()
 
         console.log(chalk.gray(`\ndetect change: ${name}\n`))
 
-        run(new Schema(config))
+        run(config)
           .catch(console.error)
       })
     }
