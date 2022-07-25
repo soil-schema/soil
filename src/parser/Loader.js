@@ -45,6 +45,9 @@ export default class Loader {
           schemas.forEach(schema => {
             const result = validate(schema, this.entityJsonSchema)
             if (result.valid == false) {
+              result.errors.forEach(error => {
+                console.log(error, error.instance)
+              })
               console.log({ schema, result, errors: result.errors })
               throw result
             }

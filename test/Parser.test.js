@@ -13,7 +13,6 @@ test('parse empty entity', async (t) => {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.assert(result[0] instanceof Entity)
 })
 
 test('parse an entity with one line field', async (t) => {
@@ -27,8 +26,7 @@ entity Article {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.assert(result[0] instanceof Entity)
-  t.is(result[0].fields.length, 1)
+  t.assert(result[0].fields.title)
 })
 
 test('parse an entity with blocked field', async (t) => {
@@ -44,9 +42,7 @@ entity Article {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.assert(result[0] instanceof Entity)
-  t.is(result[0].fields.length, 1)
-  t.is(result[0].fields[0].summary, 'This is a summary')
+  t.is(result[0].fields.title.summary, 'This is a summary')
 })
 
 test('parse an entity with mutable field', async (t) => {
@@ -60,9 +56,7 @@ entity Article {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.assert(result[0] instanceof Entity)
-  t.is(result[0].fields.length, 1)
-  t.is(result[0].fields[0].mutable, true)
+  t.is(result[0].fields.title.mutable, true)
 })
 
 test('parse an entity with get endpoint', async (t) => {
@@ -82,8 +76,7 @@ entity Article {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.assert(result[0] instanceof Entity)
-  t.is(result[0].endpoints.length, 1)
-  t.is(result[0].endpoints[0].summary, 'List Articles Endpoint')
-  t.is(result[0].endpoints[0].successResponse.schema.articles.type, 'List<Article>')
+  t.assert(result[0].endpoints['/articles'].get)
+  t.is(result[0].endpoints['/articles'].get.summary, 'List Articles')
+  t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
 })
