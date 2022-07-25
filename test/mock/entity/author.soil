@@ -1,5 +1,7 @@
 entity Author {
 
+  field id: Integer
+
   mutable field name: String? {
 
     - Author's name
@@ -36,6 +38,15 @@ entity Author {
 
     success {
       field authors: List<Author>
+    }
+  }
+
+  endpoint PUT /authors/$id {
+
+    - Update Author
+
+    success {
+      field author: Author
     }
   }
 }

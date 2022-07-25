@@ -43,15 +43,9 @@ $defs:
         type: string
       description:
         type: string
-      mutable:
-        type: boolean
-        default: false
-      writer:
-        type: boolean
-        default: false
-      reference:
-        type: boolean
-        default: false
+      annotation:
+        type: string
+        enum: [mutable, writer, reference]
       type:
         type: string
       enum:

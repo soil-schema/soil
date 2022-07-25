@@ -93,9 +93,9 @@ export default class Endpoint extends Model {
 
     return this.path
       .split('/')
-      .filter(token => /^\{[a-zA-Z_\-]+\}$/.test(token))
+      .filter(token => /^(\{[a-zA-Z_\-]+\}|$[a-zA-Z_\-]+)$/.test(token))
       .map(token => {
-        const name = token.substring(1, token.length - 1)
+        const name = token.replace(/^(\{[a-zA-Z_\-]+\}|$[a-zA-Z_\-]+)$/, '$1')
         const parameter = (this.schema.parameters || {})[name]
         const definition = typeof parameter == 'object' ? parameter.ref : name
         const field = context.resolveReference(definition)

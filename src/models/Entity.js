@@ -62,7 +62,7 @@ export default class Entity extends Model {
   /**
    * @returns {boolean}
    */
-  get requireWritable () {
+  get requireWriter () {
     return this.fields
       .filter(field => field.mutable || field.writer)
       .length > 0

@@ -1,5 +1,7 @@
 // @ts-check
 
+import { DEFINED_TYPES } from "../const.js"
+
 export default class Type {
   /**
    * @type {string}
@@ -20,5 +22,13 @@ export default class Type {
    */
   resolve (context) {
     return this.definition
+  }
+
+  get isList () {
+    return /^List<.+>/.test(this.definition)
+  }
+
+  get isDefinedType () {
+    return DEFINED_TYPES.indexOf(this.definition) != -1
   }
 }

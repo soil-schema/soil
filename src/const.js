@@ -15,6 +15,16 @@ export const DEFAULT_CONFIG = {
   },
 }
 
+export const DEFINED_TYPES = [
+  'String',
+  'Integer',
+  'Number',
+  'Boolean',
+  'URL',
+  'Timestamp',
+  'Date',
+]
+
 export const HTTP_METHOD_GET = "GET"
 export const HTTP_METHOD_POST = "POST"
 export const HTTP_METHOD_PUT = "PUT"

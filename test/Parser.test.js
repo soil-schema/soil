@@ -56,7 +56,7 @@ entity Article {
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
-  t.is(result[0].fields.title.mutable, true)
+  t.is(result[0].fields.title.annotation, 'mutable')
 })
 
 test('parse an entity with get endpoint', async (t) => {

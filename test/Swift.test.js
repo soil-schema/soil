@@ -3,7 +3,6 @@ import swift from '../src/swift.js'
 import { DEFAULT_CONFIG } from '../src/const.js'
 import contextUtilities from '../src/context.js'
 import Entity from '../src/models/Entity.js'
-import Field from '../src/models/Field.js'
 
 const context = {
   config: DEFAULT_CONFIG,
@@ -53,44 +52,52 @@ When they eat food, a sloth's \`energyLevel\` increases by the food's \`energy\`
   t.snapshot(comment)
 })
 
-/*
-  ================================
-  Entity
- */
-
-test('Entity.renderSwiftFile', t => {
-  const entity = new Entity({
+test('entity require writer', t => {
+  const target = new Entity({
     name: 'Account',
     fields: {
       name: {
         type: 'String',
+        annotation: 'mutable',
+      },
+      email: {
+        type: 'String',
+        annotation: 'writer',
+      },
+      password: {
+        type: 'String',
+        annotation: 'writer',
       },
     },
   })
-  t.notThrows(() => {
-    t.snapshot(entity.renderSwiftFile(context))
-  })
+  const nameField = target.findField('name')
+  t.is(nameField.renderSwiftMember({ entity: target }), 'public let name: String')
+  t.is(nameField.renderSwiftMember({ entity: target, writer: target.writeOnly() }), 'public var name: String')
+
+  t.snapshot(target.renderSwiftFile(context))
 })
 
-/*
-  ================================
-  Field
- */
-
-test('Field.renderSwiftMember', t => {
-  const field = new Field('id', {
-    type: 'Integer',
+test('type reference to another entity', t => {
+  const wrapper = new Entity({
+    name: 'Wrapper',
+    fields: {
+      id: 'Integer',
+      content: {
+        annotation: 'mutable',
+        type: 'Content',
+      },
+    },
   })
-  t.notThrows(() => {
-    t.snapshot(field.renderSwiftMember(context))
+  const content = new Entity({
+    name: 'Content',
+    fields: {
+      id: 'Integer',
+      body: {
+        annotation: 'mutable',
+        type: 'String',
+      },
+    },
   })
-})
-
-test('Field.renderArgumentSignature', t => {
-  const field = new Field('id', {
-    type: 'Integer',
-  })
-  t.notThrows(() => {
-    t.snapshot(field.renderArgumentSignature(context))
-  })
+  const entities = [wrapper, content]
+  t.snapshot(wrapper.renderSwiftFile({ ...context, entities }))
 })
