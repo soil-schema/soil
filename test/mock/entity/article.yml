@@ -3,3 +3,13 @@ fields:
   title: String
   overview:
     type: String
+endpoints:
+  '/articles/search':
+    get:
+      summary: Search Articles
+      query:
+        q:
+          type: String
+        sort:
+          type: Enum
+          enum: [created_at, modified_at, title, score]
