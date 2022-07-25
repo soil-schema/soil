@@ -1,6 +1,7 @@
 import Endpoint from './models/Endpoint.js'
 import Entity from './models/Entity.js'
 import Field from './models/Field.js'
+import Query from './models/Query.js'
 import RequestBody from './models/RequestBody.js'
 import Response from './models/Response.js'
 import Type from './models/Type.js'
@@ -237,7 +238,6 @@ Field.prototype.renderSwiftMember = function (context) {
     type = `${type}?`
   }
   const immutable = (entity || {}).immutable || !this.mutable
-  console.log(this.name, immutable)
   return [
     docc(this),
     immutable ? readOnlyMember(scope, this.name, type) : member(scope, this.name, type),
@@ -277,6 +277,9 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
     docc(`${this.signature}.method: \`${this.method}\``),
     readOnlyMember('public', 'method', 'String', `"${this.method}"`),
 
+    ...this.query.map(query => query.renderSwiftMember(context)),
+    ...this.query.map(query => query.renderSwiftEnum(context)),
+
     defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
 
     docc({ parameters: this.resolvePathParameters(context) }),
@@ -290,6 +293,31 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
 
     end,
   ].joinCode()
+}
+
+Query.prototype.renderSwiftMember = function (context) {
+  var type = convertType(this.type)
+  var defaultValue = this.defaultValue
+  if (this.optional) {
+    type = `${type}?`
+  }
+  if (defaultValue && this.type == 'String') {
+    defaultValue = `"${defaultValue}"`
+  }
+  if (defaultValue && this.isEnum) {
+    defaultValue = `.${defaultValue}`
+  }
+  if (typeof defaultValue == 'undefined') {
+    defaultValue = 'nil'
+  }
+  return `public var ${this.name}: ${type} = ${defaultValue}`
+}
+
+Query.prototype.renderSwiftEnum = function (context) {
+  if (!this.isSelfDefinedEnum) { return '' }
+  var type = convertType(this.type)
+  var enumBaseType = convertType(this.enumBaseType)
+  return `public enum ${type}: String { case ${this.enumValues.join(', ')} }`
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {

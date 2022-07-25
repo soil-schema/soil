@@ -54,6 +54,10 @@ $defs:
         default: false
       type:
         type: string
+      enum:
+        type: array
+        items:
+          type: string
     required: [type]
   Subtype:
     type: object
@@ -76,6 +80,13 @@ $defs:
         format: '^[A-Za-z0-9 ]$'
       description:
         type: string
+      query:
+        type: object
+        patternProperties:
+          "^[a-zA-Z0-9_]+$":
+            oneOf:
+              - $ref: '#/$defs/Query'
+              - type: string
       request:
         $ref: '#/$defs/Subschema'
       success:
@@ -95,3 +106,25 @@ $defs:
     oneOf:
       - type: object
       - type: string
+  Qyery:
+    type: object
+    properties:
+      summary:
+        type: string
+      description:
+        type: string
+      default:
+        anyOf:
+          - type: string
+          - type: integer
+          - type: number
+            format: double
+      type:
+        type: string
+        enum: ['String', 'Integer', 'Number', 'Flag', 'Enum']
+      enum:
+        oneOf:
+        - type: array
+          items:
+            type: string
+        - type: string

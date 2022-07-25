@@ -14,6 +14,7 @@ import {
 } from "../const.js"
 
 import '../extension.js'
+import Query from './Query.js'
 
 export default class Endpoint extends Model {
 
@@ -28,6 +29,11 @@ export default class Endpoint extends Model {
   successResponse
 
   /**
+   * @type {Query[]}
+   */
+  query
+
+  /**
    * 
    * @param {string} path 
    * @param {string} method 
@@ -35,6 +41,7 @@ export default class Endpoint extends Model {
    */
   constructor(path, method, schema) {
     super(path, { path, method, ...schema })
+    Object.defineProperty(this, 'query', { value: Query.parse(this.schema.query) })
     Object.defineProperty(this, 'requestBody', { value: new RequestBody(schema.request), enumerable: true })
     Object.defineProperty(this, 'successResponse', { value: new Response(schema.success), enumerable: true })
   }
