@@ -7,6 +7,14 @@ export default class Parser {
 
   constructor () {
     this.entities = []
+    this.logs = []
+  }
+
+  /**
+   * @param  {...string} messages 
+   */
+  log (...messages) {
+    this.logs.push(messages.join(' '))
   }
 
   /**
@@ -53,6 +61,7 @@ export default class Parser {
     }
     if (buffer.trim().length > 0)
       tokens.push(buffer.trim())
+    this.log('tokenized:', tokens.map(token => `'${token}'`).join(', '))
     return tokens
   }
 
@@ -61,6 +70,7 @@ export default class Parser {
    * @returns {object[]} array of soil entity
    */
   parse (body) {
+    this.log('start parse')
     const tokens = this.tokenize(body)
     var i = 0
     if (tokens[i] == 'entity') {
@@ -73,29 +83,35 @@ export default class Parser {
 
   parseEntity (tokens, i) {
     if (tokens[i] != 'entity') {
-      throw 'Illegal Call'
+      throw 'Illegal Call: parseEntity'
     }
     i += STEP
     var schema = {
       name: tokens[i],
       fields: {},
+      subtypes: [],
       endpoints: [],
     }
+    this.log('start parse entity', schema.name)
     i += STEP
     if (tokens[i] != '{') {
       throw 'Unexpected token'
     }
     i += STEP
     while (tokens[i] != '}') {
-      var token = tokens[i]
+      const token = tokens[i]
       switch (token) {
       case 'field':
         i = this.parseField(tokens, i, schema)
+        break
+      case 'inner':
+        i = this.parseInnerType(tokens, i, schema)
         break
       case 'endpoint':
         i = this.parseEndpoint(tokens, i, schema)
         break
       default:
+        this.log('unexpected token', token)
         i += STEP
         break
       }
@@ -108,6 +124,7 @@ export default class Parser {
     if (tokens[i] != 'field') {
       throw 'Illegal Call'
     }
+    this.log('start parse field in', schema.name)
     let bi = i - STEP
     var annotations = []
     while (['mutable', 'reference', 'writer', 'identifier'].indexOf(tokens[bi]) != -1) {
@@ -115,10 +132,8 @@ export default class Parser {
       bi -= STEP
     }
     i += STEP
-    if (tokens[i + 1] != ':') {
-      throw 'Unexpected Token'
-    }
     const name = tokens[i]
+    this.log('- field name:', name)
     i += STEP
     if (tokens[i] != ':') {
       throw 'Unexpected Token'
@@ -130,9 +145,12 @@ export default class Parser {
     i += STEP
 
     annotations.forEach(annotation => fieldSchema[annotation] = true)
+    this.log('- annotations:', annotations.join(', '))
 
     if (tokens[i] == '{') {
+      this.log('- field has block')
       i = this.parseFieldBlock(tokens, i, fieldSchema)
+      this.log('- field block closed')
     }
 
     schema.fields[name] = fieldSchema
@@ -154,15 +172,81 @@ export default class Parser {
         if (hasSummary == false) {
           hasSummary = true
           schema.summary = tokens[i]
+          this.log('- field summary:', schema.summary)
         } else {
           schema.description = tokens[i]
         }
+        i += STEP
+        break
+      case '{':
+        while (tokens[i] != '}') i += STEP
+        i += STEP
         break
       default:
+        console.error('unhandled token', token)
         i += STEP
         break
       }
     }
+    i += STEP
+    return i
+  }
+
+  parseInnerType (tokens, i, schema) {
+    if (tokens[i] != 'inner') {
+      throw 'Illegal Call'
+    }
+    this.log('start parse inner-type in', schema.name)
+    i += STEP
+    const name = tokens[i]
+    this.log('- inner type name:', name)
+    i += STEP
+    var innerSchema = {
+      name,
+    }
+
+    if (tokens[i] == '{') {
+      this.log('- inner has block')
+      i = this.parseInnerBlock(tokens, i, innerSchema)
+      this.log('- inner block closed')
+    }
+
+    schema.subtypes.push(innerSchema)
+
+    return i
+  }
+
+  parseInnerBlock (tokens, i, schema) {
+    if (tokens[i] != '{') {
+      throw 'Illegal Call'
+    }
+    i += STEP
+    var hasSummary = false
+    while (tokens[i] != '}') {
+      var token = tokens[i]
+      switch (token) {
+      case '-':
+        i += STEP
+        if (hasSummary == false) {
+          hasSummary = true
+          schema.summary = tokens[i]
+          this.log('- field summary:', schema.summary)
+        } else {
+          schema.description = tokens[i]
+        }
+        i += STEP
+        break
+      case '{':
+        while (tokens[i] != '}') i += STEP
+        i += STEP
+        break
+      default:
+        console.error('unhandled token', token)
+        i += STEP
+        break
+      }
+    }
+    i += STEP
     return i
   }
 
@@ -176,6 +260,7 @@ export default class Parser {
     const path = tokens[i]
     i += STEP
     var endpointSchema = {}
+    this.log('start parse endpoint', method, path)
 
     if (tokens[i] == '{') {
       var hasSummary = false
@@ -186,7 +271,7 @@ export default class Parser {
             i += STEP
             var subschema = { fields: {} }
             i = this.parseSubschema(tokens, i, subschema)
-            endpointSchema.success = subschema.fields
+            endpointSchema.success = { schema: subschema.fields }
             break
           case '-':
             i += STEP

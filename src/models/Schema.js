@@ -40,7 +40,9 @@ export default class Schema {
         if (path.extname(file) == '.soil') {
           const body = await fs.readFile(fullpath, this.config.encoding)
           const parser = new Parser()
-          return parser.parse(body)[0]
+          const result = parser.parse(body)[0]
+          parser.logs.forEach(log => console.log(chalk.gray(log)))
+          return result
         }
       })
 
