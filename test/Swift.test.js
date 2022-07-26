@@ -1,8 +1,9 @@
 import test from 'ava'
 import swift from '../src/swift.js'
+import Entity from '../src/models/Entity.js'
+
 import { DEFAULT_CONFIG } from '../src/const.js'
 import contextUtilities from '../src/context.js'
-import Entity from '../src/models/Entity.js'
 
 const context = {
   config: DEFAULT_CONFIG,

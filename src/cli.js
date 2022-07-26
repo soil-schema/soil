@@ -6,6 +6,7 @@ program
   .option('--with-validate')
   .option('--watch')
   .option('--verbose')
+  .option('--dump')
 
 program.parse()
 
@@ -15,6 +16,7 @@ const DEFAULT_OPTIONS = {
   watch: void 0,
   verbose: void 0,
   withValidate: void 0,
+  dump: void 0,
 }
 
 export const options = Object.assign({}, DEFAULT_OPTIONS, program.opts())

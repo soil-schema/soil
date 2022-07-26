@@ -26,7 +26,13 @@ export default class Field extends Model {
   }
 
   get type () {
-    return new Type(this.schema.type.replace(/\?$/, ''))
+    const typeDefinition = this.schema.type.replace(/\?$/, '')
+    if (typeDefinition == '*') {
+      // @ts-ignore
+      return new Type(this.name.classify())
+    } else {
+      return new Type(typeDefinition)
+    }
   }
 
   get mutable () {
@@ -44,6 +50,10 @@ export default class Field extends Model {
   get optional () {
     return this.schema.type[this.schema.type.length - 1] == '?'
   }
+
+  get token () {
+    return this.schema.token || `$${this.name}`
+  }
 }
 
 /*
@@ -51,4 +61,9 @@ export default class Field extends Model {
   Utilities
  */
 
+  /**
+   * 
+   * @param {object} fields 
+   * @returns 
+   */
 Field.parse = fields => Object.keys(fields || {}).map(name => new Field(name, fields[name]))

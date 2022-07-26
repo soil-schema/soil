@@ -1,6 +1,7 @@
 import Endpoint from './models/Endpoint.js'
 import Entity from './models/Entity.js'
 import Field from './models/Field.js'
+import Parameter from './models/Parameter.js'
 import Query from './models/Query.js'
 import RequestBody from './models/RequestBody.js'
 import Response from './models/Response.js'
@@ -99,6 +100,9 @@ const convertType = (type) => {
   if (type instanceof Type) {
     return convertType(type.definition)
   }
+  if (type instanceof Entity) {
+    return convertType(type.name)
+  }
   if (SWIFT_TYPE_TABLE[type]) {
     return SWIFT_TYPE_TABLE[type]
   }
@@ -107,14 +111,6 @@ const convertType = (type) => {
     return `Array<${convertType(element)}>`
   }
   return type
-}
-
-const stringify = (name, type) => {
-  switch (type) {
-    case 'Integer':
-      return `"${name}"`
-  }
-  return name
 }
 
 const pretty = (code, config) => {
@@ -282,10 +278,12 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
 
     defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
 
+    ...this.resolvePathParameters(context).map(parameter => parameter.renderSwiftEnum(context)),
+
     docc({ parameters: this.resolvePathParameters(context) }),
     init('public', ...this.resolvePathParameters(context)),
       `self.path = "${this.path}"`,
-      ...this.resolvePathParameters(context).map(field => `.replacingOccurrences(of: "{${field.name}}", with: ${stringify(field.name.camelize(), field.type)})`),
+      ...this.resolvePathParameters(context).map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
     end,
 
     defineIf(this.allowBody, () => this.requestBody.renderSwiftStruct(context)),
@@ -314,10 +312,49 @@ Query.prototype.renderSwiftMember = function (context) {
 }
 
 Query.prototype.renderSwiftEnum = function (context) {
-  if (!this.isSelfDefinedEnum) { return '' }
+  if (!this.isSelfDefinedEnum) { return null }
   var type = convertType(this.type)
-  var enumBaseType = convertType(this.enumBaseType)
   return `public enum ${type}: String { case ${this.enumValues.join(', ')} }`
+}
+
+Parameter.prototype.renderArgumentSignature = function (context) {
+  const { writer } = context
+  var type = convertType(this.type)
+  if (this.isSelfDefinedEnum) {
+    type = convertType(this.name.classify())
+  }
+  if (writer) {
+    const reference = context.resolveReference(type)
+    if (reference instanceof Entity && reference.requireWriter) {
+      type = `${type}.Writer`
+    }
+    if (/^Array\<.+\>$/.test(type)) {
+      const element = type.match(/^Array\<(.+)\>$/)[1]
+      const reference = context.resolveReference(element)
+      if (reference instanceof Entity && reference.requireWriter) {
+        type = `Array<${element}.Writer>`
+      }
+    }
+  }
+  if (this.optional) {
+    type = `${type}?`
+  }
+  return `${this.name.camelize()}: ${type}`
+}
+
+Parameter.prototype.renderSwiftEnum = function (context) {
+  if (!this.isSelfDefinedEnum) { return null }
+  return `public enum ${this.name.classify()}: String { case ${this.enumValues.join(', ')} }`
+}
+
+Parameter.prototype.renderSwiftStringifyToken = function () {
+  if (this.isEnum) {
+    return `${this.name}.rawValue`
+  }
+  if (this.type.definition == 'Integer') {
+    return `"\\(${this.name})"`
+  }
+  return this.name
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {

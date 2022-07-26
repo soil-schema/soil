@@ -10,9 +10,9 @@ entity Author {
 
     - @todo Sample Comment
 
-    example {
+    example [
       "Umeebe, Inc."
-    }
+    ]
   }
 
   mutable field records: List<Record>
@@ -45,8 +45,21 @@ entity Author {
 
     - Update Author
 
+    request {
+      field author: Author
+    }
+
     success {
       field author: Author
+    }
+  }
+
+  endpoint GET /authors/$filter {
+
+    parameter filter: Enum [ over10, over5, all, latest ]
+
+    success {
+      field authors: List<Author>
     }
   }
 }

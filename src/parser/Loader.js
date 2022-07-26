@@ -32,9 +32,17 @@ export default class Loader {
 
         if (ext == '.soil') {
           const parser = new Parser()
-          schemas = parser.parse(body)
+          try {
+            schemas = parser.parse(body)
+          } catch (error) {
+            console.error(error)
+          }
           if (soil.options.verbose)
             parser.logs.forEach(log => console.log(chalk.gray(log)))
+          if (soil.options.dump) {
+            await fs.mkdir(path.join(process.cwd(), this.config.exportDir), { recursive: true })
+            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.yml`), YAML.stringify(schemas), this.config.encode)
+          }
         }
 
         if (ext == '.yml') {
