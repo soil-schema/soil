@@ -4,6 +4,7 @@ import Field from "../src/models/Field.js"
 
 import { DEFAULT_CONFIG } from '../src/const.js'
 import contextUtilities from '../src/context.js'
+import Parameter from "../src/models/Parameter.js"
 
 const context = {
   config: DEFAULT_CONFIG,
@@ -39,12 +40,12 @@ test('get endpoint with path parameter', t => {
   const getEndpoint = new Endpoint('/users/$id', 'get', {})
   t.is(getEndpoint.signature, 'UsersIdEndpoint')
   t.is(getEndpoint.resolvePathParameters(context).length, 1)
-  t.assert(getEndpoint.resolvePathParameters(context)[0] instanceof Field)
+  t.assert(getEndpoint.resolvePathParameters(context)[0] instanceof Parameter)
 })
 
 test('get endpoint with path parameter and parameters schema', t => {
   const getEndpoint = new Endpoint('/users/$id', 'get', { parameters: { id: 'String' } })
   t.is(getEndpoint.signature, 'UsersIdEndpoint')
   t.is(getEndpoint.resolvePathParameters(context).length, 1)
-  t.assert(getEndpoint.resolvePathParameters(context)[0] instanceof Field)
+  t.assert(getEndpoint.resolvePathParameters(context)[0] instanceof Parameter)
 })

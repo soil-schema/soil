@@ -243,7 +243,7 @@ export default class Parser {
    */
   assert (tester, message = 'Unexpected token') {
     if (this.currentToken.not(tester)) {
-      throw new SyntaxError(this.currentToken.filepath, this.currentToken.line, this.currentToken.offset, message)
+      throw new SyntaxError(this.currentToken)
     }
   }
 
@@ -253,7 +253,7 @@ export default class Parser {
    */
   notAssert (tester, message = 'Unexpected token') {
     if (this.currentToken.is(tester)) {
-      throw new SyntaxError(this.currentToken.filepath, this.currentToken.line, this.currentToken.offset, message)
+      throw new SyntaxError(this.currentToken)
     }
   }
 
@@ -378,7 +378,6 @@ export default class Parser {
 
     if (this.currentToken.is('{')) {
       this.parseFieldBlock(fieldSchema)
-      this.notAssert('}')
     }
 
     this.pop()
