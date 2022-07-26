@@ -49,34 +49,33 @@ export default class Endpoint extends Model {
   /**
    * @returns {string}
    */
-  get summary () {
-    return `${super.summary} Endpoint`
-  }
-
-  /**
-   * @returns {string}
-   */
   get signature () {
-    // @ts-ignore
-    return `${this.schema.summary} Endpoint`.classify()
+    const summary = this.schema.summary
+    if (summary) {
+      // @ts-ignore
+      return `${summary} Endpoint`.classify()
+    } else {
+      // @ts-ignore
+      return `${this.path.replaceAll('/', ' ').replaceAll(/\$([a-zA-Z_\-]+)/g, '$1').replaceAll(/\{([a-zA-Z_\-]+)\}/g, ' $1')} Endpoint`.classify()
+    }
   }
 
   /**
-   * @returns {string}
+   * @type {string}
    */
   get path () {
     return this.schema.path
   }
 
   /**
-   * @returns {string}
+   * @type {string}
    */
   get method () {
     return this.schema.method.toUpperCase()
   }
 
   /**
-   * @returns {boolean}
+   * @type {boolean}
    */
   get allowBody () {
     return this.method != 'GET'
@@ -87,22 +86,20 @@ export default class Endpoint extends Model {
    * @param {object} context 
    * @returns {Array<Field>}
    */
-  resolvePathParameters(context) {
-
-    const { entity } = context
+  resolvePathParameters(context = {}) {
 
     return this.path
       .split('/')
-      .filter(token => /^(\{[a-zA-Z_\-]+\}|$[a-zA-Z_\-]+)$/.test(token))
+      .filter(token => /^[\{\$][a-zA-Z_\-]+\}?$/.test(token))
       .map(token => {
-        const name = token.replace(/^(\{[a-zA-Z_\-]+\}|$[a-zA-Z_\-]+)$/, '$1')
+        const name = token.replace(/\$([a-zA-Z_\-]+)/g, '$1').replace(/^\{([a-zA-Z_\-]+)\}$/g, '$1')
         const parameter = (this.schema.parameters || {})[name]
         const definition = typeof parameter == 'object' ? parameter.ref : name
         const field = context.resolveReference(definition)
         if (field) {
-          return field.replace(name, parameter || {})
+          return field.replace(name, Object.assign({}, parameter || {}, { token }))
         } else {
-          return null
+          return new Field(name, { type: 'String', token })
         }
       })
       .filter(param => param != null)

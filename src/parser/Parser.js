@@ -202,6 +202,7 @@ export default class Parser {
     i += STEP
     var innerSchema = {
       name,
+      fields: {},
     }
 
     if (tokens[i] == '{') {
@@ -239,6 +240,9 @@ export default class Parser {
         while (tokens[i] != '}') i += STEP
         i += STEP
         break
+      case 'field':
+        i = this.parseField(tokens, i, schema)
+        break
       default:
         console.error('unhandled token', token)
         i += STEP
@@ -267,10 +271,11 @@ export default class Parser {
         const token = tokens[i]
         switch (token) {
           case 'success':
+          case 'request':
             i += STEP
             var subschema = { fields: {} }
             i = this.parseSubschema(tokens, i, subschema)
-            endpointSchema.success = { schema: subschema.fields }
+            endpointSchema[token] = { schema: subschema.fields }
             break
           case '-':
             i += STEP

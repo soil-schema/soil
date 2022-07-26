@@ -24,7 +24,7 @@ export default class RequestBody extends Model {
     return Object.keys(this.schema.schema)
       .map(name => {
         const schema = this.schema.schema[name]
-        const definition = typeof schema == 'string' ? schema : schema.define
+        const definition = typeof schema == 'string' ? schema : schema.type
 
         const reference = context.resolveReference(definition)
         if (reference instanceof Entity && reference.requireWriter) {

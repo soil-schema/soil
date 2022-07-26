@@ -285,7 +285,7 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
     docc({ parameters: this.resolvePathParameters(context) }),
     init('public', ...this.resolvePathParameters(context)),
       `self.path = "${this.path}"`,
-      ...this.resolvePathParameters(context).map(field => `.replacingOccurrences(of: "{${field.name}}", with: ${stringify(field.name.camelize(), field.type)})`),
+      ...this.resolvePathParameters(context).map(field => `.replacingOccurrences(of: "${field.schema.token}", with: ${stringify(field.name.camelize(), field.type)})`),
     end,
 
     defineIf(this.allowBody, () => this.requestBody.renderSwiftStruct(context)),

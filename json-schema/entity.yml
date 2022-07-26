@@ -74,6 +74,11 @@ $defs:
         format: '^[A-Za-z0-9 ]$'
       description:
         type: string
+      parameters:
+        type: object
+        patternProperties:
+          "^[a-zA-Z0-9_]$":
+            $ref: '#/$defs/PathParameter'
       query:
         type: object
         patternProperties:
@@ -99,6 +104,15 @@ $defs:
   PathParameter:
     oneOf:
       - type: object
+        properties:
+          summary:
+            type: string
+          description:
+            type: string
+          type:
+            type: string
+            enum: ['String', 'Integer', 'Number', 'Enum']
+        required: [type]
       - type: string
   Qyery:
     type: object

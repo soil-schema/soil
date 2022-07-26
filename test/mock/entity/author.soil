@@ -45,6 +45,10 @@ entity Author {
 
     - Update Author
 
+    request {
+      field author: Author
+    }
+
     success {
       field author: Author
     }
