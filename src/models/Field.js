@@ -26,7 +26,13 @@ export default class Field extends Model {
   }
 
   get type () {
-    return new Type(this.schema.type.replace(/\?$/, ''))
+    const typeDefinition = this.schema.type.replace(/\?$/, '')
+    if (typeDefinition == '*') {
+      // @ts-ignore
+      return new Type(this.name.classify())
+    } else {
+      return new Type(typeDefinition)
+    }
   }
 
   get mutable () {

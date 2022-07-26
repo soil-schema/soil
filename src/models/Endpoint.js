@@ -94,7 +94,7 @@ export default class Endpoint extends Model {
       .map(token => {
         const name = token.replace(/\$([a-zA-Z_\-]+)/g, '$1').replace(/^\{([a-zA-Z_\-]+)\}$/g, '$1')
         const parameter = (this.schema.parameters || {})[name]
-        const definition = typeof parameter == 'object' ? parameter.ref : name
+        const definition = typeof parameter == 'object' ? parameter.type : name
         const field = context.resolveReference(definition)
         if (field) {
           return field.replace(name, Object.assign({}, parameter || {}, { token }))

@@ -3,7 +3,6 @@ import YAML from 'yaml'
 
 import test from 'ava'
 import Parser from '../src/parser/Parser.js'
-import Entity from '../src/models/Entity.js'
 
 test('parse empty entity', async (t) => {
   const schema = 'entity Article {}'
@@ -79,4 +78,32 @@ entity Article {
   t.assert(result[0].endpoints['/articles'].get)
   t.is(result[0].endpoints['/articles'].get.summary, 'List Articles')
   t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
+})
+
+// tokenize
+
+test('tokenize basic entity', t => {
+  const body = `
+entity User {
+  mutable field name: String
+  writer field email: String {
+    - Email Address
+  }
+  writer field password: String {
+    - Password
+  }
+}
+`
+  const parser = new Parser()
+  t.snapshot(parser.tokenize(body))
+})
+
+test('tokenize parameterized endpoint path', t => {
+  const body = `
+entity Sample {
+  endpoint GET /sample/$id {}
+}
+`
+  const parser = new Parser()
+  t.is(parser.tokenize(body).indexOf('/sample/$id'), 5)
 })
