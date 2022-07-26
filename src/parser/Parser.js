@@ -35,6 +35,8 @@ export default class Parser {
         case '{':
         case '}':
         case ':':
+        case '[':
+        case ']':
           const trim = buffer.trim()
           if (trim.length > 0)
             tokens.push(trim)
@@ -107,10 +109,13 @@ export default class Parser {
       case 'endpoint':
         i = this.parseEndpoint(tokens, i, schema)
         break
+      case 'mutable':
+        if (tokens[i + 1] == 'field') {
+          i += STEP
+          break
+        }
       default:
-        this.log('unexpected token', token)
-        i += STEP
-        break
+        throw new Error(`unexpected token: ${token}`)
       }
     }
     this.entities.push(schema)
@@ -177,14 +182,24 @@ export default class Parser {
         }
         i += STEP
         break
+      case 'schema':
+        i += STEP
+        var subschema = { name: '{field-block}', fields: {} }
+        i = this.parseSubschema(tokens, i, subschema)
+        schema.schema = subschema
+        break
+      case 'example':
+        i += STEP
+        var examples = []
+        i = this.parseExample(tokens, i, examples)
+        console.log({ examples })
+        break
       case '{':
         while (tokens[i] != '}') i += STEP
         i += STEP
         break
       default:
-        console.error('unhandled token', token)
-        i += STEP
-        break
+        throw new Error(`unexpected token: ${token}`)
       }
     }
     i += STEP
@@ -244,9 +259,7 @@ export default class Parser {
         i = this.parseField(tokens, i, schema)
         break
       default:
-        console.error('unhandled token', token)
-        i += STEP
-        break
+        throw new Error(`unexpected token: ${token}`)
       }
     }
     i += STEP
@@ -262,11 +275,14 @@ export default class Parser {
     i += STEP
     const path = tokens[i]
     i += STEP
-    var endpointSchema = {}
+    var endpointSchema = {
+      parameters: {}
+    }
     this.log('start parse endpoint', method, path)
 
     if (tokens[i] == '{') {
       var hasSummary = false
+      i += STEP
       while (tokens[i] != '}') {
         const token = tokens[i]
         switch (token) {
@@ -277,6 +293,9 @@ export default class Parser {
             i = this.parseSubschema(tokens, i, subschema)
             endpointSchema[token] = { schema: subschema.fields }
             break
+          case 'parameter':
+            i = this.parseParameter(tokens, i, endpointSchema)
+            break
           case '-':
             i += STEP
             if (hasSummary == false) {
@@ -286,6 +305,9 @@ export default class Parser {
               endpointSchema.description = tokens[i]
             }
             break
+          default:
+            console.log(endpointSchema)
+            throw new Error(`unexpected token: ${token}`)
         }
         i += STEP
       }
@@ -300,6 +322,53 @@ export default class Parser {
     return i
   }
 
+  parseParameter (tokens, i, schema) {
+    if (tokens[i] != 'parameter') {
+      throw 'Illegal Call'
+    }
+    i += STEP
+    const name = tokens[i]
+    this.log('start parse endpoint parameter:', name)
+    i += STEP
+    if (tokens[i] == ':') {
+      throw 'Unexpected Token'
+    }
+    i += STEP
+    const type = tokens[i]
+
+    const parameterSchema = {
+      type,
+    }
+
+    i += STEP
+
+    if (type == 'Enum' && tokens[i] == '[') {
+      i += STEP
+      var items = []
+      while (tokens[i] != ']') {
+        items.push(tokens[i])
+        i += STEP
+      }
+      i += STEP
+      parameterSchema.enum = items
+    }
+
+    return i
+  }
+
+  parseExample (tokens, i, schema) {
+
+    i += STEP
+    while (tokens[i] != ']') {
+      console.log(tokens[i])
+      i += STEP
+    }
+
+    i += STEP
+
+    return i
+  }
+
   parseSubschema (tokens, i, schema) {
     if (tokens[i] != '{') {
       throw 'Unexpected Token'
@@ -307,14 +376,17 @@ export default class Parser {
     i += STEP
     while (tokens[i] != '}') {
       const token = tokens[i]
+      console.log({ token, i })
       switch (token) {
         case 'field':
           i = this.parseField(tokens, i, schema)
           break
         default:
-          i += STEP
+          throw new Error(`unexpected token: ${token}`)
       }
     }
+    i += STEP
+    console.log({ token: tokens[i], i })
     return i
   }
 }
