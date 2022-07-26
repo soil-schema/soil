@@ -4,6 +4,8 @@ import Model from './Model.js'
 import RequestBody from './RequestBody.js'
 import Response from './Response.js'
 import Field from './Field.js'
+import Query from './Query.js'
+import Parameter from './Parameter.js'
 import {
   HTTP_METHOD_GET,
   HTTP_METHOD_POST,
@@ -14,7 +16,6 @@ import {
 } from "../const.js"
 
 import '../extension.js'
-import Query from './Query.js'
 
 export default class Endpoint extends Model {
 
@@ -84,7 +85,7 @@ export default class Endpoint extends Model {
   /**
    * 
    * @param {object} context 
-   * @returns {Array<Field>}
+   * @returns {Array<Parameter>}
    */
   resolvePathParameters(context = {}) {
 
@@ -97,9 +98,9 @@ export default class Endpoint extends Model {
         const definition = typeof parameter == 'object' ? parameter.type : name
         const field = context.resolveReference(definition)
         if (field) {
-          return field.replace(name, Object.assign({}, parameter || {}, { token }))
+          return new Parameter(field.name, field.type.definition, { ...parameter, token })
         } else {
-          return new Field(name, { type: 'String', token })
+          return new Parameter(name, parameter.type, { ...parameter, token })
         }
       })
       .filter(param => param != null)

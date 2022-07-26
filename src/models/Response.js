@@ -11,6 +11,11 @@ export default class Response extends Model {
     super('Response', schema)
   }
 
+  /**
+   * 
+   * @param {object} context 
+   * @returns 
+   */
   resolveParameters(context) {
 
     if (this.schema.schema === null) { return [] }
@@ -20,7 +25,11 @@ export default class Response extends Model {
     return Object.keys(this.schema.schema)
       .map(name => {
         const definition = this.schema.schema[name]
-        return { name, type: definition }
+        if (typeof definition == 'string') {
+          return { name, type: definition }
+        } else {
+          return { ...definition, name }
+        }
       })
   }
 }

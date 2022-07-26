@@ -11,9 +11,11 @@ export default class Type {
 
   /**
    * @param {string} definition 
+   * @param {object} options
    */
-  constructor (definition) {
+  constructor (definition, options = {}) {
     Object.defineProperty(this, 'definition', { value: definition, enumerable: true })
+    Object.defineProperty(this, 'options', { value: options, enumerable: true })
   }
 
   /**
@@ -24,11 +26,24 @@ export default class Type {
     return this.definition
   }
 
+  /**
+   * @type {boolean}
+   */
   get isList () {
     return /^List<.+>/.test(this.definition)
   }
 
+  /**
+   * @type {boolean}
+   */
   get isDefinedType () {
     return DEFINED_TYPES.indexOf(this.definition) != -1
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get isAutoDefiningType () {
+    return this.definition == 'Enum'
   }
 }

@@ -56,7 +56,7 @@ entity Author {
 
   endpoint GET /authors/$filter {
 
-    parameter filter: Enum [ 10+, 5+, all, latest ]
+    parameter filter: Enum [ over10, over5, all, latest ]
 
     success {
       field authors: List<Author>

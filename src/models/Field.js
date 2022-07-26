@@ -52,7 +52,7 @@ export default class Field extends Model {
   }
 
   get token () {
-    return this.schema.token || `{${this.name}}`
+    return this.schema.token || `$${this.name}`
   }
 }
 
