@@ -259,9 +259,17 @@ export default class Parser {
         this.next()
         break
 
-      case 'mutable':
+        case 'mutable':
+        case 'reference':
+        case 'identifier':
+        case 'writer':
         this.next()
         this.assert('field')
+        break
+
+      case '-':
+        this.parseComment(entitySchema)
+        this.next()
         break
 
       default:
@@ -334,12 +342,7 @@ export default class Parser {
     while (this.currentToken.not('}')) {
       switch (this.currentToken.token) {
       case '-':
-        this.next()
-        if (typeof schema.summary == 'undefined') {
-          schema.summary = this.currentToken.token
-        } else {
-          schema.description = this.currentToken.token
-        }
+        this.parseComment(schema)
         break
       case 'schema':
         this.next()
@@ -408,12 +411,7 @@ export default class Parser {
     while (this.currentToken.not('}')) {
       switch (this.currentToken.token) {
       case '-':
-        this.next()
-        if (typeof schema.summary == 'undefined') {
-          schema.summary = this.currentToken.token
-        } else {
-          schema.description = this.currentToken.token
-        }
+        this.parseComment(schema)
         this.next()
         break
       case 'field':
@@ -469,12 +467,7 @@ export default class Parser {
             endpointSchema.parameters[parameter.name] = parameter
             break
           case '-':
-            this.next()
-            if (typeof endpointSchema.summary == 'undefined') {
-              endpointSchema.summary = this.currentToken.token
-            } else {
-              endpointSchema.description = this.currentToken.token
-            }
+            this.parseComment(endpointSchema)
             this.next()
             break
           default:
@@ -555,6 +548,9 @@ export default class Parser {
           const field = this.parseField()
           schema.fields[field.name] = field
           break
+        case '-':
+          this.parseComment(schema)
+          this.next()
         default:
           throw new SyntaxError(this.currentToken)
       }
@@ -562,5 +558,23 @@ export default class Parser {
 
     this.assert('}')
     return schema
+  }
+
+  /**
+   * @param {object} schema 
+   */
+  parseComment (schema) {
+    this.assert('-')
+    this.next()
+    if (typeof schema.summary == 'undefined') {
+      schema.summary = this.currentToken.token
+    } else {
+      if (typeof schema.description == 'string') {
+        schema.description += '\n'
+        schema.description += this.currentToken.token
+      } else {
+        schema.description = this.currentToken.token
+      }
+    }
   }
 }
