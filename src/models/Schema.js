@@ -7,15 +7,23 @@ import chalk from 'chalk'
 import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
+import DuplicatedNameError from '../errors/DuplicatedNameError.js'
 
 export default class Schema {
   constructor(config) {
     Object.defineProperty(this, 'config', { value: config })
   }
 
-  async prepare(schemas) {
+  prepare(schemas) {
     const entities = schemas
       .map(schema => new Entity(schema))
+
+    // Check duplicated entity
+    Object.entries(entities
+      .map(entity => entity.name)
+      .reduce((counter, name) => { counter[name] = (counter[name] || 0)  + 1; return counter; }, {}))
+      .forEach(entry => { if (entry[1] > 1) { throw new DuplicatedNameError(entry[0])} })
+
     Object.defineProperty(this, 'entities', { value: entities, enumerable: true })
   }
 
