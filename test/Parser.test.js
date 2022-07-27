@@ -75,6 +75,26 @@ entity Article {
   t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
 })
 
+test('parse summary and description', async (t) => {
+  const schema = `
+entity Note {
+  - Note Summary
+  - Note Description 1
+  - Note Description 2
+  field title: String {
+    - Title Summary
+    - Title Description 1
+    - Title Description 2
+  }
+}`
+  const parser = new Parser('test.soil', schema)
+  const result = parser.parse()
+
+  t.is(result.length, 1)
+  t.is(result[0].name, 'Note')
+  t.is(result[0].summary, 'Note Summary')
+})
+
 // tokenize
 
 test('tokenize basic entity', t => {
