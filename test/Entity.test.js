@@ -2,25 +2,25 @@ import test from 'ava'
 import Entity from '../src/models/Entity.js'
 import Field from '../src/models/Field.js'
 
-// requireWriter
+// requireWritable
 
-test('requireWriter returns true with mutable field and immutable (basic) field', t => {
+test('requireWritable returns true when has readonly fields', t => {
   const entity = new Entity({
     name: 'Order',
     fields: {
-      id: {
-        type: 'Integer',
-      },
       timestamp: {
         type: 'Timestamp',
         annotation: 'mutable',
+      },
+      id: {
+        type: 'Integer',
       },
     },
   })
   t.assert(entity.requireWriter)
 })
 
-test('requireWriter returns true with writer fields and immutable (basic) field', t => {
+test('requireWritable returns true when has writeonly fields', t => {
   const entity = new Entity({
     name: 'Account',
     fields: {
@@ -40,7 +40,7 @@ test('requireWriter returns true with writer fields and immutable (basic) field'
   t.assert(entity.requireWriter)
 })
 
-test('requireWriter returns false with only immutable (basic) fields', t => {
+test('requireWritable returns false when has no readonly or writeonly fields', t => {
   const entity = new Entity({
     name: 'Person',
     fields: {
@@ -148,4 +148,22 @@ test('resolveReference with subtype name', t => {
 
   t.assert(product.resolveReference('Order.name') instanceof Field)
   t.is(product.resolveReference('Order.name').name, 'name')
+})
+
+test('entity has only mutable fields, it\'s writable', t => {
+  const cat = new Entity({
+    name: 'Cat',
+    fields: {
+      name: {
+        type: 'String',
+        annotation: 'mutable',
+      },
+      color: {
+        type: 'Enum',
+        annotation: 'mutable',
+        enum: ['black', 'white', 'gray', 'mosaic'],
+      },
+    },
+  })
+  t.assert(cat.isWritable)
 })

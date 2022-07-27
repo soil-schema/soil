@@ -1,10 +1,22 @@
+// @ts-check
+
+import Entity from "./models/Entity.js"
+import Field from "./models/Field.js"
+
+/**
+ * 
+ * @param {string} definition 
+ * @returns {Entity|Field|null}
+ */
 const resolveReference = function (definition) {
 
   const { entity, entities } = this
 
   const tokens = definition.split('.')
 
+  /** @type {Entity|null} */
   var currentEntity = null
+  /** @type {Entity[]} */
   var findingCollection = entities || []
 
   if (entity) {

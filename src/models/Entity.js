@@ -60,12 +60,21 @@ export default class Entity extends Model {
   }
 
   /**
-   * @returns {boolean}
+   * @type {boolean}
    */
   get requireWriter () {
     return this.fields
       .filter(field => field.mutable || field.writer)
       .length > 0
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get isWritable () {
+    return this.fields
+      .filter(field => field.mutable)
+      .length == this.fields.length
   }
 
   /**

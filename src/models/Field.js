@@ -14,7 +14,7 @@ export default class Field extends Model {
     if (typeof schema == 'string') {
       super(name, { name, type: schema })
     } else {
-      super(name, { name, ...schema })
+      super(name, { name, type: '*', ...schema })
     }
   }
 
@@ -27,9 +27,20 @@ export default class Field extends Model {
 
   get type () {
     const typeDefinition = this.schema.type.replace(/\?$/, '')
+    if (typeDefinition == 'Enum') {
+      if (this.isSelfDefinedEnum) {
+        // @ts-ignore
+        return new Type(`${this.name.classify()}Value${this.optional ? '?' : ''}`)
+      } else {
+        return new Type(this.schema.type)
+      }
+    }
     if (typeDefinition == '*') {
       // @ts-ignore
-      return new Type(this.name.classify())
+      return new Type(`${this.name.classify()}${this.optional ? '?' : ''}`)
+    } else if (typeDefinition == 'List<*>') {
+      // @ts-ignore
+      return new Type(`List<${this.name.classify()}>${this.optional ? '?' : ''}`)
     } else {
       return new Type(typeDefinition)
     }
@@ -53,6 +64,28 @@ export default class Field extends Model {
 
   get token () {
     return this.schema.token || `$${this.name}`
+  }
+
+  get enumValues () {
+    const enumValues = this.schema.enum
+    if (Array.isArray(enumValues)) {
+      return enumValues
+    }
+    return []
+  }
+
+  /**
+   * @type {boolean}
+   */
+   get isEnum () {
+    return this.schema.type.replace(/\?$/, '') == 'Enum'
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get isSelfDefinedEnum () {
+    return this.isEnum && Array.isArray(this.schema.enum)
   }
 }
 

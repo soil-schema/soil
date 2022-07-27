@@ -101,6 +101,9 @@ const defineIf = function (condition, callback) {
  */
 
 const convertType = (type) => {
+  if (type[type.length - 1] == '?') {
+    return `${convertType(type.replace(/\?$/, ''))}?`
+  }
   if (type instanceof Type) {
     return convertType(type.definition)
   }
@@ -128,7 +131,7 @@ const pretty = (code, config) => {
         commentBuffer.push(`${indent.repeat(indentLevel)}${line}`)
         continue
     }
-    const hasBlockSignature = /^(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias)/.test(line)
+    const hasBlockSignature = /^(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias|enum)/.test(line)
     if (hasBlockSignature) {
         result.push('')
         result.push(...commentBuffer)
@@ -186,10 +189,11 @@ Entity.prototype.renderSwiftStruct = function (context) {
   const nextContext = { entity: this, ...context }
   return [
     docc(this),
-    classDef('public final', this.name, ...protocolMerge(context, 'entity', (this.requireWriter && !this.immutable) ? null : 'writer')),
+    classDef('public final', this.name, ...protocolMerge(context, 'entity', this.isWritable ? 'writer' : null)),
     ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
+    ...this.fields.map(field => field.renderSwiftEnum(nextContext)),
     ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
-    defineIf(this.requireWriter && !this.immutable, () => this.writeOnly().renderSwiftStruct(nextContext)),
+    defineIf(this.requireWriter && !this.isWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
     ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
     end,
   ].joinCode()
@@ -212,7 +216,7 @@ Field.prototype.renderSwiftMember = function (context = {}) {
   const { writer, entity } = context
   var scope = 'public'
   var type = this.type.resolveSwift(context)
-  if (this.optional) {
+  if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
   if (this.mutable == false) {
@@ -260,10 +264,20 @@ Field.prototype.renderArgumentSignature = function (context) {
       }
     }
   }
-  if (this.optional) {
+  if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
   return `${this.name.camelize()}: ${type}`
+}
+
+Field.prototype.renderSwiftEnum = function (context) {
+  if (!this.isSelfDefinedEnum) { return null }
+  var type = convertType(this.type)
+  return [
+    `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
+    ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),
+    '}',
+  ].joinCode()
 }
 
 Endpoint.prototype.renderSwiftStruct = function (context) {
@@ -348,7 +362,7 @@ Parameter.prototype.renderArgumentSignature = function (context) {
 
 Parameter.prototype.renderSwiftEnum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
-  return `public enum ${this.name.classify()}: String { case ${this.enumValues.join(', ')} }`
+  return `public enum ${this.name.classify()}: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
 }
 
 Parameter.prototype.renderSwiftStringifyToken = function () {
@@ -358,7 +372,7 @@ Parameter.prototype.renderSwiftStringifyToken = function () {
   if (this.type.definition == 'Integer') {
     return `"\\(${this.name.camelize()})"`
   }
-  return this.name
+  return this.name.camelize()
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
