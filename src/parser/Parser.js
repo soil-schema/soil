@@ -1,8 +1,36 @@
+// @ts-check
+
 const STEP = 1
+
+import SyntaxError from '../errors/SyntaxError.js'
+import Token from './Token.js'
+
+const ENTITY_NAME_PATTERN = /^[A-Z][A-Za-z0-9_]+$/
 
 export default class Parser {
 
-  constructor () {
+  /**
+   * @type {Token[]}
+   */
+  tokens
+
+  /**
+   * @type {number}
+   */
+  offset = 0
+
+  /**
+   * @type {string[]}
+   */
+   stack = []
+
+  /**
+   * @param {string} filepath 
+   * @param {string} body 
+   */
+  constructor (filepath, body) {
+    this.filepath = filepath
+    this.body = body
     this.entities = []
     this.logs = []
   }
@@ -11,25 +39,52 @@ export default class Parser {
    * @param  {...string} messages 
    */
   log (...messages) {
-    this.logs.push(messages.join(' '))
+    this.logs.push('  '.repeat(this.stack.length) + messages.join(' '))
   }
 
   /**
-   * @param {string} body 
-   * @returns {string[]} tokens
+   * 
+   * @param {string} name 
    */
-  tokenize (body) {
+  push (name) {
+    if (typeof name != 'string') {
+      throw new Error('invalid stack name')
+    }
+    this.stack.push(name)
+  }
+
+  pop () {
+    this.stack.pop()
+  }
+
+  get currentStacks () {
+    return this.stack.join(' » ')
+  }
+
+  /**
+   * @returns {Token[]} tokens
+   */
+  tokenize () {
+    const { body } = this
     const length = body.length
     var tokens = []
     var buffer = ''
     var i = 0
+    var line = 1
+    var offset = 1
     while (i < body.length) {
       const c = body[i]
       switch (c) {
         case '\n':
+          if (buffer.trim().length > 0)
+            tokens.push(new Token(this.filepath, line, offset - buffer.length, buffer.trim()))
+          line += 1
+          offset = 0
+          buffer = ''
+          break
         case ' ':
           if (buffer.trim().length > 0)
-            tokens.push(buffer.trim())
+            tokens.push(new Token(this.filepath, line, offset - buffer.length, buffer.trim()))
           buffer = ''
           break
         case '{':
@@ -39,353 +94,473 @@ export default class Parser {
         case ']':
           const trim = buffer.trim()
           if (trim.length > 0)
-            tokens.push(trim)
-          tokens.push(c)
+            tokens.push(new Token(this.filepath, line, offset - buffer.length, trim))
+          tokens.push(new Token(this.filepath, line, offset, c))
           buffer = ''
+          if (c == '[') {
+            i += 1
+            offset += 1
+            var inStringLiteral = false
+            while (body[i] != ']') {
+              const t = body[i]
+              i += 1
+              offset += 1
+              if (t == ',' && inStringLiteral == false) {
+                tokens.push(new Token(this.filepath, line, offset - buffer.trimStart().length, buffer.trim()))
+                buffer = ''
+                continue
+              }
+              if (t == '"') {
+                inStringLiteral = !inStringLiteral
+                offset += 1
+                continue
+              }
+              buffer += t
+            }
+            tokens.push(new Token(this.filepath, line, offset - buffer.trimStart().length, buffer.trim()))
+            buffer = ''
+            tokens.push(new Token(this.filepath, line, offset, "]"))
+          }
           break
         case '-':
           var comment = ''
-          i += STEP
+          tokens.push(new Token(this.filepath, line, offset, '-'))
+          i += 1
+          offset += 1
           while (body[i] != '\n' && i < body.length) {
             comment += body[i]
-            i += STEP
+            i += 1
+            offset += 1
           }
-          tokens.push('-', comment.trim())
+          tokens.push(new Token(this.filepath, line, offset - comment.trimStart().length, comment.trim()))
+          line += 1
+          offset = 1
           break
         default:
           buffer += c
       }
-
-      i += STEP
+      i += 1
+      offset += 1
     }
     if (buffer.trim().length > 0)
-      tokens.push(buffer.trim())
-    this.log('tokenized:', tokens.map(token => `'${token}'`).join(', '))
+      tokens.push(new Token(this.filepath, line, offset, buffer.trim()))
+    this.log('tokenized:', tokens.map(token => `'${token.token}'`).join(', '))
+    Object.defineProperty(this, 'tokens', { value: tokens })
     return tokens
   }
 
   /**
-   * @param {string} body .soil file body
+   * 
+   * @param {number} i 
+   * @returns {Token}
+   */
+  pick (i) {
+    if (i < 0) {
+      throw new Error(`Illegal offset error: offset = ${i}`)
+    }
+    if (i >= this.tokens.length) {
+      if (this.stack.length > 0) {
+        throw new SyntaxError(`Unterminated entity block: ${this.currentStacks}`)
+      }
+      throw new Error(`Illegal offset error: offset = ${i}, tokens size = ${this.tokens.length}`)
+    }
+    return this.tokens[i]
+  }
+
+  /**
+   * @returns {Token}
+   */
+  get currentToken () {
+    return this.pick(this.offset)
+  }
+
+  next () {
+    this.offset += STEP
+  }
+
+  /**
+   * @param {RegExp|string} tester 
+   * @param {string} message 
+   */
+  assert (tester, message = 'Unexpected token') {
+    if (this.currentToken.not(tester)) {
+      throw new SyntaxError(this.currentToken)
+    }
+  }
+
+  /**
+   * @param {RegExp|string} tester 
+   * @param {string} message 
+   */
+  notAssert (tester, message = 'Unexpected token') {
+    if (this.currentToken.is(tester)) {
+      throw new SyntaxError(this.currentToken)
+    }
+  }
+
+  /**
    * @returns {object[]} array of soil entity
    */
-  parse (body) {
-    this.log('start parse')
-    const tokens = this.tokenize(body)
-    var i = 0
-    if (tokens[i] == 'entity') {
-      i = this.parseEntity(tokens, i)
-    } else {
-      throw 'Syntax Error'
+  parse () {
+    this.tokenize()
+    while (this.currentToken.is('entity')) {
+      this.entities.push(this.parseEntity())
+    }
+    if (this.offset < this.tokens.length - 1) {
+      throw new SyntaxError('Uncompleted parsing')
     }
     return this.entities
   }
 
-  parseEntity (tokens, i) {
-    if (tokens[i] != 'entity') {
-      throw 'Illegal Call: parseEntity'
-    }
-    i += STEP
-    var schema = {
-      name: tokens[i],
+  parseEntity () {
+    this.assert('entity')
+
+    this.next()
+    this.assert(ENTITY_NAME_PATTERN, `Invalid entity name`)
+
+    const name = this.currentToken.token
+
+    const entitySchema = {
+      name,
       fields: {},
       subtypes: [],
       endpoints: {},
     }
-    this.log('start parse entity', schema.name)
-    i += STEP
-    if (tokens[i] != '{') {
-      throw 'Unexpected token'
-    }
-    i += STEP
-    while (tokens[i] != '}') {
-      const token = tokens[i]
-      switch (token) {
+
+    this.log(`[Entity] ${name}`)
+    this.push(name)
+
+    this.next()
+    this.assert('{')
+
+    this.next()
+    while (this.currentToken.not('}')) {
+
+      switch (this.currentToken.token) {
       case 'field':
-        i = this.parseField(tokens, i, schema)
+        const field = this.parseField()
+        const { name } = field
+        delete field.name
+        entitySchema.fields[name] = field
         break
+
       case 'inner':
-        i = this.parseInnerType(tokens, i, schema)
+        const innerType = this.parseInnerType()
+        // @ts-ignore
+        entitySchema.subtypes.push(innerType)
         break
+
       case 'endpoint':
-        i = this.parseEndpoint(tokens, i, schema)
+        const endpoint = this.parseEndpoint()
+        if (typeof entitySchema.endpoints[endpoint.method] == 'undefined') {
+          entitySchema.endpoints[endpoint.path] = {}
+        }
+        entitySchema.endpoints[endpoint.path][endpoint.method.toLowerCase()] = endpoint
+        this.next()
         break
+
       case 'mutable':
-        if (tokens[i + 1] == 'field') {
-          i += STEP
-          break
-        }
+        this.next()
+        this.assert('field')
+        break
+
       default:
-        throw new Error(`unexpected token: ${token}`)
+        throw new SyntaxError(this.currentToken)
+
       }
+
     }
-    this.entities.push(schema)
-    return i
+
+    this.pop()
+
+    return entitySchema
   }
 
-  parseField (tokens, i, schema) {
-    if (tokens[i] != 'field') {
-      throw 'Illegal Call'
-    }
-    this.log('start parse field in', schema.name)
-    let bi = i - STEP
-    var annotation
-    while (['mutable', 'reference', 'writer', 'identifier'].indexOf(tokens[bi]) != -1) {
-      annotation = tokens[bi]
-      bi -= STEP
-    }
-    i += STEP
-    const name = tokens[i]
-    this.log('- field name:', name)
-    i += STEP
-    if (tokens[i] != ':') {
-      throw 'Unexpected Token'
-    }
-    i += STEP
-    var fieldSchema = {
-      type: tokens[i],
-    }
-    i += STEP
+  /**
+   * ```
+   * (mutable|reference|writer|identifier) field name: Type {
+   *   <field block>
+   * }
+   * ```
+   * 
+   * or
+   * 
+   * ```
+   * (mutable|reference|writer|identifier) field name: Type
+   * ```
+   * 
+   * @returns {object}
+   */
+  parseField () {
+    this.assert('field')
 
-    if (annotation) {
-      fieldSchema.annotation = annotation
-      this.log('- annotation:', annotation)
+    const annotation = this.tokens[this.offset - 1]
+
+    this.next()
+    const name = this.currentToken.token
+
+    this.log(`[Field] ${name}`)
+    this.push(name)
+
+    this.next()
+    this.assert(':')
+
+    this.next()
+    const fieldSchema = {
+      name,
+      type: this.currentToken.token,
     }
 
-    if (tokens[i] == '{') {
-      this.log('- field has block')
-      i = this.parseFieldBlock(tokens, i, fieldSchema)
-      this.log('- field block closed')
+    if (annotation.is(/^(mutable|reference|writer|identifier)$/)) {
+      fieldSchema.annotation = annotation.token
     }
 
-    schema.fields[name] = fieldSchema
+    this.next()
 
-    return i
+    if (this.currentToken.is('{')) {
+      this.parseFieldBlock(fieldSchema)
+    }
+
+    this.pop()
+
+    return fieldSchema
   }
 
-  parseFieldBlock (tokens, i, schema) {
-    if (tokens[i] != '{') {
-      throw 'Illegal Call'
-    }
-    i += STEP
-    var hasSummary = false
-    while (tokens[i] != '}') {
-      var token = tokens[i]
-      switch (token) {
+  parseFieldBlock (schema) {
+    this.assert('{')
+
+    this.next()
+
+    while (this.currentToken.not('}')) {
+      switch (this.currentToken.token) {
       case '-':
-        i += STEP
-        if (hasSummary == false) {
-          hasSummary = true
-          schema.summary = tokens[i]
-          this.log('- field summary:', schema.summary)
+        this.next()
+        if (typeof schema.summary == 'undefined') {
+          schema.summary = this.currentToken.token
         } else {
-          schema.description = tokens[i]
+          schema.description = this.currentToken.token
         }
-        i += STEP
         break
       case 'schema':
-        i += STEP
-        var subschema = { fields: {} }
-        i = this.parseSubschema(tokens, i, subschema)
-        schema.schema = subschema
+        this.next()
+        this.assert('{')
+        this.push('schema')
+        this.log('[Schema] .schema')
+        schema.schema = this.parseSubschema()
+        this.assert('}')
+        this.pop()
         break
       case 'example':
-        i += STEP
-        var examples = []
-        i = this.parseExample(tokens, i, examples)
-        console.log({ examples })
-        break
-      case '{':
-        while (tokens[i] != '}') i += STEP
-        i += STEP
+        this.next()
+        this.assert('[')
+        const examples = this.parseExample()
+        if (examples.length > 0) {
+          schema.examples = examples
+        }
+        this.assert(']')
         break
       default:
-        throw new Error(`unexpected token: ${token}`)
+        throw new SyntaxError(this.currentToken)
       }
+      this.next()
     }
-    i += STEP
-    return i
+
+    this.assert('}')
+    this.next()
   }
 
-  parseInnerType (tokens, i, schema) {
-    if (tokens[i] != 'inner') {
-      throw 'Illegal Call'
-    }
-    this.log('start parse inner-type in', schema.name)
-    i += STEP
-    const name = tokens[i]
-    this.log('- inner type name:', name)
-    i += STEP
-    var innerSchema = {
+  parseInnerType () {
+    this.assert('inner')
+
+    this.next()
+    const name = this.currentToken.token
+
+    this.log(`[InnerType] ${name}`)
+    this.push(name)
+
+    const innerSchema = {
       name,
       fields: {},
     }
 
-    if (tokens[i] == '{') {
-      this.log('- inner has block')
-      i = this.parseInnerBlock(tokens, i, innerSchema)
-      this.log('- inner block closed')
+    this.next()
+
+    if (this.currentToken.is('{')) {
+      this.parseInnerBlock(innerSchema)
+      this.assert('}')
     }
 
-    schema.subtypes.push(innerSchema)
+    this.next()
 
-    return i
+    this.pop()
+
+    return innerSchema
   }
 
-  parseInnerBlock (tokens, i, schema) {
-    if (tokens[i] != '{') {
-      throw 'Illegal Call'
-    }
-    i += STEP
-    var hasSummary = false
-    while (tokens[i] != '}') {
-      var token = tokens[i]
-      switch (token) {
+  /**
+   * @param {object} schema 
+   */
+  parseInnerBlock (schema) {
+    this.assert('{')
+
+    this.next()
+
+    while (this.currentToken.not('}')) {
+      switch (this.currentToken.token) {
       case '-':
-        i += STEP
-        if (hasSummary == false) {
-          hasSummary = true
-          schema.summary = tokens[i]
-          this.log('- field summary:', schema.summary)
+        this.next()
+        if (typeof schema.summary == 'undefined') {
+          schema.summary = this.currentToken.token
         } else {
-          schema.description = tokens[i]
+          schema.description = this.currentToken.token
         }
-        i += STEP
-        break
-      case '{':
-        while (tokens[i] != '}') i += STEP
-        i += STEP
+        this.next()
         break
       case 'field':
-        i = this.parseField(tokens, i, schema)
+        const field = this.parseField()
+        schema.fields[field.name] = field
         break
       default:
-        throw new Error(`unexpected token: ${token}`)
+        throw new SyntaxError(this.currentToken)
       }
     }
-    i += STEP
-    return i
+
+    this.assert('}')
   }
 
-  parseEndpoint (tokens, i, schema) {
-    if (tokens[i] != 'endpoint') {
-      throw 'Illegal Call'
-    }
-    i += STEP
-    const method = tokens[i]
-    i += STEP
-    const path = tokens[i]
-    i += STEP
-    var endpointSchema = {
+  parseEndpoint () {
+    this.assert('endpoint')
+    
+    this.next()
+    const method = this.currentToken.token
+
+    this.next()
+    const path = this.currentToken.token
+
+    this.log(`[Endpoint] ${method} ${path}`)
+
+    const endpointSchema = {
+      path,
+      method,
       parameters: {}
     }
-    this.log('start parse endpoint', method, path)
 
-    if (tokens[i] == '{') {
-      var hasSummary = false
-      i += STEP
-      while (tokens[i] != '}') {
-        const token = tokens[i]
-        switch (token) {
+    this.next()
+
+    if (this.currentToken.is('{')) {
+      this.next()
+      while (this.currentToken.not('}')) {
+        switch (this.currentToken.token) {
           case 'success':
           case 'request':
-            i += STEP
-            var subschema = { fields: {} }
-            i = this.parseSubschema(tokens, i, subschema)
-            endpointSchema[token] = { schema: subschema.fields }
+            const name = this.currentToken.token
+            this.next()
+            this.assert('{')
+            this.push(name)
+            this.log(`[Schema] .${name}`)
+            const subschema = this.parseSubschema()
+            endpointSchema[name] = { schema: subschema.fields }
+            this.pop()
+            this.assert('}')
+            this.next()
             break
           case 'parameter':
-            i = this.parseParameter(tokens, i, endpointSchema)
+            const parameter = this.parseParameter()
+            endpointSchema.parameters[parameter.name] = parameter
             break
           case '-':
-            i += STEP
-            if (hasSummary == false) {
-              hasSummary = true
-              endpointSchema.summary = tokens[i]
+            this.next()
+            if (typeof endpointSchema.summary == 'undefined') {
+              endpointSchema.summary = this.currentToken.token
             } else {
-              endpointSchema.description = tokens[i]
+              endpointSchema.description = this.currentToken.token
             }
-            i += STEP
+            this.next()
             break
           default:
-            throw new Error(`unexpected token: ${token}`)
+            throw new SyntaxError(this.currentToken)
         }
       }
-      i += STEP
     }
 
-    if (typeof schema.endpoints[path] == 'undefined') {
-      schema.endpoints[path] = {}
-    }
-    schema.endpoints[path][method.toLowerCase()] = endpointSchema
-
-    return i
+    return endpointSchema
   }
 
-  parseParameter (tokens, i, schema) {
-    if (tokens[i] != 'parameter') {
-      throw 'Illegal Call'
-    }
-    i += STEP
-    const name = tokens[i]
-    this.log('start parse endpoint parameter:', name)
-    i += STEP
-    if (tokens[i] != ':') {
-      throw new Error(`Unexpected Token: '${tokens[i]}', but expected ':'`)
-    }
-    i += STEP
-    const type = tokens[i]
+  parseParameter () {
+    this.assert('parameter')
+    
+    this.next()
+    const name = this.currentToken.token
+
+    this.push(name)
+    this.log(`[Parameter] ${name}`)
+
+    this.next()
+    this.assert(':')
+    
+    this.next()
+    const type = this.currentToken.token
 
     const parameterSchema = {
+      name,
       type,
     }
 
-    i += STEP
+    this.next()
 
-    if (type == 'Enum' && tokens[i] == '[') {
-      i += STEP
+    if (type == 'Enum' && this.currentToken.is('[')) {
+      this.next()
       var items = []
-      while (tokens[i] != ']') {
-        items.push(tokens[i].replace(/,$/, ''))
-        i += STEP
+      while (this.currentToken.not(']')) {
+        items.push(this.currentToken.token.replace(/,$/, ''))
+        this.next()
       }
-      i += STEP
+      this.assert(']')
+      this.next()
       parameterSchema.enum = items
     }
 
-    schema.parameters[name] = parameterSchema
+    this.pop()
 
-    return i
+    return parameterSchema
   }
 
-  parseExample (tokens, i, schema) {
+  parseExample () {
+    this.assert('[')
 
-    i += STEP
-    while (tokens[i] != ']') {
-      console.log(tokens[i])
-      i += STEP
+    this.next()
+    var examples = []
+
+    while (this.currentToken.not(']')) {
+      examples.push(this.currentToken.token)
+      this.next()
     }
 
-    i += STEP
+    this.assert(']')
 
-    return i
+    return examples
   }
 
-  parseSubschema (tokens, i, schema) {
-    if (tokens[i] != '{') {
-      throw 'Unexpected Token'
+  parseSubschema () {
+    this.assert('{')
+
+    const schema = {
+      fields: {},
     }
-    i += STEP
-    while (tokens[i] != '}') {
-      const token = tokens[i]
-      switch (token) {
+
+    this.next()
+    while (this.currentToken.not('}')) {
+      switch (this.currentToken.token) {
         case 'field':
-          i = this.parseField(tokens, i, schema)
+          const field = this.parseField()
+          schema.fields[field.name] = field
           break
         default:
-          throw new Error(`unexpected token: ${token}`)
+          throw new SyntaxError(this.currentToken)
       }
     }
-    i += STEP
-    return i
+
+    this.assert('}')
+    return schema
   }
 }

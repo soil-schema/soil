@@ -33,7 +33,11 @@ const docc = function (target) {
       if (comments.length > 0) comments.push('')
       comments.push('- Parameters:')
       target.parameters.forEach(parameter => {
-        comments.push(`  - ${parameter.name}: ${parameter.description || parameter.summary || '{No Hint}'}`)
+        if (parameter instanceof Parameter) {
+          comments.push(`  - ${parameter.name.camelize()}: ${parameter.description || parameter.summary || '{no comment}'}`)
+        } else {
+          comments.push(`  - ${parameter.name}: ${parameter.description || parameter.summary || '{no comment}'}`)
+        }
       })
     } else if (typeof target.parameters == 'object' && !Array.isArray(target.parameters)) {
       if (comments.length > 0) comments.push('')
@@ -349,10 +353,10 @@ Parameter.prototype.renderSwiftEnum = function (context) {
 
 Parameter.prototype.renderSwiftStringifyToken = function () {
   if (this.isEnum) {
-    return `${this.name}.rawValue`
+    return `${this.name.camelize()}.rawValue`
   }
   if (this.type.definition == 'Integer') {
-    return `"\\(${this.name})"`
+    return `"\\(${this.name.camelize()})"`
   }
   return this.name
 }

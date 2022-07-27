@@ -31,9 +31,9 @@ export default class Loader {
         var schemas = []
 
         if (ext == '.soil') {
-          const parser = new Parser()
+          const parser = new Parser(filepath, body)
           try {
-            schemas = parser.parse(body)
+            schemas = parser.parse()
           } catch (error) {
             console.error(error)
           }

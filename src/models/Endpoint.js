@@ -98,9 +98,11 @@ export default class Endpoint extends Model {
         const definition = typeof parameter == 'object' ? parameter.type : name
         const field = context.resolveReference(definition)
         if (field) {
-          return new Parameter(field.name, field.type.definition, { ...parameter, token })
-        } else {
+          return new Parameter(name, field.type.definition, { ...parameter, token })
+        } else if (parameter) {
           return new Parameter(name, parameter.type, { ...parameter, token })
+        } else {
+          return new Parameter(name, 'String', { token })
         }
       })
       .filter(param => param != null)

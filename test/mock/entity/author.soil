@@ -11,7 +11,7 @@ entity Author {
     - @todo Sample Comment
 
     example [
-      "Umeebe, Inc."
+      "Soil, Inc."
     ]
   }
 

@@ -1,0 +1,11 @@
+entity Comment {
+  field id: Integer
+  mutable field body: String
+
+  endpoint GET /articles/$article_id/comments {
+    parameter article_id: Author.id
+    success {
+      field comments: List<Comment>
+    }
+  }
+}

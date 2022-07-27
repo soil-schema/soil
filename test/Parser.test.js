@@ -6,9 +6,8 @@ import Parser from '../src/parser/Parser.js'
 
 test('parse empty entity', async (t) => {
   const schema = 'entity Article {}'
-  const parser = new Parser()
-
-  const result = parser.parse(schema)
+  const parser = new Parser('test.soil', schema)
+  const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -19,9 +18,8 @@ test('parse an entity with one line field', async (t) => {
 entity Article {
   field title: String
 }`
-  const parser = new Parser()
-
-  const result = parser.parse(schema)
+const parser = new Parser('test.soil', schema)
+const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -35,9 +33,8 @@ entity Article {
     - This is a summary
   }
 }`
-  const parser = new Parser()
-
-  const result = parser.parse(schema)
+  const parser = new Parser('test.soil', schema)
+  const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -49,9 +46,8 @@ test('parse an entity with mutable field', async (t) => {
 entity Article {
   mutable field title: String
 }`
-  const parser = new Parser()
-
-  const result = parser.parse(schema)
+const parser = new Parser('test.soil', schema)
+const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -69,9 +65,8 @@ entity Article {
     }
   }
 }`
-  const parser = new Parser()
-
-  const result = parser.parse(schema)
+  const parser = new Parser('test.soil', schema)
+  const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -94,8 +89,8 @@ entity User {
   }
 }
 `
-  const parser = new Parser()
-  t.snapshot(parser.tokenize(body))
+  const parser = new Parser('test.soil', body)
+  t.snapshot(parser.tokenize())
 })
 
 test('tokenize parameterized endpoint path', t => {
@@ -104,6 +99,6 @@ entity Sample {
   endpoint GET /sample/$id {}
 }
 `
-  const parser = new Parser()
-  t.is(parser.tokenize(body).indexOf('/sample/$id'), 5)
+  const parser = new Parser('test.soil', body)
+  t.is(parser.tokenize().map(token => token.token).indexOf('/sample/$id'), 5)
 })
