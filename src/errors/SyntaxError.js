@@ -1,3 +1,4 @@
+
 export default class SyntaxError extends Error {
   constructor (filepath, line, offset, message) {
     if (typeof filepath == 'object') {

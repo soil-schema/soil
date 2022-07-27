@@ -3,71 +3,9 @@
 const STEP = 1
 
 import SyntaxError from '../errors/SyntaxError.js'
+import Token from './Token.js'
 
 const ENTITY_NAME_PATTERN = /^[A-Z][A-Za-z0-9_]+$/
-
-class Token {
-  /**
-   * @type {string}
-   */
-  filepath
-
-  /**
-   * @type {number}
-   */
-  line
-
-  /**
-   * @type {number}
-   */
-  offset
-
-  /**
-   * @type {string}
-   */
-  token
-
-  /**
-   * 
-   * @param {string} filepath 
-   * @param {number} line 
-   * @param {number} offset 
-   * @param {string} token 
-   */
-  constructor (filepath, line, offset, token) {
-    Object.defineProperty(this, 'filepath', { value: filepath })
-    Object.defineProperty(this, 'line', { value: line })
-    Object.defineProperty(this, 'offset', { value: offset })
-    Object.defineProperty(this, 'token', { value: token })
-  }
-
-  /**
-   * @returns {string}
-   */
-  toString() {
-    return this.token
-  }
-
-  /**
-   * 
-   * @param {RegExp|string} tester 
-   */
-  is (tester) {
-    if (tester instanceof RegExp) {
-      return tester.test(this.token)
-    } else {
-      return this.token == tester
-    }
-  }
-
-  /**
-   * 
-   * @param {RegExp|string} tester 
-   */
-  not (tester) {
-    return !this.is(tester)
-  }
-}
 
 export default class Parser {
 
@@ -80,6 +18,11 @@ export default class Parser {
    * @type {number}
    */
   offset = 0
+
+  /**
+   * @type {string[]}
+   */
+   stack = []
 
   /**
    * @param {string} filepath 
@@ -100,15 +43,13 @@ export default class Parser {
   }
 
   /**
-   * @type {string[]}
-   */
-  stack = []
-
-  /**
    * 
    * @param {string} name 
    */
   push (name) {
+    if (typeof name != 'string') {
+      throw new Error('invalid stack name')
+    }
     this.stack.push(name)
   }
 
