@@ -259,10 +259,10 @@ export default class Parser {
         this.next()
         break
 
-        case 'mutable':
-        case 'reference':
-        case 'identifier':
-        case 'writer':
+      case 'mutable':
+      case 'reference':
+      case 'identifier':
+      case 'writer':
         this.next()
         this.assert('field')
         break
@@ -418,6 +418,13 @@ export default class Parser {
         const field = this.parseField()
         schema.fields[field.name] = field
         break
+      case 'mutable':
+      case 'reference':
+      case 'identifier':
+      case 'writer':
+        this.next()
+        this.assert('field')
+        break
       default:
         throw new SyntaxError(this.currentToken)
       }
@@ -547,6 +554,13 @@ export default class Parser {
         case 'field':
           const field = this.parseField()
           schema.fields[field.name] = field
+          break
+        case 'mutable':
+        case 'reference':
+        case 'identifier':
+        case 'writer':
+          this.next()
+          this.assert('field')
           break
         case '-':
           this.parseComment(schema)

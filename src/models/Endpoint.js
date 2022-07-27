@@ -96,6 +96,9 @@ export default class Endpoint extends Model {
         const name = token.replace(/\$([a-zA-Z_\-]+)/g, '$1').replace(/^\{([a-zA-Z_\-]+)\}$/g, '$1')
         const parameter = (this.schema.parameters || {})[name]
         const definition = typeof parameter == 'object' ? parameter.type : name
+        if (typeof definition != 'string') {
+          throw new Error(`Invalid parameter definition: ${this.method.toUpperCase()} ${this.path} ${token}`)
+        }
         const field = context.resolveReference(definition)
         if (field) {
           return new Parameter(name, field.type.definition, { ...parameter, token })

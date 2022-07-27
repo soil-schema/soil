@@ -25,10 +25,11 @@ export default class RequestBody extends Model {
       .map(name => {
         const schema = this.schema.schema[name]
         const definition = typeof schema == 'string' ? schema : schema.type
+        const optional = definition[definition.length - 1] == '?'
 
-        const reference = context.resolveReference(definition)
-        if (reference instanceof Entity && reference.requireWriter) {
-          return { ...schema, name, type: `${reference.name}.Writer` }
+        const reference = context.resolveReference(definition.replace(/\?$/, ''))
+        if (reference instanceof Entity && reference.requireWriter && !reference.isWritable) {
+          return { ...schema, name, type: `${reference.name}.Writer${optional ? '?' : ''}` }
         }
 
         return { ...schema, name, type: definition }

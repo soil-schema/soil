@@ -23,6 +23,6 @@ export default class Writer extends Model {
    */
   get fields () {
     return this.entity.fields
-      .filter(field => field.mutable)
+      .filter(field => field.mutable || field.writer)
   }
 }
