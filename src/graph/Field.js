@@ -57,7 +57,7 @@ export default class Field extends Node {
   /**
    * @type {boolean}
    */
-  get writer () {
+   get writer () {
     return this.schema.annotation == 'writer'
   }
 
