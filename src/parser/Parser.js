@@ -464,10 +464,19 @@ export default class Parser {
       this.next()
       while (this.currentToken.not('}')) {
         switch (this.currentToken.token) {
-          case 'success':
           case 'request':
+          case 'success':
             const name = this.currentToken.token
             this.next()
+            if (this.currentToken.is('mime')) {
+              this.next()
+              this.assert(':')
+              this.next()
+              const mimeType = this.currentToken.token
+              endpointSchema[name] = `mime:${mimeType}`
+              this.next()
+              break
+            }
             this.assert('{')
             this.push(name)
             this.log(`[Schema] .${name}`)

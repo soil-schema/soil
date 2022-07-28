@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG = {
       requestBody: 'Encodable',
       response: 'Decodable',
     },
+    mime: {},
   },
 }
 
