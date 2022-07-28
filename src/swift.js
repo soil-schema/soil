@@ -227,13 +227,13 @@ Field.prototype.renderSwiftMember = function (context = {}) {
 
   if (writer) {
     const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWriter) {
+    if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter) {
+      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
         type = `Array<${element}.Writer>`
       }
     }
@@ -276,13 +276,13 @@ Field.prototype.renderArgumentSignature = function (context) {
   var type = convertType(this.type)
   if (writer) {
     const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWriter) {
+    if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter) {
+      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
         type = `Array<${element}.Writer>`
       }
     }

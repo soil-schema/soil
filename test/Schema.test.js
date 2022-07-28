@@ -5,7 +5,7 @@ import Schema from "../src/graph/Schema.js";
 test('error with duplicated entity', t => {
   const schema = new Schema({})
   t.throws(() => {
-    schema.prepare([
+    schema.parse([
       { name: 'Author' },
       { name: 'Author' },
     ])

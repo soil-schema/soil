@@ -45,6 +45,12 @@ test('optional reference entity field', t => {
   t.is(name.type.definition, 'Author')
 })
 
+test('captureSubschemas', t => {
+  const record = new Field('record', { type: '*', schema: { fields: { timestamp: 'Timestamp', body: 'String' } } })
+  t.is(record.captureSubschemas().length, 1)
+  t.is(record.captureSubschemas()[0].name, 'Record')
+})
+
 import '../src/swift.js'
 
 test('[Swift] render as member variable string field', t => {

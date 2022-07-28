@@ -1,43 +1,47 @@
 // @ts-check
 
-import Model from './Node.js'
+import Node from './Node.js'
 import Field from './Field.js'
 import Endpoint from './Endpoint.js'
 import Writer from './Writer.js'
 
 import '../extension.js'
 
-export default class Entity extends Model {
+export default class Entity extends Node {
 
   /**
-   * @type {Array<Field>}
-   * @readonly
+   * @type {boolean}
+   * @private
    */
-  fields
-
-  /**
-   * @type {Array<Entity>}
-   * @readonly
-   */
-  subtypes
+  _inReference = false
 
   /**
    * @param {object} schema 
    */
   constructor(schema) {
+    if (typeof schema.name != 'string') {
+      throw new Error(`Invalid entity name`)
+    }
     super(schema.name, schema)
 
-    Object.defineProperty(this, 'fields', { value: Field.parse(this.schema.fields) })
+    Object.keys(this.schema.fields || {}).forEach(name => {
+      this.addChild(name, new Field(name, this.schema.fields[name]))
+    })
+
     Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
 
-    var subtypes = this.schema.subtypes || []
     this.fields.forEach(field => {
-      const subschema = field.schema.schema
-      if (typeof subschema == 'undefined') { return }
-      // @ts-ignore
-      subtypes.push({ name: field.name.classify(), ...subschema })
+      field.captureSubschemas()
+        // @ts-ignore
+        .map(subschema => new Entity(subschema))
+        .forEach(entity => this.addChild(entity.name, entity))
     })
-    Object.defineProperty(this, 'subtypes', { value: subtypes.map(subtype => new Entity(subtype)) })
+    if (this.schema.subtypes) {
+      this.schema.subtypes.forEach((/** @type {object} */ subschema) => {
+        // @ts-ignore
+        this.addChild(subschema.name, new Entity(subschema))
+      })
+    }
   }
 
   /**
@@ -49,6 +53,22 @@ export default class Entity extends Model {
 
   get readableFields () {
     return this.fields.filter(field => !field.writer)
+  }
+
+  /**
+   * @type {Field[]}
+   */
+   get fields () {
+    // @ts-ignore
+    return this.findAny(node => node instanceof Field)
+  }
+
+  /**
+   * @type {Entity[]}
+   */
+   get subtypes () {
+    // @ts-ignore
+    return this.findAny(node => node instanceof Entity)
   }
 
   /**
@@ -71,18 +91,42 @@ export default class Entity extends Model {
    * @type {boolean}
    */
   get requireWriter () {
-    return this.fields
-      .filter(field => field.mutable || field.writer)
-      .length > 0
+    try {
+      for (var field of this.fields) {
+        if (field.mutable || field.writer) return true
+      }
+      for (var field of this.fields) {
+        const resolved = this.resolve(field.type.referenceName)
+        this._inReference = true
+        if (resolved instanceof Entity) {
+          if (resolved._inReference == false && resolved.requireWriter) return true
+        }
+      }
+    } finally {
+      this._inReference = false
+    }
+    return false
   }
 
   /**
    * @type {boolean}
    */
   get isWritable () {
-    return this.fields
-      .filter(field => field.mutable)
-      .length == this.fields.length
+    try {
+      for (var field of this.fields) {
+        if (!field.mutable) return false
+      }
+      for (var field of this.fields) {
+        const resolved = this.resolve(field.type.referenceName)
+        this._inReference = true
+        if (resolved instanceof Entity) {
+          if (resolved._inReference == false && resolved.isWritable == false) return false
+        }
+      }
+    } finally {
+      this._inReference = false
+    }
+    return true
   }
 
   /**
@@ -90,35 +134,5 @@ export default class Entity extends Model {
    */
   writeOnly () {
     return new Writer(this)
-  }
-
-  /**
-   * @param {string} reference 
-   * @returns {any}
-   */
-  resolveReference (reference) {
-    if (reference == this.name) {
-      return this
-    }
-
-    var tokens = reference.split('.')
-
-    if (tokens.length > 1) {
-      // @ts-ignore
-      const resolved = this.resolveReference(tokens.shift())
-      if (resolved instanceof Entity) {
-        return resolved.resolveReference(tokens.join('.'))
-      }
-      return resolved
-    } else {
-      const hitField = this.findField(reference)
-      if (hitField) {
-        return hitField
-      }
-      const hitSubtype = this.subtypes.find(subtype => subtype.name == reference)
-      if (hitSubtype) {
-        return hitSubtype
-      }
-    }
   }
 }

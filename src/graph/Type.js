@@ -26,6 +26,14 @@ export default class Type {
     return this.definition
   }
 
+  get referenceName () {
+    if (this.isList) {
+      return this.definition.replace(/^List<(.+)\??>\??/, '$1')
+    } else {
+      return this.definition.replace(/^(.+)\??/, '$1')
+    }
+  }
+
   /**
    * @type {boolean}
    */

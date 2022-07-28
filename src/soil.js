@@ -28,12 +28,12 @@ const run = async function(config) {
 
   try {
     await loader.prepare()
-    await soil.prepare((await loader.load()).flatMap(c => c))
-    await soil.debug()
+    soil.parse((await loader.load()).flatMap(c => c))
+    soil.debug()
     await soil.exportSwiftCode()
     console.log(chalk.green('🍻 Done!'))
   } catch (error) {
-    console.log(chalk.red('☄️ Crash!'))
+    console.log(chalk.red('☄️ Crash!'), error)
     throw error
   }
 }

@@ -20,7 +20,7 @@ const resolveReference = function (definition) {
   var findingCollection = entities || []
 
   if (entity) {
-    const hitReference = entity.resolveReference(definition)
+    const hitReference = entity.resolve(definition)
     if (hitReference) {
       return hitReference
     }
