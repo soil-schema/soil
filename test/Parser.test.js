@@ -95,6 +95,20 @@ entity Note {
   t.is(result[0].summary, 'Note Summary')
 })
 
+test('parse endpoint request with mime-type', t => {
+  const schema = `
+entity UserImage {
+  endpoint POST /user_images {
+    request mime:image/jpeg
+  }
+}`
+  const parser = new Parser('test.soil', schema)
+  const result = parser.parse()
+
+  t.is(result.length, 1)
+  t.is(result[0].endpoints['/user_images'].post.request, 'mime:image/jpeg')
+})
+
 // tokenize
 
 test('tokenize basic entity', t => {

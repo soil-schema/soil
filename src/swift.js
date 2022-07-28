@@ -1,3 +1,4 @@
+import UnsupportedKeywordError from './errors/UnsupportedKeywordError.js'
 import Endpoint from './graph/Endpoint.js'
 import Entity from './graph/Entity.js'
 import Field from './graph/Field.js'
@@ -400,7 +401,18 @@ Parameter.prototype.renderSwiftStringifyToken = function () {
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
   if (this.schema == null) { return 'public typealias RequestBody = Never' }
-  if (this.schema == 'binary') { return 'public typealias RequestBody = Data' }
+
+  if (typeof this.schema == 'string') {
+    const { mime } = context.config.swift
+    const mimeTypeValue = this.schema.replace(/^mime:/, '')
+    if (typeof mime != undefined && mime[mimeTypeValue]) {
+      return `public typealias RequestBody = ${mime[mimeTypeValue]}`
+    }
+    if (mimeTypeValue == 'application/json') { return 'public typealias RequestBody = Data' }
+    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = String' }
+    throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
+  }
 
   const parameters = this.resolveParameters(context)
   return [
@@ -420,6 +432,18 @@ RequestBody.prototype.renderSwiftStruct = function (context) {
 
 Response.prototype.renderSwiftStruct = function (context) {
   if (this.schema == null) { return 'public typealias Response = Never' }
+
+  if (typeof this.schema == 'string') {
+    const { mime } = context.config.swift
+    const mimeTypeValue = this.schema.replace(/^mime:/, '')
+    if (typeof mime != undefined && mime[mimeTypeValue]) {
+      return `public typealias Response = ${mime[mimeTypeValue]}`
+    }
+    if (mimeTypeValue == 'application/json') { return 'public typealias Response = Data' }
+    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'public typealias Response = Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public typealias Response = String' }
+    throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
+  }
 
   const parameters = this.resolveParameters(context)
   return [

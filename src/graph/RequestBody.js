@@ -5,7 +5,7 @@ import Model from "./Node.js";
 
 export default class RequestBody extends Model {
   /**
-   * @param {object} schema 
+   * @param {object|string} schema 
    */
   constructor(schema) {
     super('RequestBody', schema)
