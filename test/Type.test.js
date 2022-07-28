@@ -1,5 +1,5 @@
 import test from 'ava'
-import Type from '../src/models/Type.js'
+import Type from '../src/graph/Type.js'
 
 test('List', t => {
   const records = new Type('List<Record>')

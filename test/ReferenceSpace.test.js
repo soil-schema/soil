@@ -1,5 +1,5 @@
 import test from 'ava'
-import Entity from '../src/models/Entity.js'
+import Entity from '../src/graph/Entity.js'
 import ReferenceSpace from '../src/parser/ReferenceSpace.js'
 
 test('resolve reference by entity name', t => {

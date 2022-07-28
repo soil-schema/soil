@@ -1,7 +1,7 @@
 // @ts-check
 
 import DuplicatedNameError from '../errors/DuplicatedNameError.js'
-import Entity from '../models/Entity.js'
+import Entity from '../graph/Entity.js'
 
 export default class ReferenceSpace {
 

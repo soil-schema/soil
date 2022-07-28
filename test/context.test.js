@@ -1,6 +1,6 @@
 import test from "ava"
 import context from '../src/context.js'
-import Entity from "../src/models/Entity.js"
+import Entity from "../src/graph/Entity.js"
 
 test('resolveReference returns null with invalid reference code', t => {
   t.is(context.resolveReference('id'), null)

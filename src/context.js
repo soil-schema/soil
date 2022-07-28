@@ -1,7 +1,7 @@
 // @ts-check
 
-import Entity from "./models/Entity.js"
-import Field from "./models/Field.js"
+import Entity from "./graph/Entity.js"
+import Field from "./graph/Field.js"
 
 /**
  * 

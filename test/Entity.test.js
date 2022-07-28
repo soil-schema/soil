@@ -1,6 +1,6 @@
 import test from 'ava'
-import Entity from '../src/models/Entity.js'
-import Field from '../src/models/Field.js'
+import Entity from '../src/graph/Entity.js'
+import Field from '../src/graph/Field.js'
 
 // requireWritable
 

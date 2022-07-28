@@ -10,7 +10,7 @@ import './swift.js'
 import './cli.js'
 import { loadConfig } from './utils.js'
 
-import Schema from './models/Schema.js'
+import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
 
 if (soil.options.workingDir) {

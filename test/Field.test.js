@@ -1,5 +1,5 @@
 import test from 'ava'
-import Field from '../src/models/Field.js'
+import Field from '../src/graph/Field.js'
 
 test('replace returns another Field', t => {
   const target = new Field('name', {
