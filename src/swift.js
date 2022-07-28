@@ -193,6 +193,14 @@ Entity.prototype.renderSwiftStruct = function (context) {
     ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
     ...this.fields.map(field => field.renderSwiftEnum(nextContext)),
     ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
+    defineIf(this.isWritable, () => {
+      return [
+        docc({ parameters: this.fields }),
+        init('public', ...this.fields.map(field => field.renderArgumentSignature(nextContext))),
+          ...this.fields.map(field => `self.${field.name.camelize()} = ${field.name.camelize()}`),
+        end,
+      ].joinCode()
+    }),
     defineIf(this.requireWriter && !this.isWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
     ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
     end,
@@ -216,6 +224,21 @@ Field.prototype.renderSwiftMember = function (context = {}) {
   const { writer, entity } = context
   var scope = 'public'
   var type = this.type.resolveSwift(context)
+
+  if (writer) {
+    const reference = context.resolveReference(type)
+    if (reference instanceof Entity && reference.requireWriter) {
+      type = `${type}.Writer`
+    }
+    if (/^Array\<.+\>$/.test(type)) {
+      const element = type.match(/^Array\<(.+)\>$/)[1]
+      const reference = context.resolveReference(element)
+      if (reference instanceof Entity && reference.requireWriter) {
+        type = `Array<${element}.Writer>`
+      }
+    }
+  }
+
   if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
