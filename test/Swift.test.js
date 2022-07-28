@@ -72,8 +72,8 @@ test('entity require writer', t => {
     },
   })
   const nameField = target.findField('name')
-  t.is(nameField.renderSwiftMember({ entity: target }), 'public let name: String')
-  t.is(nameField.renderSwiftMember({ entity: target, writer: target.writeOnly() }), 'public var name: String')
+  t.is(nameField.renderSwiftMember({ ...context, entity: target }), 'public let name: String')
+  t.is(nameField.renderSwiftMember({ ...context, entity: target, writer: target.writeOnly() }), 'public var name: String')
 
   t.snapshot(target.renderSwiftFile(context))
 })

@@ -60,6 +60,14 @@ export default class Entity extends Model {
   }
 
   /**
+   * @param {string} name 
+   * @returns {Entity?}
+   */
+  findSubtype (name) {
+    return this.subtypes.find(subtype => subtype.name == name) || null
+  }
+
+  /**
    * @type {boolean}
    */
   get requireWriter () {
