@@ -1,6 +1,6 @@
 import test from 'ava'
-import Entity from '../src/models/Entity.js'
-import Field from '../src/models/Field.js'
+import Entity from '../src/graph/Entity.js'
+import Field from '../src/graph/Field.js'
 
 // requireWritable
 
@@ -108,33 +108,33 @@ test('subtypes embed  with defining as list in fields schema', t => {
   t.assert(product.subtypes.length > 0)
 })
 
-test('resolveReference with self entity name', t => {
+test('resolve with self entity name', t => {
   const product = new Entity({
     name: 'Product',
     fields: {
       name: 'String',
     },
   })
-  t.is(product.resolveReference('Product'), product)
+  t.is(product.resolve('Product'), product)
 })
 
-test('resolveReference with self field name', t => {
+test('resolve with self field name', t => {
   const product = new Entity({
     name: 'Product',
     fields: {
       name: 'String',
     },
   })
-  t.is(product.resolveReference('name'), product.findField('name'))
+  t.is(product.resolve('name'), product.findField('name'))
 })
 
-test('resolveReference with subtype name', t => {
+test('resolve with subtype name', t => {
   const product = new Entity({
     name: 'Product',
     fields: {
       name: 'String',
       orders: {
-        define: 'List<Order>',
+        define: 'List<*>',
         schema: {
           fields: {
             name: 'String',
@@ -143,11 +143,11 @@ test('resolveReference with subtype name', t => {
       },
     },
   })
-  t.assert(product.resolveReference('Order') instanceof Entity)
-  t.is(product.resolveReference('Order').name, 'Order')
+  t.assert(product.resolve('Order') instanceof Entity)
+  t.is(product.resolve('Order').name, 'Order')
 
-  t.assert(product.resolveReference('Order.name') instanceof Field)
-  t.is(product.resolveReference('Order.name').name, 'name')
+  t.assert(product.resolve('Order.name') instanceof Field)
+  t.is(product.resolve('Order.name').name, 'name')
 })
 
 test('entity has only mutable fields, it\'s writable', t => {

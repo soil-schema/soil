@@ -1,5 +1,5 @@
 import test from 'ava'
-import Query from '../src/models/Query.js'
+import Query from '../src/graph/Query.js'
 
 test('name', t => {
   const query = new Query('q', {})

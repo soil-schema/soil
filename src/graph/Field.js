@@ -1,11 +1,12 @@
 // @ts-check
 
-import Model from './Model.js'
+import Node from './Node.js'
 import Type from './Type.js'
 
 import '../extension.js'
+import { DEFINED_TYPES } from '../const.js'
 
-export default class Field extends Model {
+export default class Field extends Node {
   /**
    * @param {string} name 
    * @param {object|string} schema 
@@ -46,20 +47,51 @@ export default class Field extends Model {
     }
   }
 
+  /**
+   * @type {boolean}
+   */
   get mutable () {
     return this.schema.annotation == 'mutable'
   }
 
-  get writer () {
+  /**
+   * @type {boolean}
+   */
+   get writer () {
     return this.schema.annotation == 'writer'
   }
 
+  /**
+   * @type {boolean}
+   */
   get reference () {
     return this.schema.annotation == 'reference'
   }
 
+  /**
+   * @type {boolean}
+   */
   get optional () {
     return this.schema.type[this.schema.type.length - 1] == '?'
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get isSelfDefined () {
+    return ['*', 'List<*>', '*?', 'Enum'].indexOf(this.schema.type) != -1
+  }
+
+  /**
+   * @returns {object[]}
+   */
+  captureSubschemas () {
+    const subschemas = []
+    if (this.isSelfDefined && this.schema.schema) {
+      // @ts-ignore
+      subschemas.push({ ...this.schema.schema, name: this.name.classify() })
+    }
+    return subschemas
   }
 
   get token () {

@@ -1,7 +1,7 @@
 // @ts-check
 
 import Entity from "./Entity.js";
-import Model from "./Model.js";
+import Model from "./Node.js";
 
 export default class RequestBody extends Model {
   /**

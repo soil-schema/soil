@@ -1,5 +1,5 @@
 import test from 'ava'
-import Field from '../src/models/Field.js'
+import Field from '../src/graph/Field.js'
 
 test('replace returns another Field', t => {
   const target = new Field('name', {
@@ -43,6 +43,12 @@ test('optional reference entity field', t => {
   t.is(name.optional, true)
   t.is(name.reference, true)
   t.is(name.type.definition, 'Author')
+})
+
+test('captureSubschemas', t => {
+  const record = new Field('record', { type: '*', schema: { fields: { timestamp: 'Timestamp', body: 'String' } } })
+  t.is(record.captureSubschemas().length, 1)
+  t.is(record.captureSubschemas()[0].name, 'Record')
 })
 
 import '../src/swift.js'

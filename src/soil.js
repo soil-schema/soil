@@ -10,7 +10,7 @@ import './swift.js'
 import './cli.js'
 import { loadConfig } from './utils.js'
 
-import Schema from './models/Schema.js'
+import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
 
 if (soil.options.workingDir) {
@@ -28,12 +28,12 @@ const run = async function(config) {
 
   try {
     await loader.prepare()
-    await soil.prepare((await loader.load()).flatMap(c => c))
-    await soil.debug()
+    soil.parse((await loader.load()).flatMap(c => c))
+    soil.debug()
     await soil.exportSwiftCode()
     console.log(chalk.green('🍻 Done!'))
   } catch (error) {
-    console.log(chalk.red('☄️ Crash!'))
+    console.log(chalk.red('☄️ Crash!'), error)
     throw error
   }
 }

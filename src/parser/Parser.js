@@ -454,7 +454,8 @@ export default class Parser {
     const endpointSchema = {
       path,
       method,
-      parameters: {}
+      parameters: {},
+      query: {},
     }
 
     this.next()
@@ -479,6 +480,10 @@ export default class Parser {
           case 'parameter':
             const parameter = this.parseParameter()
             endpointSchema.parameters[parameter.name] = parameter
+            break
+          case 'query':
+            const query = this.parseQuery()
+            endpointSchema.query[query.name] = query
             break
           case '-':
             this.parseComment(endpointSchema)
@@ -538,6 +543,53 @@ export default class Parser {
     this.pop()
 
     return parameterSchema
+  }
+
+  parseQuery () {
+    this.assert('query')
+
+    this.next()
+    const name = this.currentToken.token
+
+    this.push(name)
+    this.log(`[Query] ${name}`)
+
+    this.next()
+    this.assert(':')
+
+    this.next()
+    const type = this.currentToken.token
+
+    const querySchema = {
+      name,
+      type,
+    }
+
+    this.next()
+
+    if (type == 'Enum' && this.currentToken.is('[')) {
+      querySchema.enum = this.parseEnumCases()
+    }
+
+    if (this.currentToken.is('{')) {
+      this.next()
+      while (this.currentToken.not('}')) {
+        switch (this.currentToken.token) {
+          case '-':
+            this.parseComment(querySchema)
+            this.next()
+            break
+          default:
+            throw new SyntaxError(this.currentToken)
+        }
+      }
+      this.assert('}')
+      this.next()
+    }
+
+    this.pop()
+
+    return querySchema
   }
 
   parseExample () {

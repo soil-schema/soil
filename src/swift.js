@@ -1,12 +1,12 @@
-import Endpoint from './models/Endpoint.js'
-import Entity from './models/Entity.js'
-import Field from './models/Field.js'
-import Parameter from './models/Parameter.js'
-import Query from './models/Query.js'
-import RequestBody from './models/RequestBody.js'
-import Response from './models/Response.js'
-import Type from './models/Type.js'
-import Writer from './models/Writer.js'
+import Endpoint from './graph/Endpoint.js'
+import Entity from './graph/Entity.js'
+import Field from './graph/Field.js'
+import Parameter from './graph/Parameter.js'
+import Query from './graph/Query.js'
+import RequestBody from './graph/RequestBody.js'
+import Response from './graph/Response.js'
+import Type from './graph/Type.js'
+import Writer from './graph/Writer.js'
 
 /*
   ================================
@@ -227,13 +227,13 @@ Field.prototype.renderSwiftMember = function (context = {}) {
 
   if (writer) {
     const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWriter) {
+    if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter) {
+      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
         type = `Array<${element}.Writer>`
       }
     }
@@ -276,13 +276,13 @@ Field.prototype.renderArgumentSignature = function (context) {
   var type = convertType(this.type)
   if (writer) {
     const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWriter) {
+    if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
       const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter) {
+      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
         type = `Array<${element}.Writer>`
       }
     }

@@ -1,6 +1,6 @@
 // @ts-check
 
-import Model from "./Model.js";
+import Model from "./Node.js";
 
 export default class Response extends Model {
 

@@ -1,6 +1,5 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import util from 'node:util'
 
 import chalk from 'chalk'
 
@@ -8,23 +7,23 @@ import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
 import DuplicatedNameError from '../errors/DuplicatedNameError.js'
+import Root from './Root.js'
 
 export default class Schema {
   constructor(config) {
     Object.defineProperty(this, 'config', { value: config })
   }
 
-  prepare(schemas) {
+  parse(schemas) {
+    const root = new Root()
     const entities = schemas
-      .map(schema => new Entity(schema))
+      .forEach(schema => root.addChild(schema.name, new Entity(schema)))
 
-    // Check duplicated entity
-    Object.entries(entities
-      .map(entity => entity.name)
-      .reduce((counter, name) => { counter[name] = (counter[name] || 0)  + 1; return counter; }, {}))
-      .forEach(entry => { if (entry[1] > 1) { throw new DuplicatedNameError(entry[0])} })
+    Object.defineProperty(this, 'root', { value: root, enumerable: true })
+  }
 
-    Object.defineProperty(this, 'entities', { value: entities, enumerable: true })
+  get entities () {
+    return this.root.children
   }
 
   async exportOpenApiSchema() {
@@ -42,9 +41,9 @@ export default class Schema {
       try {
         const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
         fs.writeFile(file, body, this.config.encode)
-        console.log(chalk.green('export [Swift]', '-', file))
+        console.log(chalk.green('[Swift]', '-', file))
       } catch (error) {
-        console.error(`failure exporting to ${file}`)
+        console.error(chalk.red('[Swift]', `Failure exporting to ${file}`))
         console.error(error)
       }
     })
@@ -56,6 +55,8 @@ export default class Schema {
   debug () {
     if (!soil.options.verbose) { return }
     console.log(chalk.yellow('[DEBUG] print loaded schema'))
-    console.log(util.inspect(this, { depth: null, colors: true }))
+    this.entities.forEach(entity => {
+      entity.inspect()
+    })
   }
 }

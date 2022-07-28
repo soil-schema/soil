@@ -1,10 +1,10 @@
 import test from "ava"
-import Endpoint from "../src/models/Endpoint.js"
-import Field from "../src/models/Field.js"
+import Endpoint from "../src/graph/Endpoint.js"
+import Field from "../src/graph/Field.js"
 
 import { DEFAULT_CONFIG } from '../src/const.js'
 import contextUtilities from '../src/context.js'
-import Parameter from "../src/models/Parameter.js"
+import Parameter from "../src/graph/Parameter.js"
 
 const context = {
   config: DEFAULT_CONFIG,

@@ -1,7 +1,7 @@
 // @ts-check
 
-import Entity from "./models/Entity.js"
-import Field from "./models/Field.js"
+import Entity from "./graph/Entity.js"
+import Field from "./graph/Field.js"
 
 /**
  * 
@@ -20,7 +20,7 @@ const resolveReference = function (definition) {
   var findingCollection = entities || []
 
   if (entity) {
-    const hitReference = entity.resolveReference(definition)
+    const hitReference = entity.resolve(definition)
     if (hitReference) {
       return hitReference
     }
