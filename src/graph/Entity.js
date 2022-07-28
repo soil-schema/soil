@@ -1,6 +1,6 @@
 // @ts-check
 
-import Model from './Model.js'
+import Model from './Node.js'
 import Field from './Field.js'
 import Endpoint from './Endpoint.js'
 import Writer from './Writer.js'

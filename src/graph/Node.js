@@ -1,6 +1,6 @@
 // @ts-check
 
-export default class Model {
+export default class Node {
 
   /**
    * @type {string}
@@ -32,6 +32,10 @@ export default class Model {
       return description.trim()
     }
     return null
+  }
+
+  registerChild (name, node) {
+
   }
 
   /**

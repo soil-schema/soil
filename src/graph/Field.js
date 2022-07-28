@@ -1,6 +1,6 @@
 // @ts-check
 
-import Model from './Model.js'
+import Model from './Node.js'
 import Type from './Type.js'
 
 import '../extension.js'

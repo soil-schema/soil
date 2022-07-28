@@ -1,6 +1,6 @@
 // @ts-check
 
-import Model from './Model.js'
+import Model from './Node.js'
 import RequestBody from './RequestBody.js'
 import Response from './Response.js'
 import Field from './Field.js'
