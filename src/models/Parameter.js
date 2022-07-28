@@ -44,6 +44,20 @@ export default class Parameter {
     }
   }
 
+  /**
+   * @type {string}
+   */
+   get summary () {
+    return this.options.summary
+  }
+
+  /**
+   * @type {string}
+   */
+   get description () {
+    return this.options.description
+  }
+
   get token () {
     return this.options.token || '$?'
   }

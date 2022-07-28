@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import path from 'path'
-import watch from 'node-watch';
+import util from 'node:util'
+import watch from 'node-watch'
 import chalk from 'chalk'
 
 import './swift.js'
@@ -10,7 +11,7 @@ import './cli.js'
 import { loadConfig } from './utils.js'
 
 import Schema from './models/Schema.js'
-import Loader from './parser/Loader.js';
+import Loader from './parser/Loader.js'
 
 if (soil.options.workingDir) {
   process.chdir(soil.options.workingDir)
@@ -39,6 +40,7 @@ const run = async function(config) {
 
 loadConfig()
   .then(config => {
+    console.log(util.inspect(config, { depth: null, colors: true }))
     run(config)
 
     if (soil.options.watch) {

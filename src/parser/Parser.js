@@ -325,6 +325,13 @@ export default class Parser {
 
     this.next()
 
+    if (/^(List<Enum>|Enum)\??$/.test(fieldSchema.type)) {
+      // check enum items
+      if (this.currentToken.is('[')) {
+        fieldSchema.enum = this.parseEnumCases()
+      }
+    }
+
     if (this.currentToken.is('{')) {
       this.parseFieldBlock(fieldSchema)
     }
@@ -509,15 +516,23 @@ export default class Parser {
     this.next()
 
     if (type == 'Enum' && this.currentToken.is('[')) {
+      parameterSchema.enum = this.parseEnumCases()
+    }
+
+    if (this.currentToken.is('{')) {
       this.next()
-      var items = []
-      while (this.currentToken.not(']')) {
-        items.push(this.currentToken.token.replace(/,$/, ''))
-        this.next()
+      while (this.currentToken.not('}')) {
+        switch (this.currentToken.token) {
+          case '-':
+            this.parseComment(parameterSchema)
+            this.next()
+            break
+          default:
+            throw new SyntaxError(this.currentToken)
+        }
       }
-      this.assert(']')
+      this.assert('}')
       this.next()
-      parameterSchema.enum = items
     }
 
     this.pop()
@@ -565,6 +580,7 @@ export default class Parser {
         case '-':
           this.parseComment(schema)
           this.next()
+          break
         default:
           throw new SyntaxError(this.currentToken)
       }
@@ -572,6 +588,22 @@ export default class Parser {
 
     this.assert('}')
     return schema
+  }
+
+  /**
+   * @returns {string[]}
+   */
+  parseEnumCases () {
+    this.assert('[')
+    this.next()
+    var items = []
+    while (this.currentToken.not(']')) {
+      items.push(this.currentToken.token)
+      this.next()
+    }
+    this.assert(']')
+    this.next()
+    return items
   }
 
   /**
