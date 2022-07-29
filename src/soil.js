@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import path from 'path'
-import { program } from 'commander'
+import path from 'node:path'
 import util from 'node:util'
 import watch from 'node-watch'
 import chalk from 'chalk'
+
+import { program } from 'commander'
 
 import './swift.js'
 
@@ -12,12 +13,6 @@ import { loadConfig } from './utils.js'
 
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
-
-/**
- * @param {object} config
- */
-const run = async function(config) {
-}
 
 const commands = {
   build: async () => {
@@ -39,6 +34,19 @@ const commands = {
     } catch (error) {
       console.log(chalk.red('☄️ Crash!'), error)
     }
+  },
+  watch: async () => {
+    console.log(chalk.gray('watch', process.cwd()))
+    watch(process.cwd(), { recursive: true }, async (evt, name) => {
+      if (path.extname(name) == '.yml' || path.extname(name) == '.soil') {
+        console.log(chalk.gray(`\ndetect change: ${name}\n`))
+        try {
+          await commands.build()
+        } catch (error) {
+          console.error(error)
+        }
+      }
+    })
   },
 }
 
@@ -63,7 +71,8 @@ async function main() {
       if (typeof commands[command] == 'function') {
         await commands[command]()
       } else {
-        throw new Error('soil:', command, 'is not a soil command.')
+        console.error('soil:', command, 'is not a soil command.')
+        process.exit(1)
       }
     })
 

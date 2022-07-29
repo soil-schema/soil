@@ -25,6 +25,9 @@ export const DEFAULT_CONFIG = {
   dev: {
     port: 8080,
   },
+  html: {
+    style: ['./soil.css'],
+  },
 }
 
 export const DEFINED_TYPES = [
