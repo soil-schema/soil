@@ -1,3 +1,5 @@
+from:
+
 ```soil
 entity User {
 
@@ -15,6 +17,8 @@ entity User {
   }
 }
 ```
+
+to:
 
 ```swift
 import Foundation
