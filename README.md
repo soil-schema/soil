@@ -1,15 +1,16 @@
 # soil
 
-soil is schema language for json api and swift / kotlin client code.
+soil is schema language for REST and JSON api and swift / ~~kotlin~~ client code generator.
 
 - [x] Short schema based REST api.
 - [ ] Small and flexible client code.
 - [ ] Write and run api testing scenario.
 
-Other tools are recommended if you expect to
+Other tools are more good if you want:
 
-- **Speed**: use [protobuf](https://developers.google.com/protocol-buffers).
+- **Speed**: don't use JSON, use [protobuf](https://developers.google.com/protocol-buffers).
 - **GraphQL**: soil is not supporting GraphQL.
+- **Complex api**: use [Open API Schema](https://www.openapis.org/) and around tools.
 
 # .soil file
 
@@ -54,7 +55,7 @@ entity User {
 - `endpoint GET /users`: Endpoint. This endpoint accessed by GET method and `/users` path.
 - `success` directive: successful response (status code 2xx) schema. like entity directive.
 
-## Request and writer
+## Request and writer entity
 
 In the REST api, most of the time there are two types of resource fields: writable and read-only.
 In the POST and PUT methods, only the values of writable fields should be sent.
@@ -92,6 +93,40 @@ public final class User: Decodable {
 ```
 
 `User` is read-time entity, `User.Writer` is write-time entity.
+
+## Subtypes
+
+soil supports tow ways to define subtype in the Entity.
+
+### 1. use anonymous type `field` and `schema` directive
+
+```soil
+entity Book {
+  field title: String
+  field author: * { # `*` is anonymous type
+    schema {
+      field name: String
+    }
+  }
+}
+```
+
+soil detect `Book` entity, and generate `Book.Author` (dynamic naming) inner entity.
+
+### 2. use `inner` directive.
+
+```soil
+entity Book {
+  field title: String
+  field author: Author
+  
+  inner Author {
+    field name: String
+  }
+}
+```
+
+soil detect `Book` entity and `Book.Author` inner entity.
 
 # Installation
 
