@@ -1,14 +1,9 @@
 import { promises as fs } from 'node:fs'
-import url from 'node:url'
 import path from  'node:path'
 
 import chalk from 'chalk'
-import YAML from 'yaml'
-import { validate } from 'jsonschema'
 
 import Parser from './Parser.js'
-
-const ENTITY_SCHEMA_PATH = path.join(url.fileURLToPath(import.meta.url), '../../../json-schema/entity.yml')
 
 export default class Loader {
 
@@ -17,7 +12,7 @@ export default class Loader {
   }
 
   async prepare () {
-    this.entityJsonSchema = YAML.parse(await fs.readFile(ENTITY_SCHEMA_PATH, 'utf-8'))
+    /* Nothing to do */
   }
 
   async load () {
@@ -41,25 +36,8 @@ export default class Loader {
             parser.logs.forEach(log => console.log(chalk.gray(log)))
           if (soil.options.dump) {
             await fs.mkdir(path.join(process.cwd(), this.config.exportDir), { recursive: true })
-            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.yml`), YAML.stringify(schemas), this.config.encode)
+            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.json`), JSON.stringify(schemas), this.config.encode)
           }
-        }
-
-        if (ext == '.yml') {
-          schemas = [YAML.parse(body)]
-        }
-
-        if (soil.options.withValidate) {
-          schemas.forEach(schema => {
-            const result = validate(schema, this.entityJsonSchema)
-            if (result.valid == false) {
-              result.errors.forEach(error => {
-                console.log(error, error.instance)
-              })
-              console.log({ schema, result, errors: result.errors })
-              throw result
-            }
-          })
         }
 
         return schemas
