@@ -1,5 +1,5 @@
 {
-  "name": "soil",
+  "name": "soil-scheme",
   "version": "0.0.1",
   "type": "module",
   "repository": "git@github.com:niaeashes/soil.git",
@@ -21,20 +21,5 @@
   },
   "scripts": {
     "test": "ava"
-  },
-  "engines": {
-    "vscode": "^1.69.0"
-  },
-  "contributes": {
-    "languages": [{
-        "id": "soil",
-        "extensions": [".soil"],
-        "configuration": "./language-configuration.json"
-    }],
-    "grammars": [{
-        "language": "soil",
-        "scopeName": "source.soil",
-        "path": "./syntaxes/soil.tmLanguage.json"
-    }]
   }
 }

@@ -1,79 +1,3 @@
-from:
-
-```soil
-entity User {
-
-  field id: Integer
-  mutable field name: String
-
-  endpoint POST /users {
-    - Register New User
-    request {
-      field user: User
-    }
-    success {
-      field user: User
-    }
-  }
-}
-```
-
-to:
-
-```swift
-import Foundation
-
-public final class User: Decodable {
-
-    public let id: Int
-
-    public let name: String
-
-    public struct Writer: Encodable {
-
-        public var name: String
-
-        /// - Parameters:
-        ///   - name: {no comment}
-        public init(name: String) {
-            self.name = name
-        }
-    }
-
-    /// Register New User
-    public struct RegisterNewUserEndpoint {
-
-        /// RegisterNewUserEndpoint.path: `/users`
-        public let path: String
-
-        /// RegisterNewUserEndpoint.method: `POST`
-        public let method: String = "POST"
-
-        public var body: RequestBody! = nil
-
-        public init() {
-            self.path = "/users"
-        }
-
-        public struct RequestBody: Encodable {
-
-            let user: User.Writer
-
-            /// - Parameters:
-            ///   - user: {no comment}
-            public init(user: User.Writer) {
-                self.user = user
-            }
-        }
-
-        public struct Response: Decodable {
-
-            public let user: User
-        }
-    }
-}
-```
-
 # soil
 
 soil is schema language for json api and swift / kotlin client code.
@@ -174,7 +98,7 @@ public final class User: Decodable {
 soil is written by nodejs.
 
 ```
-$ npm install -g soil
+$ npm install -g soil-schema
 ```
 
 # Swift
@@ -182,7 +106,7 @@ $ npm install -g soil
 soil supports Swift code generation.
 Generated code has no dependencies, use your api request / response client class.
 
-- [ ] Instead of writing your own code, you can use _soil-swift_.
+- [ ] Instead of writing your own code, you can use ~~soil-swift~~.
 
 You run soil command in your cli, export swift code.
 
