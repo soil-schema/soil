@@ -1,0 +1,11 @@
+entity Article {
+  field title: String
+  field overview: String
+  mutable field body: String
+
+  endpoint GET /articles/search {
+    - Search Articles
+    query q: String
+    query sort: Enum [created_at, modified_at, title, score]
+  }
+}

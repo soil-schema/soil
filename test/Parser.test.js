@@ -1,6 +1,3 @@
-import { promises as fs } from 'fs'
-import YAML from 'yaml'
-
 import test from 'ava'
 import Parser from '../src/parser/Parser.js'
 
