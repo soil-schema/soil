@@ -328,7 +328,7 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
       ...this.resolvePathParameters(context).map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
     end,
 
-    defineIf(this.allowBody, () => this.requestBody.renderSwiftStruct(context)),
+    this.requestBody.renderSwiftStruct(context),
     this.successResponse.renderSwiftStruct(context),
 
     end,

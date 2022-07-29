@@ -14,6 +14,17 @@ export const DEFAULT_CONFIG = {
     },
     mime: {},
   },
+  profile: {
+    /**
+     * name: {
+     *   host: api.example.com,
+     *   endpoint: /v1,
+     * }
+     */
+  },
+  dev: {
+    port: 8080,
+  },
 }
 
 export const DEFINED_TYPES = [
