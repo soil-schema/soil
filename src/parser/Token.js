@@ -59,4 +59,11 @@ export default class Token {
   not (tester) {
     return !this.is(tester)
   }
+
+  /**
+   * @type {string}
+   */
+  get address () {
+    return `${this.uri}:${this.line}:${this.offset}`
+  }
 }

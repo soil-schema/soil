@@ -1,10 +1,27 @@
 
+import Token from '../parser/Token.js'
+
 export default class SyntaxError extends Error {
-  constructor (filepath, line, offset, message) {
-    if (typeof filepath == 'object') {
-      super(`Unexpected token \`${filepath.token}\` at ${filepath.filepath}:${filepath.line}:${filepath.offset}`)
-    } else {
-      super(`${message} at ${filepath}:${line}:${offset}`)
-    }
+
+  /**
+   * @type {Token[]}
+   */
+  tokens
+
+  constructor () {
+    const args = Array.from(arguments)
+    var tokens = []
+    var message = []
+    args.forEach(arg => {
+      if (arg instanceof Token) {
+        message.push(`Token \`${arg.token}\` at ${arg.address}`)
+        tokens.push(arg)
+      }
+      if (typeof arg == 'string') {
+        message.push(arg)
+      }
+    })
+    super(message.join('\n'))
+    this.tokens = tokens
   }
 }

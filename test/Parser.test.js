@@ -70,6 +70,7 @@ entity Article {
   t.assert(result[0].endpoints['/articles'].get)
   t.is(result[0].endpoints['/articles'].get.summary, 'List Articles')
   t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
+  t.snapshot(result)
 })
 
 test('parse summary and description', async (t) => {
@@ -90,6 +91,7 @@ entity Note {
   t.is(result.length, 1)
   t.is(result[0].name, 'Note')
   t.is(result[0].summary, 'Note Summary')
+  t.snapshot(result)
 })
 
 test('parse endpoint request with mime-type', t => {
@@ -104,6 +106,7 @@ entity UserImage {
 
   t.is(result.length, 1)
   t.is(result[0].endpoints['/user_images'].post.request, 'mime:image/jpeg')
+  t.snapshot(result)
 })
 
 // tokenize
@@ -124,12 +127,59 @@ entity User {
   t.snapshot(parser.tokenize())
 })
 
-test('tokenize parameterized endpoint path', t => {
+test('tokenize inner type', t => {
+  const body = `
+entity Order {
+  mutable field item: List<Item>
+  inner Item {
+    field name: String
+  }
+}
+`
+  const parser = new Parser('test.soil', body)
+  t.snapshot(parser.tokenize())
+})
+
+test('tokenize endpoint with path parameter', t => {
   const body = `
 entity Sample {
   endpoint GET /sample/$id {}
 }
 `
   const parser = new Parser('test.soil', body)
-  t.is(parser.tokenize().map(token => token.token).indexOf('/sample/$id'), 5)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/$id'), 5)
+  t.snapshot(result)
+})
+
+test('tokenize endpoint with path parameter directive', t => {
+  const body = `
+entity Sample {
+  endpoint GET /sample/$id {
+    parameter id: Integer {
+      - Parameter Summary
+    }
+  }
+}
+`
+  const parser = new Parser('test.soil', body)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/$id'), 5)
+  t.snapshot(result)
+})
+
+test('tokenize endpoint with query parameter directive', t => {
+  const body = `
+entity Sample {
+  endpoint GET /sample/search {
+    query q: String {
+      - Query Summary
+    }
+  }
+}
+`
+  const parser = new Parser('test.soil', body)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/search'), 5)
+  t.snapshot(result)
 })
