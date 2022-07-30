@@ -18,6 +18,7 @@
     "ava": "^4.3.1"
   },
   "scripts": {
-    "test": "ava"
+    "test": "ava",
+    "test:update-snapshot": "ava --update-snapshots"
   }
 }

@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 
 import path from 'node:path'
+import url from 'node:url'
 import util from 'node:util'
 import watch from 'node-watch'
 import chalk from 'chalk'
 
+import { promises as fs } from 'node:fs'
 import { program } from 'commander'
 
 import './swift.js'
 
 import { loadConfig } from './utils.js'
+
+import server from './language-server/server.js'
 
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
@@ -48,6 +52,8 @@ const commands = {
       }
     })
   },
+  replay: () => {
+  },
 }
 
 async function main() {
@@ -69,7 +75,7 @@ async function main() {
       global.soil = { options }
 
       if (typeof commands[command] == 'function') {
-        await commands[command]()
+        await commands[command](options)
       } else {
         console.error('soil:', command, 'is not a soil command.')
         process.exit(1)

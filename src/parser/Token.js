@@ -2,7 +2,7 @@ export default class Token {
   /**
    * @type {string}
    */
-  filepath
+  uri
 
   /**
    * @type {number}
@@ -17,27 +17,27 @@ export default class Token {
   /**
    * @type {string}
    */
+  kind
+
+  /**
+   * @type {string}
+   */
   token
 
   /**
    * 
-   * @param {string} filepath 
+   * @param {string} uri 
    * @param {number} line 
    * @param {number} offset 
    * @param {string} token 
+   * @param {string|undefined} kind
    */
-  constructor (filepath, line, offset, token) {
-    Object.defineProperty(this, 'filepath', { value: filepath })
+  constructor (uri, line, offset, token, kind = undefined) {
+    Object.defineProperty(this, 'uri', { value: uri })
     Object.defineProperty(this, 'line', { value: line })
     Object.defineProperty(this, 'offset', { value: offset })
     Object.defineProperty(this, 'token', { value: token })
-  }
-
-  /**
-   * @returns {string}
-   */
-  toString() {
-    return this.token
+    this.kind = kind
   }
 
   /**

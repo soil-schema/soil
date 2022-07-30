@@ -1,5 +1,7 @@
 // @ts-check
 
+import url from 'node:url'
+
 const STEP = 1
 
 import SyntaxError from '../errors/SyntaxError.js'
@@ -57,10 +59,6 @@ export default class Parser {
     this.stack.pop()
   }
 
-  get currentStacks () {
-    return this.stack.join(' » ')
-  }
-
   /**
    * @returns {Token[]} tokens
    */
@@ -77,14 +75,14 @@ export default class Parser {
       switch (c) {
         case '\n':
           if (buffer.trim().length > 0)
-            tokens.push(new Token(this.filepath, line, offset - buffer.length, buffer.trim()))
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
           line += 1
           offset = 0
           buffer = ''
           break
         case ' ':
           if (buffer.trim().length > 0)
-            tokens.push(new Token(this.filepath, line, offset - buffer.length, buffer.trim()))
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
           buffer = ''
           break
         case '{':
@@ -94,8 +92,8 @@ export default class Parser {
         case ']':
           const trim = buffer.trim()
           if (trim.length > 0)
-            tokens.push(new Token(this.filepath, line, offset - buffer.length, trim))
-          tokens.push(new Token(this.filepath, line, offset, c))
+            tokens.push(new Token(this.uri, line, offset - buffer.length, trim))
+          tokens.push(new Token(this.uri, line, offset, c, 'keyword'))
           buffer = ''
           if (c == '[') {
             i += 1
@@ -106,7 +104,7 @@ export default class Parser {
               i += 1
               offset += 1
               if (t == ',' && inStringLiteral == false) {
-                tokens.push(new Token(this.filepath, line, offset - buffer.trimStart().length, buffer.trim()))
+                tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
                 buffer = ''
                 continue
               }
@@ -117,14 +115,14 @@ export default class Parser {
               }
               buffer += t
             }
-            tokens.push(new Token(this.filepath, line, offset - buffer.trimStart().length, buffer.trim()))
+            tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
             buffer = ''
-            tokens.push(new Token(this.filepath, line, offset, "]"))
+            tokens.push(new Token(this.uri, line, offset, "]", 'keyword'))
           }
           break
         case '-':
           var comment = ''
-          tokens.push(new Token(this.filepath, line, offset, '-'))
+          tokens.push(new Token(this.uri, line, offset, '-', 'keyword'))
           i += 1
           offset += 1
           while (body[i] != '\n' && i < body.length) {
@@ -132,7 +130,21 @@ export default class Parser {
             i += 1
             offset += 1
           }
-          tokens.push(new Token(this.filepath, line, offset - comment.trimStart().length, comment.trim()))
+          tokens.push(new Token(this.uri, line, offset - comment.trimStart().length, comment.trim(), 'string'))
+          line += 1
+          offset = 1
+          break
+        case '#':
+          var comment = ''
+          tokens.push(new Token(this.uri, line, offset, '#', 'keyword'))
+          i += 1
+          offset += 1
+          while (body[i] != '\n' && i < body.length) {
+            comment += body[i]
+            i += 1
+            offset += 1
+          }
+          tokens.push(new Token(this.uri, line, offset - comment.trimStart().length, comment.trim(), 'comment'))
           line += 1
           offset = 1
           break
@@ -143,18 +155,35 @@ export default class Parser {
       offset += 1
     }
     if (buffer.trim().length > 0)
-      tokens.push(new Token(this.filepath, line, offset, buffer.trim()))
+      tokens.push(new Token(this.uri, line, offset, buffer.trim()))
     this.log('tokenized:', tokens.map(token => `'${token.token}'`).join(', '))
     Object.defineProperty(this, 'tokens', { value: tokens })
     return tokens
   }
 
+  get currentStacks () {
+    return this.stack.join(' » ')
+  }
+
   /**
-   * 
+   * @type {string}
+   */
+  get uri () {
+    return url.pathToFileURL(this.filepath).toString()
+  }
+
+  /**
+   * @returns {Token}
+   */
+  get currentToken () {
+    return this.pick(this.offset)
+  }
+
+  /**
    * @param {number} i 
    * @returns {Token}
    */
-  pick (i) {
+   pick (i) {
     if (i < 0) {
       throw new Error(`Illegal offset error: offset = ${i}`)
     }
@@ -165,13 +194,6 @@ export default class Parser {
       throw new Error(`Illegal offset error: offset = ${i}, tokens size = ${this.tokens.length}`)
     }
     return this.tokens[i]
-  }
-
-  /**
-   * @returns {Token}
-   */
-  get currentToken () {
-    return this.pick(this.offset)
   }
 
   next () {
