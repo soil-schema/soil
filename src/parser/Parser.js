@@ -305,6 +305,10 @@ export default class Parser {
             this.parseComment(blockSchema)
             this.next()
             break
+          case COMMENT_MARK:
+            this.next()
+            this.next() // Skip comment body
+            break
           default:
             tokenResolver()
             break

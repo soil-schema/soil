@@ -109,6 +109,57 @@ entity UserImage {
   t.snapshot(result)
 })
 
+test('full directive case', t => {
+  const body = `
+entity Servant {
+  # @see https://www.fate-go.jp/
+  identifier field id: Integer
+  mutable field name: String {
+    - Field Summary
+    - Field Description
+  }
+  mutable field class: Enum [saber, archer, lancer, rider, caster, assassin, berserker, ruler, avenger, moon-cancer, alter-ego, foreigner, pretender, shielder] {
+    - Each Servant has a Class
+  }
+  endpoint GET /servants {
+    - List All Servant
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint GET /servants/search {
+    - Search Servant
+    query q: String
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint GET /my/servants {
+    - List My Servant
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint POST /my/servants {
+    - Register Servant
+    request {
+      field id: Servant.id
+    }
+    success {
+      field servant: Servant
+    }
+  }
+  endpoint DELETE /my/servants/$id {
+    - Remove Servant
+    - Remove a servant from my storage
+  }
+}
+`
+  const parser = new Parser('test.soil', body)
+  const result = parser.parse()
+  t.snapshot(result)
+})
+
 // tokenize
 
 test('tokenize basic entity', t => {
