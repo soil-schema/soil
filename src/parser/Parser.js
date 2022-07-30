@@ -8,6 +8,10 @@ import SyntaxError from '../errors/SyntaxError.js'
 import Token from './Token.js'
 
 const ENTITY_NAME_PATTERN = /^[A-Z][A-Za-z0-9_]+$/
+const FIELD_NAME_PATTERN = /^[a-z0-9_]+$/
+const QYERY_NAME_PATTERN = FIELD_NAME_PATTERN
+const PARAMETER_NAME_PATTERN = FIELD_NAME_PATTERN
+const ENDPOINT_METHOD_PATTERN = /^(GET|POST|PUT|PATCH|DELETE|HEAD)$/i
 
 const BLOCK_BEGIN       = '{'
 const BLOCK_END         = '}'
@@ -17,13 +21,17 @@ const DESCRIPTION_MARK  = '-'
 const COMMENT_MARK      = '#'
 const TYPE_SEPARATOR   = ':'
 
-const KEYWORD_ENTITY    = 'entity'
-const KEYWORD_FIELD     = 'field'
-const KEYWORD_INNER     = 'inner'
-const KEYWORD_ENDPOINT  = 'endpoint'
-const KEYWORD_PARAMETER = 'parameter'
-const KEYWORD_QUERY     = 'query'
-const KEYWORD_SCHEMA    = 'schema'
+const KEYWORD_ENTITY      = 'entity'
+const KEYWORD_FIELD       = 'field'
+const KEYWORD_INNER       = 'inner'
+const KEYWORD_ENDPOINT    = 'endpoint'
+const KEYWORD_PARAMETER   = 'parameter'
+const KEYWORD_QUERY       = 'query'
+const KEYWORD_SCHEMA      = 'schema'
+const KEYWORD_MUTABLE     = 'mutable'
+const KEYWORD_REFERENCE   = 'reference'
+const KEYWORD_IDENTIFIER  = 'identifier'
+const KEYWORD_WRITER      = 'writer'
 
 export default class Parser {
 
@@ -228,7 +236,8 @@ export default class Parser {
    */
   assert (tester, message = 'Unexpected token') {
     if (this.currentToken.not(tester)) {
-      throw new SyntaxError(this.currentToken)
+      // @ts-ignore
+      throw new SyntaxError(this.currentToken. message)
     }
   }
 
@@ -240,6 +249,15 @@ export default class Parser {
     if (this.currentToken.is(tester)) {
       throw new SyntaxError(this.currentToken)
     }
+  }
+
+  /**
+   * @param {string} name
+   * @param {RegExp|string} tester 
+   */
+  assertSematicEntity (name, tester) {
+    this.assert(tester, `Invalid ${name} name`)
+    this.currentToken.kind = `entity.${name}`
   }
 
   /**
@@ -317,11 +335,10 @@ export default class Parser {
    */
   parseEntity () {
     this.assert(KEYWORD_ENTITY)
-    this.currentToken.kind = 'keyword.directive.entity'
+    this.currentToken.asDirective(KEYWORD_ENTITY)
 
     this.next()
-    this.assert(ENTITY_NAME_PATTERN, `Invalid entity name`)
-    this.currentToken.kind = 'entity.entity'
+    this.assertSematicEntity(KEYWORD_ENTITY, ENTITY_NAME_PATTERN)
 
     const name = this.currentToken.token
 
@@ -360,10 +377,10 @@ export default class Parser {
           entitySchema.endpoints[endpoint.path][endpoint.method.toLowerCase()] = endpoint
           break
   
-        case 'mutable':
-        case 'reference':
-        case 'identifier':
-        case 'writer':
+        case KEYWORD_MUTABLE:
+        case KEYWORD_REFERENCE:
+        case KEYWORD_IDENTIFIER:
+        case KEYWORD_WRITER:
           this.next()
           this.assert(KEYWORD_FIELD)
           break
@@ -395,13 +412,13 @@ export default class Parser {
    */
   parseField () {
     this.assert(KEYWORD_FIELD)
-    this.currentToken.kind = 'keyword.directive.field'
+    this.currentToken.asDirective(KEYWORD_FIELD)
 
     const annotation = this.tokens[this.offset - 1]
 
     this.next()
     const name = this.currentToken.token
-    this.currentToken.kind = 'entity.field'
+    this.assertSematicEntity(KEYWORD_FIELD, FIELD_NAME_PATTERN)
 
     this.log(`[Field] ${name}`)
     this.push(name)
@@ -464,7 +481,7 @@ export default class Parser {
 
   parseInnerType () {
     this.assert(KEYWORD_INNER)
-    this.currentToken.kind = 'keyword.directive.inner'
+    this.currentToken.asDirective(KEYWORD_INNER)
 
     this.next()
     const name = this.currentToken.token
@@ -488,10 +505,10 @@ export default class Parser {
         delete field.name
         innerSchema.fields[name] = field
         break
-      case 'mutable':
-      case 'reference':
-      case 'identifier':
-      case 'writer':
+      case KEYWORD_MUTABLE:
+      case KEYWORD_REFERENCE:
+      case KEYWORD_IDENTIFIER:
+      case KEYWORD_WRITER:
         this.next()
         this.assert(KEYWORD_FIELD)
         break
@@ -507,15 +524,15 @@ export default class Parser {
 
   fk () {
     this.assert(KEYWORD_ENDPOINT)
-    this.currentToken.kind = `keyword.endpoint`
+    this.currentToken.asDirective(KEYWORD_ENDPOINT)
     
     this.next()
+    this.assertSematicEntity(`${KEYWORD_ENDPOINT}.method`, ENDPOINT_METHOD_PATTERN)
     const method = this.currentToken.token
-    this.currentToken.kind = `entity.endpoint.method`
 
     this.next()
     const path = this.currentToken.token
-    this.currentToken.kind = `entity.endpoint.path`
+    this.currentToken.kind = `entity.${KEYWORD_ENDPOINT}.path`
 
     this.log(`[Endpoint] ${method} ${path}`)
     this.push(`${method} ${path}`)
@@ -590,11 +607,11 @@ export default class Parser {
    */
   parseParameter () {
     this.assert(KEYWORD_PARAMETER)
-    this.currentToken.kind = 'keyword.directive.parameter'
-    
+    this.currentToken.asDirective(KEYWORD_PARAMETER)
+
     this.next()
+    this.assertSematicEntity(KEYWORD_PARAMETER, PARAMETER_NAME_PATTERN)
     const name = this.currentToken.token
-    this.currentToken.kind = 'entity.parameter'
 
     this.push(name)
     this.log(`[Parameter] ${name}`)
@@ -644,11 +661,11 @@ export default class Parser {
    */
   parseQuery () {
     this.assert(KEYWORD_QUERY)
-    this.currentToken.kind = 'keyword.directive.query'
+    this.currentToken.asDirective(KEYWORD_QUERY)
 
     this.next()
+    this.assertSematicEntity(KEYWORD_QUERY, QYERY_NAME_PATTERN)
     const name = this.currentToken.token
-    this.currentToken.kind = 'entity.query'
 
     this.push(name)
     this.log(`[Query] ${name}`)
@@ -709,10 +726,10 @@ export default class Parser {
           const field = this.parseField()
           schema.fields[field.name] = field
           break
-        case 'mutable':
-        case 'reference':
-        case 'identifier':
-        case 'writer':
+        case KEYWORD_MUTABLE:
+        case KEYWORD_REFERENCE:
+        case KEYWORD_IDENTIFIER:
+        case KEYWORD_WRITER:
           this.next()
           this.assert(KEYWORD_FIELD)
           break

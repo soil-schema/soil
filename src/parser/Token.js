@@ -66,4 +66,11 @@ export default class Token {
   get address () {
     return `${this.uri}:${this.line}:${this.offset}`
   }
+ 
+  /**
+   * @param {string} name set kind = 'keyword.directive.$name'
+   */
+  asDirective (name) {
+    this.kind = `keyword.directive.${name}`
+  }
 }
