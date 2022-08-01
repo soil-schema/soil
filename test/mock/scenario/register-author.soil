@@ -6,5 +6,5 @@ scenario Register Author {
     }
   }
   GET /authors {}
-  POST /reset {}
+  @request POST /reset
 }

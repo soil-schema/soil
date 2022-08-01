@@ -25,4 +25,10 @@ export default class CommandStep {
     env.log('set current context var:', name, value)
     env.setVar(name, value)
   }
+
+  request (env) {
+    const [method, path] = this.args
+    env.log('http request:', method, path)
+    env.request(method, path)
+  }
 }

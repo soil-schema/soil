@@ -106,7 +106,12 @@ const convertType = (type) => {
     return `${convertType(type.replace(/\?$/, ''))}?`
   }
   if (type instanceof Type) {
-    return convertType(type.definition)
+    if (type.isEnum) {
+      // @ts-ignore
+      return type.owner.name.classify()
+    } else {
+      return convertType(type.definition)
+    }
   }
   if (type instanceof Entity) {
     return convertType(type.name)
@@ -467,7 +472,7 @@ const SWIFT_TYPE_TABLE = {
 }
 
 Type.prototype.resolveSwift = function (context) {
-  return convertType(this.definition)
+  return convertType(this)
 }
 
 export default { docc, struct, member, pretty, end, convertType }

@@ -1,15 +1,11 @@
 // @ts-check
 
+import Node from './Node.js'
 import Type from './Type.js'
 
 import '../extension.js'
 
-export default class Parameter {
-
-  /**
-   * @type {string}
-   */
-  name
+export default class Parameter extends Node {
 
   /**
    * @type {string}
@@ -24,42 +20,22 @@ export default class Parameter {
   /**
    * @param {string} name 
    * @param {string} definition 
-   * @param {object} options 
+   * @param {object} schema 
    */
-  constructor (name, definition, options = {}) {
-    this.name = name
+  constructor (name, definition, schema) {
+    super(name, schema)
     this.definition = definition
-    this.options = options
   }
 
   /**
    * @type {Type}
    */
   get type () {
-    if (this.isSelfDefinedEnum) {
-      // @ts-ignore
-      return new Type(this.name.classify(), this.options)
-    } else {
-      return new Type(this.definition, this.options)
-    }
-  }
-
-  /**
-   * @type {string}
-   */
-   get summary () {
-    return this.options.summary
-  }
-
-  /**
-   * @type {string}
-   */
-   get description () {
-    return this.options.description
+    return new Type(this.definition, this)
   }
 
   get token () {
-    return this.options.token || '$?'
+    return this.schema.token || '$?'
   }
 
   /**
@@ -73,15 +49,14 @@ export default class Parameter {
    * @type {boolean}
    */
   get isSelfDefinedEnum () {
-    return this.isEnum && Array.isArray(this.options.enum)
+    return this.isEnum && Array.isArray(this.schema.enum)
   }
 
   get enumValues () {
-    const enumValues = this.options.enum
-    if (Array.isArray(enumValues)) {
-      return enumValues
+    if (this.type.isEnum) {
+      return this.schema.enum
     }
-    return []
+    return void 0
   }
 
   /**
