@@ -1,6 +1,8 @@
 import test from 'ava'
 import Parser from '../src/parser/Parser.js'
 
+const FILE_PATH = '/tmp/test.soil'
+
 test('parse empty entity', async (t) => {
   const schema = 'entity Article {}'
   const parser = new Parser('test.soil', schema)
@@ -15,7 +17,7 @@ test('parse an entity with one line field', async (t) => {
 entity Article {
   field title: String
 }`
-const parser = new Parser('test.soil', schema)
+const parser = new Parser(FILE_PATH, schema)
 const result = parser.parse()
 
   t.is(result.length, 1)
@@ -30,7 +32,7 @@ entity Article {
     - This is a summary
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -43,7 +45,7 @@ test('parse an entity with mutable field', async (t) => {
 entity Article {
   mutable field title: String
 }`
-const parser = new Parser('test.soil', schema)
+const parser = new Parser(FILE_PATH, schema)
 const result = parser.parse()
 
   t.is(result.length, 1)
@@ -62,7 +64,7 @@ entity Article {
     }
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -85,7 +87,7 @@ entity Note {
     - Title Description 2
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -101,7 +103,7 @@ entity UserImage {
     request mime:image/jpeg
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -155,7 +157,7 @@ entity Servant {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   const result = parser.parse()
   t.snapshot(result)
 })
@@ -174,7 +176,7 @@ entity User {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   t.snapshot(parser.tokenize())
 })
 
@@ -187,7 +189,7 @@ entity Order {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   t.snapshot(parser.tokenize())
 })
 
@@ -213,7 +215,7 @@ entity Sample {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   const result = parser.tokenize()
   t.is(result.map(token => token.token).indexOf('/sample/$id'), 5)
   t.snapshot(result)
@@ -229,7 +231,7 @@ entity Sample {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   const result = parser.tokenize()
   t.is(result.map(token => token.token).indexOf('/sample/search'), 5)
   t.snapshot(result)
