@@ -154,7 +154,6 @@ export default class Entity extends Node {
     const referencePath = referenceBody.split('.')
     if (referencePath.length == 1) {
       const endpoint = this.endpoints.find(endpoint => {
-        console.log({ endpoint })
         return endpoint.id == referenceBody
       })
       if (endpoint instanceof Endpoint) {

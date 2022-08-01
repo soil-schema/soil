@@ -1,10 +1,11 @@
 // @ts-check
 
-import Model from "./Node.js";
+import Node from './Node.js'
+import Type from './Type.js'
 
 import '../extension.js'
 
-export default class Query extends Model {
+export default class Query extends Node {
 
   /**
    * @param {string} name 
@@ -15,18 +16,10 @@ export default class Query extends Model {
   }
 
   /**
-   * @type {string}
+   * @type {Type}
    */
   get type () {
-    if (this.schema.type == 'Enum') {
-      if (this.isSelfDefinedEnum) {
-        // @ts-ignore
-        return `${this.name.classify()}Value`
-      } else {
-        return this.schema.enum
-      }
-    }
-    return this.schema.type || 'String'
+    return new Type(this.schema.type || 'String', this)
   }
 
   get defaultValue () {

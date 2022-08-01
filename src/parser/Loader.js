@@ -38,11 +38,7 @@ export default class Loader {
 
         if (ext == '.soil') {
           const parser = new Parser(filepath, body)
-          try {
-            parser.parse()
-          } catch (error) {
-            console.error(error)
-          }
+          parser.parse()
           if (soil.options.verbose)
             parser.logs.forEach(log => console.log(chalk.gray(log)))
           if (soil.options.dump) {
