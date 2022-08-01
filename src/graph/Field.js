@@ -28,24 +28,8 @@ export default class Field extends Node {
   }
 
   get type () {
-    const typeDefinition = this.schema.type.replace(/\?$/, '')
-    if (typeDefinition == 'Enum') {
-      if (this.isSelfDefinedEnum) {
-        // @ts-ignore
-        return new Type(`${this.name.classify()}Value${this.optional ? '?' : ''}`)
-      } else {
-        return new Type(this.schema.type)
-      }
-    }
-    if (typeDefinition == '*') {
-      // @ts-ignore
-      return new Type(`${this.name.classify()}${this.optional ? '?' : ''}`)
-    } else if (typeDefinition == 'List<*>') {
-      // @ts-ignore
-      return new Type(`List<${this.name.classify()}>${this.optional ? '?' : ''}`)
-    } else {
-      return new Type(typeDefinition, /\?$/.test(typeDefinition))
-    }
+    // @ts-ignore
+    return new Type(this.schema.type.replace('*', this.name.classify()), this)
   }
 
   /**
@@ -73,7 +57,7 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get optional () {
-    return this.schema.type[this.schema.type.length - 1] == '?'
+    return this.type.isOptional
   }
 
   /**
@@ -111,7 +95,7 @@ export default class Field extends Node {
    * @type {boolean}
    */
    get isEnum () {
-    return this.schema.type.replace(/\?$/, '') == 'Enum'
+    return this.type.isEnum
   }
 
   /**
@@ -125,7 +109,7 @@ export default class Field extends Node {
    * @type {any}
    */
   get typicalValue () {
-    return this.type.typicalValue
+    return this.type.mock()
   }
 
   mock () {

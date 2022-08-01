@@ -1,5 +1,5 @@
 scenario Register Author {
-  @set-header X-Api-Key $env.API_KEY
+  @set-header X-Api-Key testing-api-key
   Author.register {
     receiver {
       @set-var target_id $response.author.id

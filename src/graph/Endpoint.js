@@ -16,7 +16,6 @@ import {
 } from "../const.js"
 
 import '../extension.js'
-import Type from './Type.js'
 
 export default class Endpoint extends Model {
 
