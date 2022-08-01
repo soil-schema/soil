@@ -1,9 +1,11 @@
 import test from 'ava'
 import Parser from '../src/parser/Parser.js'
 
+const FILE_PATH = '/tmp/test.soil'
+
 test('parse empty entity', async (t) => {
   const schema = 'entity Article {}'
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -15,7 +17,7 @@ test('parse an entity with one line field', async (t) => {
 entity Article {
   field title: String
 }`
-const parser = new Parser('test.soil', schema)
+const parser = new Parser(FILE_PATH, schema)
 const result = parser.parse()
 
   t.is(result.length, 1)
@@ -30,7 +32,7 @@ entity Article {
     - This is a summary
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -43,7 +45,7 @@ test('parse an entity with mutable field', async (t) => {
 entity Article {
   mutable field title: String
 }`
-const parser = new Parser('test.soil', schema)
+const parser = new Parser(FILE_PATH, schema)
 const result = parser.parse()
 
   t.is(result.length, 1)
@@ -62,7 +64,7 @@ entity Article {
     }
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
@@ -70,6 +72,7 @@ entity Article {
   t.assert(result[0].endpoints['/articles'].get)
   t.is(result[0].endpoints['/articles'].get.summary, 'List Articles')
   t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
+  t.snapshot(result)
 })
 
 test('parse summary and description', async (t) => {
@@ -84,12 +87,13 @@ entity Note {
     - Title Description 2
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Note')
   t.is(result[0].summary, 'Note Summary')
+  t.snapshot(result)
 })
 
 test('parse endpoint request with mime-type', t => {
@@ -99,11 +103,63 @@ entity UserImage {
     request mime:image/jpeg
   }
 }`
-  const parser = new Parser('test.soil', schema)
+  const parser = new Parser(FILE_PATH, schema)
   const result = parser.parse()
 
   t.is(result.length, 1)
   t.is(result[0].endpoints['/user_images'].post.request, 'mime:image/jpeg')
+  t.snapshot(result)
+})
+
+test('full directive case', t => {
+  const body = `
+entity Servant {
+  # @see https://www.fate-go.jp/
+  identifier field id: Integer
+  mutable field name: String {
+    - Field Summary
+    - Field Description
+  }
+  mutable field class: Enum [saber, archer, lancer, rider, caster, assassin, berserker, ruler, avenger, moon-cancer, alter-ego, foreigner, pretender, shielder] {
+    - Each Servant has a Class
+  }
+  endpoint GET /servants {
+    - List All Servant
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint GET /servants/search {
+    - Search Servant
+    query q: String
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint GET /my/servants {
+    - List My Servant
+    success {
+      field servants: List<Servant>
+    }
+  }
+  endpoint POST /my/servants {
+    - Register Servant
+    request {
+      field id: Servant.id
+    }
+    success {
+      field servant: Servant
+    }
+  }
+  endpoint DELETE /my/servants/$id {
+    - Remove Servant
+    - Remove a servant from my storage
+  }
+}
+`
+  const parser = new Parser(FILE_PATH, body)
+  const result = parser.parse()
+  t.snapshot(result)
 })
 
 // tokenize
@@ -120,16 +176,63 @@ entity User {
   }
 }
 `
-  const parser = new Parser('test.soil', body)
+  const parser = new Parser(FILE_PATH, body)
   t.snapshot(parser.tokenize())
 })
 
-test('tokenize parameterized endpoint path', t => {
+test('tokenize inner type', t => {
+  const body = `
+entity Order {
+  mutable field item: List<Item>
+  inner Item {
+    field name: String
+  }
+}
+`
+  const parser = new Parser(FILE_PATH, body)
+  t.snapshot(parser.tokenize())
+})
+
+test('tokenize endpoint with path parameter', t => {
   const body = `
 entity Sample {
   endpoint GET /sample/$id {}
 }
 `
-  const parser = new Parser('test.soil', body)
-  t.is(parser.tokenize().map(token => token.token).indexOf('/sample/$id'), 5)
+  const parser = new Parser(FILE_PATH, body)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/$id'), 5)
+  t.snapshot(result)
+})
+
+test('tokenize endpoint with path parameter directive', t => {
+  const body = `
+entity Sample {
+  endpoint GET /sample/$id {
+    parameter id: Integer {
+      - Parameter Summary
+    }
+  }
+}
+`
+  const parser = new Parser(FILE_PATH, body)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/$id'), 5)
+  t.snapshot(result)
+})
+
+test('tokenize endpoint with query parameter directive', t => {
+  const body = `
+entity Sample {
+  endpoint GET /sample/search {
+    query q: String {
+      - Query Summary
+    }
+  }
+}
+`
+  const parser = new Parser(FILE_PATH, body)
+  const result = parser.tokenize()
+  t.is(result.map(token => token.token).indexOf('/sample/search'), 5)
+  t.snapshot(result)
 })

@@ -48,6 +48,8 @@ const commands = {
       }
     })
   },
+  replay: () => {
+  },
 }
 
 async function main() {
@@ -69,7 +71,7 @@ async function main() {
       global.soil = { options }
 
       if (typeof commands[command] == 'function') {
-        await commands[command]()
+        await commands[command](options)
       } else {
         console.error('soil:', command, 'is not a soil command.')
         process.exit(1)
