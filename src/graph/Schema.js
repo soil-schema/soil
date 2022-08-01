@@ -6,7 +6,7 @@ import chalk from 'chalk'
 import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
-import DuplicatedNameError from '../errors/DuplicatedNameError.js'
+import Scenario from './Scenario.js'
 import Root from './Root.js'
 
 export default class Schema {
@@ -16,14 +16,22 @@ export default class Schema {
 
   parse(schemas) {
     const root = new Root()
-    const entities = schemas
+    schemas
+      .entities
       .forEach(schema => root.addChild(schema.name, new Entity(schema)))
+    schemas
+      .scenarios
+      .forEach(schema => root.addChild(schema.name, new Scenario(schema)))
 
     Object.defineProperty(this, 'root', { value: root, enumerable: true })
   }
 
   get entities () {
-    return this.root.children
+    return this.root.entities
+  }
+
+  get scenarios () {
+    return this.root.scenarios
   }
 
   async exportOpenApiSchema() {

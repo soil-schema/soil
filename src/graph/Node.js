@@ -6,6 +6,12 @@ import DuplicatedNameError from '../errors/DuplicatedNameError.js'
 export default class Node {
 
   /**
+   * @type {string|undefined}
+   * @readonly
+   */
+  id
+
+  /**
    * @type {string}
    * @readonly
    */
@@ -36,6 +42,7 @@ export default class Node {
     Object.defineProperty(this, 'name', { value: name, enumerable: true })
     Object.defineProperty(this, 'schema', { value: Object.freeze(schema) })
     Object.defineProperty(this, '_children', { value: {}, enumerable: false })
+    Object.defineProperty(this, 'id', { value: (schema || {}).id, enumerable: true })
   }
 
   get summary () {
@@ -110,6 +117,7 @@ export default class Node {
   /**
    * 
    * @param {string} referenceBody 
+   * @param {boolean} allowGlobalFinding 
    * @returns {Node|undefined}
    */
   resolve (referenceBody, allowGlobalFinding = true) {
@@ -118,7 +126,7 @@ export default class Node {
       if (this.name == referenceBody) {
         return this
       }
-      const child = this.find(child => child.name == referenceBody)
+      const child = this.find(child => child.name == referenceBody || child.id == referenceBody)
       if (child) {
         return child
       }

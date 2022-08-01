@@ -83,4 +83,22 @@ export default class Parameter {
     }
     return []
   }
+
+  /**
+   * 
+   * @param {string} string 
+   * @returns {boolean}
+   */
+  match (string) {
+    switch (this.definition) {
+      case 'String':
+        return true
+      case 'Integer':
+        return /^[0-9]+$/.test(string)
+      case 'Enum':
+        return this.enumValues.indexOf(string) != -1
+      default:
+        return false
+    }
+  }
 }

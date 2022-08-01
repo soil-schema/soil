@@ -1,6 +1,7 @@
 // @ts-check
 
 import Node from './Node.js'
+import Root from './Root.js'
 import Type from './Type.js'
 
 import '../extension.js'
@@ -43,7 +44,7 @@ export default class Field extends Node {
       // @ts-ignore
       return new Type(`List<${this.name.classify()}>${this.optional ? '?' : ''}`)
     } else {
-      return new Type(typeDefinition)
+      return new Type(typeDefinition, /\?$/.test(typeDefinition))
     }
   }
 
@@ -118,6 +119,20 @@ export default class Field extends Node {
    */
   get isSelfDefinedEnum () {
     return this.isEnum && Array.isArray(this.schema.enum)
+  }
+
+  /**
+   * @type {any}
+   */
+  get typicalValue () {
+    return this.type.typicalValue
+  }
+
+  mock () {
+    if (this.isEnum) {
+      return this.enumValues[0]
+    }
+    return this.typicalValue
   }
 }
 

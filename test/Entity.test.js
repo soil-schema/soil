@@ -1,6 +1,7 @@
 import test from 'ava'
 import Entity from '../src/graph/Entity.js'
 import Field from '../src/graph/Field.js'
+import Root from '../src/graph/Root.js'
 
 // requireWritable
 
@@ -166,4 +167,119 @@ test('entity has only mutable fields, it\'s writable', t => {
     },
   })
   t.assert(cat.isWritable)
+})
+
+test('mock', t => {
+  const monster = new Entity({
+    name: 'Monster',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      level: {
+        type: 'Integer',
+      },
+    },
+  })
+  const mock = monster.mock()
+  t.assert('name' in mock)
+  t.assert('level' in mock)
+})
+
+test('mock with list', t => {
+  const sample = new Entity({
+    name: 'Sample',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      cases: {
+        type: 'List<String>',
+      },
+    },
+  })
+  const mock = sample.mock()
+  t.assert('name' in mock)
+  t.assert('cases' in mock)
+  t.assert(Array.isArray(mock.cases))
+})
+
+test('mock with enum', t => {
+  const file = new Entity({
+    name: 'File',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      kind: {
+        type: 'Enum',
+        enum: ['image', 'video', 'document'],
+      },
+    },
+  })
+  const mock = file.mock()
+  t.assert('name' in mock)
+  t.assert('kind' in mock)
+  t.is(mock.kind, 'image')
+})
+
+test('mock with inner type', t => {
+  const person = new Entity({
+    name: 'Person',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      contact: {
+        type: '*',
+        schema: {
+          fields: {
+            kind: { type: 'String' },
+            body: { type: 'String' },
+          },
+        }
+      },
+    },
+  })
+  const mock = person.mock()
+  t.assert('name' in mock)
+  t.assert('contact' in mock)
+  t.assert('kind' in mock.contact)
+  t.assert('body' in mock.contact)
+})
+
+test('mock with global entity and entity list', t => {
+  const book = new Entity({
+    name: 'Book',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      spells: {
+        type: 'List<Spell>',
+      },
+    },
+  })
+  const spell = new Entity({
+    name: 'Spell',
+    fields: {
+      name: {
+        type: 'String',
+      },
+      body: {
+        type: 'String',
+      },
+    },
+  })
+  const root = new Root()
+  root.addChild('Book', book)
+  root.addChild('Spell', spell)
+  const mock = book.mock()
+  t.assert('name' in mock)
+  t.assert('spells' in mock)
+  t.assert(Array.isArray(mock.spells))
+  mock.spells.forEach(spell => {
+    t.assert('name' in spell)
+    t.assert('body' in spell)
+  })
 })

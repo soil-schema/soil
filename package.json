@@ -19,6 +19,7 @@
   },
   "scripts": {
     "test": "ava",
+    "test:api": "node test/mock/api/server.js",
     "test:update-snapshot": "ava --update-snapshots"
   }
 }

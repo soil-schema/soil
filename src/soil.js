@@ -13,6 +13,7 @@ import { loadConfig } from './utils.js'
 
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
+import Runner from './runner/Runner.js'
 
 const commands = {
   build: async () => {
@@ -27,7 +28,7 @@ const commands = {
   
     try {
       await loader.prepare()
-      schema.parse((await loader.load()).flatMap(c => c))
+      schema.parse(await loader.load())
       schema.debug()
       await schema.exportSwiftCode()
       console.log(chalk.green('🍻 Done!'))
@@ -48,7 +49,34 @@ const commands = {
       }
     })
   },
-  replay: () => {
+  replay: async () => {
+    const config = await loadConfig()
+
+    if (soil.options.debug) {
+      console.log(util.inspect(config, { depth: null, colors: true }))
+    }
+
+    const schema = new Schema(config)
+    const loader = new Loader(config)
+  
+    try {
+      await loader.prepare()
+      schema.parse(await loader.load())
+      schema.debug()
+      schema.scenarios.forEach(scenario => {
+        console.log('Run Scenario:', scenario.name)
+        if (soil.options.verbose) {
+          console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
+        }
+        const runner = new Runner()
+        scenario.steps.forEach(step => {
+          runner.run(step, schema.root)
+        })
+        runner.logs.forEach(log => console.log(chalk.gray(log)))
+      })
+    } catch (error) {
+      console.log(chalk.red('☄️ Crash!'), error)
+    }
   },
 }
 

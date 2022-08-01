@@ -54,4 +54,25 @@ export default class Type {
   get isAutoDefiningType () {
     return this.definition == 'Enum'
   }
+
+  /**
+   * @type {any}
+   */
+  get typicalValue () {
+    if (this.isList) {
+      const match =  this.definition.match(/^List<(.+)>$/)
+      // @ts-ignore
+      return [new Type(match[1], /\?$/.test(match[1])).typicalValue]
+    }
+    switch (this.referenceName) {
+      case 'String':
+        return 'string'
+      case 'Integer':
+        return 1
+      case 'Number':
+        return 1.0
+      case 'Boolean':
+        return true
+    }
+  }
 }

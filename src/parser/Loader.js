@@ -9,6 +9,7 @@ export default class Loader {
 
   constructor (config) {
     this.config = config
+    this.result = { entities: [], scenarios: [] }
   }
 
   async prepare () {
@@ -16,19 +17,29 @@ export default class Loader {
   }
 
   async load () {
-    const workingDirPath = path.join(process.cwd(), this.config.workingDir)
+    await this.loadDirectory(path.join(process.cwd(), this.config.workingDir))
+    return this.result
+  }
 
-    return await Promise.all((await fs.readdir(path.join(workingDirPath, 'entity')))
+  async loadDirectory (dirpath) {
+
+    await Promise.all((await fs.readdir(dirpath))
       .map(async file => {
-        const filepath = path.join(workingDirPath, 'entity', file)
+        const filepath = path.join(dirpath, file)
+        const stat = await fs.stat(filepath)
+
+        if (stat.isDirectory()) {
+          await this.loadDirectory(filepath)
+          return
+        }
+
         const body = await fs.readFile(filepath, this.config.encoding)
         const ext = path.extname(file)
-        var schemas = []
 
         if (ext == '.soil') {
           const parser = new Parser(filepath, body)
           try {
-            schemas = parser.parse()
+            parser.parse()
           } catch (error) {
             console.error(error)
           }
@@ -36,11 +47,12 @@ export default class Loader {
             parser.logs.forEach(log => console.log(chalk.gray(log)))
           if (soil.options.dump) {
             await fs.mkdir(path.join(process.cwd(), this.config.exportDir), { recursive: true })
-            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.json`), JSON.stringify(schemas), this.config.encode)
+            const dump = { entities: parser.entities, scenarios: parser.scenarios }
+            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.json`), JSON.stringify(dump, null, 2), this.config.encode)
           }
+          parser.entities.forEach(entity => this.result.entities.push(entity))
+          parser.scenarios.forEach(scenario => this.result.scenarios.push(scenario))
         }
-
-        return schemas
       }))
   }
 }

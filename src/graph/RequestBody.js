@@ -1,9 +1,9 @@
 // @ts-check
 
-import Entity from "./Entity.js";
-import Model from "./Node.js";
+import Node from './Node.js'
+import Entity from './Entity.js'
 
-export default class RequestBody extends Model {
+export default class RequestBody extends Node {
   /**
    * @param {object|string} schema 
    */
@@ -34,5 +34,22 @@ export default class RequestBody extends Model {
 
         return { ...schema, name, type: definition }
       })
+  }
+
+  mock () {
+    if (typeof this.schema == 'undefined') {
+      return void 0
+    }
+    if (typeof this.schema == 'string') {
+      // @ts-ignore
+      return this.resolve(this.schema).mock()
+    }
+    return Object.keys(this.schema.schema)
+      .reduce((mock, name) => {
+        console.log(name, this.schema.schema[name].type)
+        // @ts-ignore
+        mock[name] = this.resolve(this.schema.schema[name].type).mock()
+        return mock
+      }, {})
   }
 }

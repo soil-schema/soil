@@ -32,6 +32,21 @@ entity Author {
     }
   }
 
+  endpoint POST /authors {
+
+    id register
+
+    - Register Author
+
+    request {
+      field author: Author
+    }
+
+    success {
+      field authors: Author
+    }
+  }
+
   endpoint GET /authors {
 
     - List Authors

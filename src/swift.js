@@ -320,12 +320,12 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
 
     defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
 
-    ...this.resolvePathParameters(context).map(parameter => parameter.renderSwiftEnum(context)),
+    ...this.resolvePathParameters().map(parameter => parameter.renderSwiftEnum(context)),
 
-    docc({ parameters: this.resolvePathParameters(context) }),
-    init('public', ...this.resolvePathParameters(context)),
+    docc({ parameters: this.resolvePathParameters() }),
+    init('public', ...this.resolvePathParameters()),
       `self.path = "${this.path}"`,
-      ...this.resolvePathParameters(context).map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
+      ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
     end,
 
     this.requestBody.renderSwiftStruct(context),
