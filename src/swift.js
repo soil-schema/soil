@@ -106,7 +106,12 @@ const convertType = (type) => {
     return `${convertType(type.replace(/\?$/, ''))}?`
   }
   if (type instanceof Type) {
-    return convertType(type.definition)
+    if (type.isEnum) {
+      // @ts-ignore
+      return `${type.owner.name.classify()}Value`
+    } else {
+      return convertType(type.definition)
+    }
   }
   if (type instanceof Entity) {
     return convertType(type.name)
@@ -298,7 +303,7 @@ Field.prototype.renderSwiftEnum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
   var type = convertType(this.type)
   return [
-    `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
+    `public enum ${type.replace(/\?$/, '')}Value: String, Codable {`,
     ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),
     '}',
   ].joinCode()
@@ -320,12 +325,12 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
 
     defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
 
-    ...this.resolvePathParameters(context).map(parameter => parameter.renderSwiftEnum(context)),
+    ...this.resolvePathParameters().map(parameter => parameter.renderSwiftEnum(context)),
 
-    docc({ parameters: this.resolvePathParameters(context) }),
-    init('public', ...this.resolvePathParameters(context)),
+    docc({ parameters: this.resolvePathParameters() }),
+    init('public', ...this.resolvePathParameters()),
       `self.path = "${this.path}"`,
-      ...this.resolvePathParameters(context).map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
+      ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
     end,
 
     this.requestBody.renderSwiftStruct(context),
@@ -341,7 +346,7 @@ Query.prototype.renderSwiftMember = function (context) {
   if (this.optional) {
     type = `${type}?`
   }
-  if (defaultValue && this.type == 'String') {
+  if (defaultValue && this.type.definition == 'String') {
     defaultValue = `"${defaultValue}"`
   }
   if (defaultValue && this.isEnum) {
@@ -386,7 +391,7 @@ Parameter.prototype.renderArgumentSignature = function (context) {
 
 Parameter.prototype.renderSwiftEnum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
-  return `public enum ${this.name.classify()}: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
+  return `public enum ${this.name.classify()}Value: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
 }
 
 Parameter.prototype.renderSwiftStringifyToken = function () {
@@ -467,7 +472,7 @@ const SWIFT_TYPE_TABLE = {
 }
 
 Type.prototype.resolveSwift = function (context) {
-  return convertType(this.definition)
+  return convertType(this)
 }
 
 export default { docc, struct, member, pretty, end, convertType }

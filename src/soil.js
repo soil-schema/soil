@@ -13,6 +13,10 @@ import { loadConfig } from './utils.js'
 
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
+import Runner from './runner/Runner.js'
+import CommandStep from './graph/CommandStep.js'
+import Context from './runner/Context.js'
+import RequestStep from './graph/RequestStep.js'
 
 const commands = {
   build: async () => {
@@ -27,7 +31,7 @@ const commands = {
   
     try {
       await loader.prepare()
-      schema.parse((await loader.load()).flatMap(c => c))
+      schema.parse(await loader.load())
       schema.debug()
       await schema.exportSwiftCode()
       console.log(chalk.green('🍻 Done!'))
@@ -38,7 +42,7 @@ const commands = {
   watch: async () => {
     console.log(chalk.gray('watch', process.cwd()))
     watch(process.cwd(), { recursive: true }, async (evt, name) => {
-      if (path.extname(name) == '.yml' || path.extname(name) == '.soil') {
+      if (path.extname(name) == '.soil') {
         console.log(chalk.gray(`\ndetect change: ${name}\n`))
         try {
           await commands.build()
@@ -48,7 +52,48 @@ const commands = {
       }
     })
   },
-  replay: () => {
+  replay: async () => {
+    const config = await loadConfig()
+
+    if (soil.options.debug) {
+      console.log(util.inspect(config, { depth: null, colors: true }))
+    }
+
+    const schema = new Schema(config)
+    const loader = new Loader(config)
+  
+    try {
+      await loader.prepare()
+      schema.parse(await loader.load())
+      schema.debug()
+      for (const scenario of schema.scenarios) {
+        console.log('Run Scenario:', scenario.name)
+        if (soil.options.verbose) {
+          console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
+        }
+        const rootContext = new Context()
+        const runner = new Runner(rootContext)
+        for (const step of scenario.steps) {
+          if (step instanceof CommandStep) {
+            await runner.runCommand(step.commandName, ...step.args)
+          }
+          if (step instanceof RequestStep) {
+            const endpoint = schema.resolveEndpoint(step)
+            const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock())
+            const receiverContext = new Context(rootContext)
+            receiverContext.setVar('response', response)
+            const receiverRunner = new Runner(receiverContext)
+            for (const receiver of step.receiverSteps) {
+              await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
+            }
+            runner.logs.push(...receiverRunner.logs)
+          }
+        }
+        runner.logs.forEach(log => console.log(chalk.gray(log)))
+      }
+    } catch (error) {
+      console.log(chalk.red('☄️ Crash!'), error)
+    }
   },
 }
 

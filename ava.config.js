@@ -1,6 +1,6 @@
 export default {
   files: [
     "test/**/*",
-    "!test/mock/*",
+    "!test/mock/**/*",
   ],
 }

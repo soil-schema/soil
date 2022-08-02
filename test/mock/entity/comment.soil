@@ -1,6 +1,7 @@
 entity Comment {
   field id: Integer
   mutable field body: String
+  mutable field category: Enum [opinion, review, comment]
 
   endpoint GET /articles/$article_id/comments {
     parameter article_id: Author.id

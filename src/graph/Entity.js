@@ -1,6 +1,7 @@
 // @ts-check
 
 import Node from './Node.js'
+import Root from './Root.js'
 import Field from './Field.js'
 import Endpoint from './Endpoint.js'
 import Writer from './Writer.js'
@@ -14,6 +15,11 @@ export default class Entity extends Node {
    * @private
    */
   _inReference = false
+
+  /**
+   * @type {Endpoint[]}
+   */
+  endpoints
 
   /**
    * @param {object} schema 
@@ -36,12 +42,15 @@ export default class Entity extends Node {
         .map(subschema => new Entity(subschema))
         .forEach(entity => this.addChild(entity.name, entity))
     })
+
     if (this.schema.subtypes) {
       this.schema.subtypes.forEach((/** @type {object} */ subschema) => {
         // @ts-ignore
         this.addChild(subschema.name, new Entity(subschema))
       })
     }
+
+    this.endpoints.forEach(endpoint => endpoint.moveToParent(this))
   }
 
   /**
@@ -134,5 +143,39 @@ export default class Entity extends Node {
    */
   writeOnly () {
     return new Writer(this)
+  }
+
+  /**
+   * @param {string} referenceBody 
+   * @param {boolean} allowGlobalFinding 
+   * @returns {Node|undefined}
+   */
+  resolve (referenceBody, allowGlobalFinding = true) {
+    const referencePath = referenceBody.split('.')
+    if (referencePath.length == 1) {
+      const endpoint = this.endpoints.find(endpoint => {
+        return endpoint.id == referenceBody
+      })
+      if (endpoint instanceof Endpoint) {
+        return endpoint
+      }
+    }
+    return super.resolve(referenceBody, allowGlobalFinding)
+  }
+
+  mock () {
+    return this.fields.reduce((mock, field) => {
+      const type = this.resolve(field.type.referenceName)
+      if (type instanceof Entity) {
+        if (field.type.isList) {
+          mock[field.name] = [type.mock()]
+        } else {
+          mock[field.name] = type.mock()
+        }
+      } else {
+        mock[field.name] = field.mock()
+      }
+      return mock
+    }, {})
   }
 }

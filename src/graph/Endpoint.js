@@ -40,11 +40,18 @@ export default class Endpoint extends Model {
    * @param {string} method 
    * @param {object} schema 
    */
-  constructor(path, method, schema) {
-    super(path, { path, method, ...schema })
+  constructor(path, method, schema = {}) {
+    super(`${method} ${path}`, { path, method, ...schema })
     Object.defineProperty(this, 'query', { value: Query.parse(this.schema.query) })
     Object.defineProperty(this, 'requestBody', { value: new RequestBody(schema.request), enumerable: true })
     Object.defineProperty(this, 'successResponse', { value: new Response(schema.success), enumerable: true })
+
+    if (this.requestBody) {
+      this.requestBody.moveToParent(this)
+    }
+    if (this.successResponse) {
+      this.successResponse.moveToParent(this)
+    }
   }
 
   /**
@@ -83,11 +90,9 @@ export default class Endpoint extends Model {
   }
 
   /**
-   * 
-   * @param {object} context 
    * @returns {Array<Parameter>}
    */
-  resolvePathParameters(context = {}) {
+  resolvePathParameters() {
 
     return this.path
       .split('/')
@@ -99,9 +104,11 @@ export default class Endpoint extends Model {
         if (typeof definition != 'string') {
           throw new Error(`Invalid parameter definition: ${this.method.toUpperCase()} ${this.path} ${token}`)
         }
-        const field = context.resolveReference(definition)
-        if (field) {
+        const field = this.resolve(definition)
+        if (field instanceof Field) {
           return new Parameter(name, field.type.definition, { ...parameter, token })
+        } else if (typeof parameter == 'string') {
+          return new Parameter(name, parameter, { type: parameter, token })
         } else if (parameter) {
           return new Parameter(name, parameter.type, { ...parameter, token })
         } else {
@@ -109,6 +116,40 @@ export default class Endpoint extends Model {
         }
       })
       .filter(param => param != null)
+  }
+
+  /**
+   * 
+   * @param {string} method 
+   * @param {string} path 
+   */
+  match (method, path) {
+    if (this.method != method.toUpperCase()) { return false }
+    const actualPath = path.split('/').filter(part => part.length)
+    const exceptPath = this.path.split('/').filter(part => part.length)
+    const parameters = this.resolvePathParameters()
+    if (actualPath.length != exceptPath.length) { return false }
+    for (const index in actualPath) {
+      const actualElement = actualPath[index]
+      const exceptElement = exceptPath[index]
+      if (exceptElement[0] == '$') {
+        const parameterName = exceptElement.replace(/^\$/, '')
+        const parameter = parameters.find(parameter => parameter.name == parameterName)
+        if (parameter instanceof Parameter && parameter.match(actualElement) == false) {
+          return false
+        }
+      } else if (actualElement != exceptElement) {
+        return false
+      }
+    }
+    return true
+  }
+
+  requestMock () {
+    if (typeof this.requestBody == 'undefined') {
+      return {}
+    }
+    return this.requestBody.mock()
   }
 }
 

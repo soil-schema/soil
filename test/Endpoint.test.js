@@ -49,3 +49,19 @@ test('get endpoint with path parameter and parameters schema', t => {
   t.is(getEndpoint.resolvePathParameters(context).length, 1)
   t.assert(getEndpoint.resolvePathParameters(context)[0] instanceof Parameter)
 })
+
+test('match static path', t => {
+  t.assert(new Endpoint('/users', 'get').match('get', '/users'))
+})
+
+test('not match static path', t => {
+  t.not(new Endpoint('/users', 'get').match('get', '/authors'))
+})
+
+test('match with integer path parameter', t => {
+  t.assert(new Endpoint('/users/$id', 'get', { parameters: { id: 'Integer' } }).match('get', '/users/10'))
+})
+
+test('not match with integer path parameter', t => {
+  t.not(new Endpoint('/users/$id', 'get', { parameters: { id: 'Integer' } }).match('get', '/users/code'))
+})

@@ -6,8 +6,10 @@ import chalk from 'chalk'
 import contextUtilities from '../context.js'
 
 import Entity from './Entity.js'
-import DuplicatedNameError from '../errors/DuplicatedNameError.js'
+import Scenario from './Scenario.js'
 import Root from './Root.js'
+import Endpoint from './Endpoint.js'
+import RequestStep from './RequestStep.js'
 
 export default class Schema {
   constructor(config) {
@@ -16,14 +18,26 @@ export default class Schema {
 
   parse(schemas) {
     const root = new Root()
-    const entities = schemas
+    schemas
+      .entities
       .forEach(schema => root.addChild(schema.name, new Entity(schema)))
+    schemas
+      .scenarios
+      .forEach(schema => root.addChild(schema.name, new Scenario(schema)))
 
     Object.defineProperty(this, 'root', { value: root, enumerable: true })
   }
 
   get entities () {
-    return this.root.children
+    return this.root.entities
+  }
+
+  get scenarios () {
+    return this.root.scenarios
+  }
+
+  get endpoints () {
+    return this.root.endpoints
   }
 
   async exportOpenApiSchema() {
@@ -50,6 +64,27 @@ export default class Schema {
   }
 
   async exportKotlinCode() {
+  }
+
+  /**
+   * 
+   * @param {RequestStep|string} reference 
+   * @param {string|undefined} path 
+   * @returns {Endpoint|undefined}
+   */
+  resolveEndpoint (reference, path = undefined) {
+    if (reference instanceof RequestStep) {
+      return this.resolveEndpoint(reference.reference || reference.method, reference.path)
+    }
+    if (typeof path == 'string') {
+      const method = reference
+      return this.root.endpoints.find(endpoint => endpoint.match(method, path))
+    } else {
+      const node = this.root.resolve(reference)
+      if (node instanceof Endpoint) {
+        return node
+      }
+    }
   }
 
   debug () {

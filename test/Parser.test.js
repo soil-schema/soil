@@ -6,7 +6,8 @@ const FILE_PATH = '/tmp/test.soil'
 test('parse empty entity', async (t) => {
   const schema = 'entity Article {}'
   const parser = new Parser(FILE_PATH, schema)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -17,8 +18,9 @@ test('parse an entity with one line field', async (t) => {
 entity Article {
   field title: String
 }`
-const parser = new Parser(FILE_PATH, schema)
-const result = parser.parse()
+  const parser = new Parser(FILE_PATH, schema)
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -33,7 +35,8 @@ entity Article {
   }
 }`
   const parser = new Parser(FILE_PATH, schema)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -45,8 +48,9 @@ test('parse an entity with mutable field', async (t) => {
 entity Article {
   mutable field title: String
 }`
-const parser = new Parser(FILE_PATH, schema)
-const result = parser.parse()
+  const parser = new Parser(FILE_PATH, schema)
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -65,7 +69,8 @@ entity Article {
   }
 }`
   const parser = new Parser(FILE_PATH, schema)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Article')
@@ -88,7 +93,8 @@ entity Note {
   }
 }`
   const parser = new Parser(FILE_PATH, schema)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].name, 'Note')
@@ -104,7 +110,8 @@ entity UserImage {
   }
 }`
   const parser = new Parser(FILE_PATH, schema)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
 
   t.is(result.length, 1)
   t.is(result[0].endpoints['/user_images'].post.request, 'mime:image/jpeg')
@@ -158,7 +165,8 @@ entity Servant {
 }
 `
   const parser = new Parser(FILE_PATH, body)
-  const result = parser.parse()
+  parser.parse()
+  const result = parser.entities
   t.snapshot(result)
 })
 

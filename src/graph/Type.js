@@ -1,6 +1,9 @@
 // @ts-check
 
 import { DEFINED_TYPES } from "../const.js"
+import UnresolvedReferenceError from "../errors/UnresolvedReferenceError.js"
+
+import Node from './Node.js'
 
 export default class Type {
   /**
@@ -10,27 +13,43 @@ export default class Type {
   definition
 
   /**
-   * @param {string} definition 
-   * @param {object} options
+   * @type {Node}
+   * @readonly
    */
-  constructor (definition, options = {}) {
-    Object.defineProperty(this, 'definition', { value: definition, enumerable: true })
-    Object.defineProperty(this, 'options', { value: options, enumerable: true })
-  }
+  owner
 
   /**
-   * @param {object} context 
-   * @returns {string}
+   * @param {string} definition
+   * @param {Node|undefined} owner
    */
-  resolve (context) {
-    return this.definition
+  constructor (definition, owner = undefined) {
+    Object.defineProperty(this, 'definition', { value: definition, enumerable: true })
+    Object.defineProperty(this, 'owner', { value: owner, enumerable: false })
   }
 
   get referenceName () {
     if (this.isList) {
       return this.definition.replace(/^List<(.+)\??>\??/, '$1')
     } else {
-      return this.definition.replace(/^(.+)\??/, '$1')
+      return this.definition.replace(/\?$/, '')
+    }
+  }
+
+  /**
+   * @type {Node|undefined}
+   */
+  get reference () {
+    if (this.isDefinedType) {
+      return void 0
+    } else {
+      if (typeof this.owner == 'undefined') {
+        throw new UnresolvedReferenceError(`Unresolve reference: ${this.referenceName} (nobody owner)`)
+      }
+      const result = this.owner.resolve(this.referenceName)
+      if (typeof result == 'undefined') {
+        throw new UnresolvedReferenceError(`Unresolve reference: ${this.referenceName}`)
+      }
+      return result
     }
   }
 
@@ -44,14 +63,65 @@ export default class Type {
   /**
    * @type {boolean}
    */
+  get isEnum () {
+    return this.referenceName == 'Enum'
+  }
+
+  /**
+   * @type {boolean}
+   */
   get isDefinedType () {
-    return DEFINED_TYPES.indexOf(this.definition) != -1
+    return DEFINED_TYPES.indexOf(this.referenceName) != -1
   }
 
   /**
    * @type {boolean}
    */
   get isAutoDefiningType () {
-    return this.definition == 'Enum'
+    return ['*', 'List<*>', '*?', 'Enum'].indexOf(this.definition) != -1
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get isOptional () {
+    return /\?$/.test(this.definition)
+  }
+
+  mock () {
+    if (this.isList) {
+      return [this.mockValue()]
+    } else {
+      return this.mockValue()
+    }
+  }
+
+  /**
+   * @private
+   * @returns {any} 
+   */
+  mockValue () {
+    if (this.isOptional) {
+      return null
+    }
+    if (this.isDefinedType) {
+      switch (this.referenceName) {
+        case 'String':
+          return 'string'
+        case 'Integer':
+          return 1
+        case 'Number':
+          return 1.0
+        case 'Boolean':
+          return true
+      }
+    }
+    if (typeof this.reference == 'object') {
+      // @ts-ignore
+      if (typeof this.reference.mock == 'function') {
+        // @ts-ignore
+        return this.reference.mock()
+      }
+    }
   }
 }

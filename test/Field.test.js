@@ -28,7 +28,7 @@ test('constructor supports string schema', t => {
 test('optional string field', t => {
   const name = new Field('name', { type: 'String?' })
   t.is(name.optional, true)
-  t.is(name.type.definition, 'String')
+  t.is(name.type.definition, 'String?')
 })
 
 test('reference entity field', t => {
@@ -42,7 +42,7 @@ test('optional reference entity field', t => {
   const name = new Field('author', { annotation: 'reference', type: 'Author?' })
   t.is(name.optional, true)
   t.is(name.reference, true)
-  t.is(name.type.definition, 'Author')
+  t.is(name.type.definition, 'Author?')
 })
 
 test('captureSubschemas', t => {

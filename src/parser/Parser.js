@@ -8,6 +8,8 @@ import SyntaxError from '../errors/SyntaxError.js'
 import Token from './Token.js'
 
 const ENTITY_NAME_PATTERN = /^[A-Z][A-Za-z0-9_]+$/
+const SCENARIO_NAME_PATTERN = /^[A-Za-z0-9_]+$/
+const SCENARIO_STEP_PATTERN = /^@[A-Za-z\-]+$/
 const FIELD_NAME_PATTERN = /^[a-z0-9_]+$/
 const QYERY_NAME_PATTERN = FIELD_NAME_PATTERN
 const PARAMETER_NAME_PATTERN = FIELD_NAME_PATTERN
@@ -19,19 +21,23 @@ const EXAMPLE_BEGIN     = '['
 const EXAMPLE_END       = ']'
 const DESCRIPTION_MARK  = '-'
 const COMMENT_MARK      = '#'
-const TYPE_SEPARATOR   = ':'
+const TYPE_SEPARATOR    = ':'
+const COMMAND_PREFIX    = '@'
 
 const KEYWORD_ENTITY      = 'entity'
+const KEYWORD_SCENARIO    = 'scenario'
 const KEYWORD_FIELD       = 'field'
 const KEYWORD_INNER       = 'inner'
 const KEYWORD_ENDPOINT    = 'endpoint'
 const KEYWORD_PARAMETER   = 'parameter'
 const KEYWORD_QUERY       = 'query'
 const KEYWORD_SCHEMA      = 'schema'
+const KEYWORD_RECEIVER    = 'receiver'
 const KEYWORD_MUTABLE     = 'mutable'
 const KEYWORD_REFERENCE   = 'reference'
 const KEYWORD_IDENTIFIER  = 'identifier'
 const KEYWORD_WRITER      = 'writer'
+const KEYWORD_ID          = 'id'
 
 export default class Parser {
 
@@ -48,7 +54,7 @@ export default class Parser {
   /**
    * @type {string[]}
    */
-   stack = []
+  stack = []
 
   /**
    * @param {string} filepath 
@@ -58,6 +64,7 @@ export default class Parser {
     this.filepath = filepath
     this.body = body
     this.entities = []
+    this.scenarios = []
     this.logs = []
   }
 
@@ -152,6 +159,33 @@ export default class Parser {
             buffer = ''
             tokens.push(new Token(this.uri, line, offset, "]", 'keyword'))
           }
+          break
+        case COMMAND_PREFIX:
+          var command = ''
+          while (/\s/.test(body[i]) == false && i < body.length) {
+            command += body[i]
+            i += 1
+            offset += 1
+          }
+          tokens.push(new Token(this.uri, line, offset - command.length, command, 'keyword'))
+          var arg = ''
+          while (body[i] != '\n' && i < body.length) {
+            if (/\s/.test(body[i])) {
+              if (arg.trim() != '') {
+                tokens.push(new Token(this.uri, line, offset - arg.trimStart().length, arg.trim(), 'parameter'))
+              }
+              arg = ''
+            } else {
+              arg += body[i]
+            }
+            i += 1
+            offset += 1
+          }
+          if (arg.trim() != '') {
+            tokens.push(new Token(this.uri, line, offset - arg.trimStart().length, arg.trim(), 'parameter'))
+          }
+          line += 1
+          offset = 1
           break
         case DESCRIPTION_MARK:
           var comment = ''
@@ -257,18 +291,19 @@ export default class Parser {
    */
   assertSematicEntity (name, tester) {
     this.assert(tester, `Invalid ${name} name`)
-    this.currentToken.kind = `entity.${name}`
+    this.currentToken.kind = `entity.name.${name}`
   }
 
-  /**
-   * @returns {object[]} array of soil entity
-   */
   parse () {
     this.tokenize()
+
     while (this.offset < this.tokens.length - 1) {
       switch (this.currentToken.token) {
         case KEYWORD_ENTITY:
           this.entities.push(this.parseEntity())
+          break
+        case KEYWORD_SCENARIO:
+          this.scenarios.push(this.parseScenario())
           break
         default:
           throw new SyntaxError(this.currentToken)
@@ -280,8 +315,6 @@ export default class Parser {
         throw new Error(`Unknown kind token: ${token.token} at ${token.address}`)
       }
     })
-
-    return this.entities
   }
 
   /**
@@ -308,6 +341,13 @@ export default class Parser {
           case COMMENT_MARK:
             this.next()
             this.next() // Skip comment body
+            break
+          case KEYWORD_ID:
+            this.currentToken.kind = 'keyword.other.id'
+            this.next()
+            this.currentToken.kind = 'entity.name.id'
+            blockSchema.id = this.currentToken.token
+            this.next()
             break
           default:
             tokenResolver()
@@ -374,8 +414,8 @@ export default class Parser {
           break
   
         case KEYWORD_ENDPOINT:
-          const endpoint = this.fk()
-          if (typeof entitySchema.endpoints[endpoint.method] == 'undefined') {
+          const endpoint = this.parseEndpoint()
+          if (typeof entitySchema.endpoints[endpoint.path] == 'undefined') {
             entitySchema.endpoints[endpoint.path] = {}
           }
           entitySchema.endpoints[endpoint.path][endpoint.method.toLowerCase()] = endpoint
@@ -397,6 +437,44 @@ export default class Parser {
     this.pop(name)
 
     return entitySchema
+  }
+
+  /**
+   * Begin parsing scenario directive at current position.
+   * 
+   * ```
+   * scenario Scenari Name {
+   *   <scenario block>
+   * }
+   * ```
+   */
+  parseScenario () {
+    this.assert(KEYWORD_SCENARIO)
+    this.currentToken.asDirective(KEYWORD_SCENARIO)
+    this.next()
+    this.assertSematicEntity(KEYWORD_ENTITY, ENTITY_NAME_PATTERN)
+
+    var nameTokens = []
+    while (this.currentToken.not(BLOCK_BEGIN)) {
+      nameTokens.push(this.currentToken.token)
+      this.assertSematicEntity(KEYWORD_SCENARIO, SCENARIO_NAME_PATTERN)
+      this.next()
+    }
+    const name = nameTokens.join(' ')
+
+    const scenarioSchema = {
+      name,
+      steps: [],
+    }
+
+    this.log(`[Scenario] ${name}`)
+    this.push(name)
+
+    this.parseRunner(scenarioSchema)
+
+    this.pop(name)
+
+    return scenarioSchema
   }
 
   /**
@@ -526,7 +604,7 @@ export default class Parser {
     return innerSchema
   }
 
-  fk () {
+  parseEndpoint () {
     this.assert(KEYWORD_ENDPOINT)
     this.currentToken.asDirective(KEYWORD_ENDPOINT)
     
@@ -699,6 +777,76 @@ export default class Parser {
     this.pop()
 
     return querySchema
+  }
+
+  /**
+   * @param {object} schema
+   */
+  parseRunner (schema) {
+
+    this.parseBlock(schema, () => {
+      // Test match scenario step: like `@command-name`
+      if (SCENARIO_STEP_PATTERN.test(this.currentToken.token)) {
+        this.currentToken.kind = 'entity.name.function.scenario-step'
+        const stepSchema = {
+          command: this.currentToken.token,
+          args: [],
+        }
+        this.next()
+        while (this.currentToken.kind == 'parameter') {
+          // @ts-ignore
+          stepSchema.args.push(this.currentToken.token)
+          this.next()
+        }
+        // @ts-ignore
+        schema.steps.push(stepSchema)
+        return
+      }
+      const stepSchema = {
+        request: {},
+        steps: [],
+      }
+      // Test match scenario step: like `@command-name`
+      if (/^(GET|POST|PUT|PATCH|DELETE|HEAD)$/.test(this.currentToken.token)) {
+        this.currentToken.kind = 'keyword.other.http-method'
+        stepSchema.request.method = this.currentToken.token
+        this.next()
+        this.currentToken.kind = 'keyword.other.http-path'
+        stepSchema.request.path = this.currentToken.token
+        this.next()
+        this.push(`Request ${stepSchema.request.method} ${stepSchema.request.path}`)
+      } else {
+        const reference = this.currentToken.token
+        this.currentToken.kind = 'function.request'
+        stepSchema.request.reference = reference
+        this.next()
+        this.push(`Request *${reference}`)
+      }
+      this.parseBlock(stepSchema, () => {
+        switch (this.currentToken.token) {
+          case KEYWORD_RECEIVER:
+            this.currentToken.kind = `keyword.other.${KEYWORD_RECEIVER}`
+            const receiverSchema = { name: KEYWORD_RECEIVER, steps: [] }
+            this.next()
+            this.parseRunner(receiverSchema)
+            // @ts-ignore
+            stepSchema.receiver = receiverSchema
+            break
+          default: // parse as setter
+            const name = this.currentToken.token
+            this.next()
+            this.assert(TYPE_SEPARATOR)
+            this.next()
+            const value = this.currentToken.token
+            // @ts-ignore
+            stepSchema.steps.push({ command: '@set', name, value })
+            break
+        }
+      })
+      // @ts-ignore
+      schema.steps.push(stepSchema)
+      this.pop()
+    })
   }
 
   parseExample () {
