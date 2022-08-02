@@ -1,11 +1,14 @@
 // @ts-check
 
 import Node from './Node.js'
-import Root from './Root.js'
-import Runner from '../runner/Runner.js'
-import Endpoint from './Endpoint.js'
+import CommandStep from './CommandStep.js'
 
 export default class RequestStep extends Node {
+  /**
+   * @type {CommandStep[]}
+   */
+  receiverSteps
+
   /**
    * @param {object} request 
    * @param {object} schema 
@@ -13,23 +16,27 @@ export default class RequestStep extends Node {
   constructor (request, schema) {
     if (request.reference) {
       super(request.reference, schema)
+      Object.defineProperty(this, 'reference', { value: request.reference })
     } else {
       super(`${request.method} ${request.path}`, schema)
+      Object.defineProperty(this, 'method', { value: request.method })
+      Object.defineProperty(this, 'path', { value: request.path })
     }
-  }
 
-  /**
-   * @param {Runner} env 
-   * @param {Root} root
-   */
-  execute (env, root) {
-    env.log('Request Step', this.name)
-
-    const endpoint = root.resolve(this.name) || root.endpoints.find(endpoint => endpoint.name == this.name)
-    if (endpoint instanceof Endpoint) {
-      env.request(endpoint.method, endpoint.path, endpoint.requestBody.mock())
+    const receiver = schema.receiver
+    if (receiver) {
+      const steps = (receiver.steps || [])
+        .map(step => {
+          if (step.command) {
+            return new CommandStep(step.command, step.args)
+          }
+          if (step.request) {
+            throw new Error('Invalid request step (can\'t run request step in receiver block)')
+          }
+        })
+      Object.defineProperty(this, 'receiverSteps', { value: steps, enumerable: false })
     } else {
-      console.error('Endpoint Not Found', this.name)
+      Object.defineProperty(this, 'receiverSteps', { value: [], enumerable: false })
     }
   }
 }

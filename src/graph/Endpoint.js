@@ -144,6 +144,13 @@ export default class Endpoint extends Model {
     }
     return true
   }
+
+  requestMock () {
+    if (typeof this.requestBody == 'undefined') {
+      return {}
+    }
+    return this.requestBody.mock()
+  }
 }
 
 /*

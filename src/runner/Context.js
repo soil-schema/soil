@@ -2,19 +2,25 @@ import Runner from './Runner.js'
 
 import VariableNotFoundError from '../errors/VariableNotFoundError.js'
 
-export default class VariableSpace {
+export default class Context {
   /**
    * 
-   * @param {VariableSpace|Runner|undefined} parent 
+   * @param {Context|undefined} parent
+   * @param {object|undefined} env 
    */
-  constructor (parent) {
+  constructor (parent, env = undefined) {
     this._space = {}
     this._headers = {}
+    this._env = env
     Object.defineProperty(this, 'parent', { value: parent, enumerable: false })
   }
 
   get env () {
-    return this.parent.env
+    if (typeof this.parent != 'undefined') {
+      return this.parent.env
+    } else {
+      return this._env || process.env
+    }
   }
 
   get headers () {
@@ -38,9 +44,10 @@ export default class VariableSpace {
   /**
    * 
    * @param {string} code 
+   * @param {object|undefined} namespace
    * @returns 
    */
-  resolveVar (code) {
+  resolveVar (code, namespace = undefined) {
     var path = code.split('.')
     const name = path.shift()
 
@@ -51,28 +58,45 @@ export default class VariableSpace {
     switch (name) {
       case '$env':
         if (typeof this.env[path[0]] == 'undefined') {
-          throw new VariableNotFoundError(`Variable not found \`${code}\``)
+          break
         } else {
           return this.env[path[0]]
         }
       case '$header':
         if (typeof this.headers[path[0]] == 'undefined') {
-          throw new VariableNotFoundError(`Variable not found \`${code}\``)
+          break
         } else {
           return this.headers[path[0]]
         }
       default:
-        if (name[0] == '$') {
-          if (this._space[name] instanceof VariableSpace) {
-            return this._space[name].resolveVar(path.join('.'))
+        if (typeof namespace == 'object' && typeof namespace[name] != 'undefined') {
+          if (path.length == 0) {
+            return namespace[name]
+          } else {
+            return this.resolveVar(path.join('.'), namespace[name])
           }
-          if (typeof this._space[name] != 'undefined') {
+        }
+        if (typeof this._space[name] == 'object') {
+          if (path.length == 0) {
             return this._space[name]
+          } else {
+            return this.resolveVar(path.join('.'), this._space[name])
           }
+        }
+        if (typeof this._space[name] != 'undefined') {
+          return this._space[name]
+        }
+        if (typeof this.parent != 'undefined') {
           return this.parent.resolveVar(code)
         }
     }
 
-    return void 0
+    console.log(this._space)
+
+    throw new VariableNotFoundError(`Variable not found \`${code}\``)
+  }
+
+  spawnNestedContext () {
+    return new Context(this)
   }
 }

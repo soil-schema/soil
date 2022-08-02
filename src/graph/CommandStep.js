@@ -4,31 +4,7 @@ export default class CommandStep {
     this.args = args
   }
 
-  execute (env) {
-    const commandName = this.name.replaceAll('-', '_').replace(/^@/, '')
-    if (typeof this[commandName] == 'function') {
-      console.log('run', commandName)
-      this[commandName](env)
-    } else {
-      throw new Error(`Unknown Command: ${this.name}`)
-    }
-  }
-
-  set_header (env) {
-    const [name, value] = this.args
-    env.log('set current context header:', name, value)
-    env.setHeader(name, value)
-  }
-
-  set_var (env) {
-    const [name, value] = this.args
-    env.log('set current context var:', name, value)
-    env.setVar(name, value)
-  }
-
-  request (env) {
-    const [method, path] = this.args
-    env.log('http request:', method, path)
-    env.request(method, path)
+  get commandName () {
+    return this.name.replaceAll('-', '_').replace(/^@/, '')
   }
 }
