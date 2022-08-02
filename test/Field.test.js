@@ -51,6 +51,35 @@ test('captureSubschemas', t => {
   t.is(record.captureSubschemas()[0].name, 'Record')
 })
 
+test('assert string field', t => {
+  const name = new Field('name', { type: 'String' })
+  t.assert(name.assert('sample'))
+  t.assert(name.assert('1'))
+})
+
+test('assert integer field', t => {
+  const age = new Field('age', { type: 'Integer' })
+  t.not(age.assert('sample'))
+  t.assert(age.assert('1'))
+})
+
+test('assert number field', t => {
+  const score = new Field('score', { type: 'Number' })
+  t.not(score.assert('sample'))
+  t.assert(score.assert('-1'))
+  t.assert(score.assert('-12.42'))
+  t.assert(score.assert('1E+2'))
+})
+
+test('assert boolean field', t => {
+  const is_admin = new Field('is_admin', { type: 'Boolean' })
+  t.assert(is_admin.assert('true'))
+  t.assert(is_admin.assert('false'))
+  t.assert(is_admin.assert(true))
+  t.assert(is_admin.assert(false))
+  t.not(is_admin.assert('string'))
+})
+
 import '../src/swift.js'
 
 test('[Swift] render as member variable string field', t => {
