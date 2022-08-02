@@ -68,6 +68,10 @@ export default class Context {
         } else {
           return this.headers[path[0]]
         }
+      case '$rand':
+        if (typeof this._rand == 'undefined')
+          this._rand = Math.floor(Math.random() * 10000)
+        return this._rand
       default:
         if (typeof namespace == 'object' && typeof namespace[name] != 'undefined') {
           if (path.length == 0) {
@@ -91,9 +95,35 @@ export default class Context {
         }
     }
 
-    console.log(this._space)
-
     throw new VariableNotFoundError(`Variable not found \`${code}\``)
+  }
+
+  clearMemo () {
+    delete this._rand
+  }
+
+  applyString (string) {
+    return string.split(' ')
+      .map(token => {
+        if (token.length == 0) return token
+        if (token[0] == '$') {
+          var keys = token.split('.')
+          while (keys.length > 0) {
+            try {
+              const value = this.resolveVar(keys.join('.'))
+              if (typeof value == 'object') {
+                return `{${keys.join('.')}}`
+              } else {
+                return value
+              }
+            } catch {
+              keys.pop()
+            }
+          }
+        }
+        return token
+      })
+      .join(' ')
   }
 
   spawnNestedContext () {

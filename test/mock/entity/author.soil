@@ -2,7 +2,7 @@ entity Author {
 
   field id: Integer
 
-  mutable field name: String? {
+  mutable field name: String {
 
     - Author's name
 

@@ -1,8 +1,8 @@
 import test from 'ava'
-import Runner from '../src/runner/Runner.js'
+import Runner from '../../src/runner/Runner.js'
 
-import VariableNotFoundError from '../src/errors/VariableNotFoundError.js'
-import Context from '../src/runner/Context.js'
+import VariableNotFoundError from '../../src/errors/VariableNotFoundError.js'
+import Context from '../../src/runner/Context.js'
 
 test('set and resolve var', t => {
   const runner = new Runner(new Context())

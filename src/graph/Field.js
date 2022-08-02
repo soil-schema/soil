@@ -105,18 +105,17 @@ export default class Field extends Node {
     return this.isEnum && Array.isArray(this.schema.enum)
   }
 
-  /**
-   * @type {any}
-   */
-  get typicalValue () {
-    return this.type.mock()
-  }
-
   mock () {
     if (this.isEnum) {
       return this.enumValues[0]
     }
-    return this.typicalValue
+    if (typeof this.schema.examples == 'object') {
+      if (Array.isArray(this.schema.examples) == false) {
+        throw new SyntaxError(`${this.name}.examples is not an array.`)
+      }
+      return this.schema.examples[0]
+    }
+    return this.type.mock()
   }
 }
 

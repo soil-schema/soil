@@ -45,7 +45,7 @@ test('Integer?', t => {
   t.not(type.isEnum)
   t.not(type.isList)
 
-  t.is(type.mock(), null)
+  t.not(type.mock(), null)
 })
 
 test('resolve entity', t => {

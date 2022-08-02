@@ -32,7 +32,6 @@ const commands = {
     try {
       await loader.prepare()
       schema.parse(await loader.load())
-      schema.debug()
       await schema.exportSwiftCode()
       console.log(chalk.green('🍻 Done!'))
     } catch (error) {
@@ -79,7 +78,12 @@ const commands = {
           }
           if (step instanceof RequestStep) {
             const endpoint = schema.resolveEndpoint(step)
-            const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock())
+            const overrides = step.overrides
+            Object.keys(overrides).forEach(key => {
+              if (typeof overrides[key] == 'string')
+                overrides[key] = rootContext.applyString(overrides[key])
+            })
+            const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock(overrides))
             const receiverContext = new Context(rootContext)
             receiverContext.setVar('response', response)
             const receiverRunner = new Runner(receiverContext)

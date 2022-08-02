@@ -101,9 +101,6 @@ export default class Type {
    * @returns {any} 
    */
   mockValue () {
-    if (this.isOptional) {
-      return null
-    }
     if (this.isDefinedType) {
       switch (this.referenceName) {
         case 'String':

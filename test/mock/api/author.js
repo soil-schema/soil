@@ -21,7 +21,8 @@ class AuthorController {
     req.on('data', buffer => body += buffer)
     req.on('end', () => {
       const json = JSON.parse(body)
-      this.authors.push(Object.assign({}, json, {
+      console.log('Register Author', json.author)
+      this.authors.push(Object.assign({}, json.author, {
         id: this.authors.length,
       }))
       res.write(body)

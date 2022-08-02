@@ -46,9 +46,13 @@ export default class RequestBody extends Node {
     }
     return Object.keys(this.schema.schema)
       .reduce((mock, name) => {
-        console.log(name, this.schema.schema[name].type)
-        // @ts-ignore
-        mock[name] = this.resolve(this.schema.schema[name].type).mock()
+        const value = this.resolve(this.schema.schema[name].type)
+        if (value instanceof Entity && value.requireWriter) {
+          mock[name] = value.writeOnly().mock()
+        } else {
+          // @ts-ignore
+          mock[name] = value.mock()
+        }
         return mock
       }, {})
   }

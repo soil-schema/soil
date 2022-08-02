@@ -23,6 +23,7 @@ const DESCRIPTION_MARK  = '-'
 const COMMENT_MARK      = '#'
 const TYPE_SEPARATOR    = ':'
 const COMMAND_PREFIX    = '@'
+const EQUAL_SIGN        = '='
 
 const KEYWORD_ENTITY      = 'entity'
 const KEYWORD_SCENARIO    = 'scenario'
@@ -212,6 +213,20 @@ export default class Parser {
             offset += 1
           }
           tokens.push(new Token(this.uri, line, offset - comment.trimStart().length, comment.trim(), 'comment'))
+          line += 1
+          offset = 1
+          break
+        case EQUAL_SIGN:
+          var value = ''
+          tokens.push(new Token(this.uri, line, offset, EQUAL_SIGN, 'keyword.other.var-set'))
+          i += 1
+          offset += 1
+          while (body[i] != '\n' && i < body.length) {
+            value += body[i]
+            i += 1
+            offset += 1
+          }
+          tokens.push(new Token(this.uri, line, offset - value.trimStart().length, value.trim(), 'value'))
           line += 1
           offset = 1
           break
@@ -804,6 +819,7 @@ export default class Parser {
       }
       const stepSchema = {
         request: {},
+        overrides: {},
         steps: [],
       }
       // Test match scenario step: like `@command-name`
@@ -834,12 +850,14 @@ export default class Parser {
             break
           default: // parse as setter
             const name = this.currentToken.token
+            this.currentToken.kind = 'entity.name.variable'
             this.next()
-            this.assert(TYPE_SEPARATOR)
+            this.assert(EQUAL_SIGN)
             this.next()
             const value = this.currentToken.token
             // @ts-ignore
-            stepSchema.steps.push({ command: '@set', name, value })
+            stepSchema.overrides[name] = value
+            this.next()
             break
         }
       })

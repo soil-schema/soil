@@ -1,10 +1,10 @@
 // @ts-check
 
-import Model from './Node.js'
+import Node from './Node.js'
 import Entity from './Entity.js'
 import Field from './Field.js'
 
-export default class Writer extends Model {
+export default class Writer extends Node {
   /**
    * @type {Entity}
    */
@@ -16,6 +16,16 @@ export default class Writer extends Model {
   constructor(entity) {
     super(`WriteOnly${entity.name}`, entity.schema)
     Object.defineProperty(this, 'entity', { value: entity })
+  }
+
+  /**
+   * 
+   * @param {string} referenceBody 
+   * @param {boolean} allowGlobalFinding 
+   * @returns {Node|undefined}
+   */
+  resolve (referenceBody, allowGlobalFinding = true) {
+    return this.entity.resolve(referenceBody, allowGlobalFinding)
   }
 
   /**
