@@ -4,6 +4,7 @@ import Node from './Node.js'
 import Type from './Type.js'
 
 import '../extension.js'
+import Entity from './Entity.js'
 
 export default class Field extends Node {
   /**
@@ -143,6 +144,14 @@ export default class Field extends Node {
 
     if (typeof value == 'boolean') {
       return this.type.referenceName == 'Boolean'
+    }
+
+    if (typeof value == 'object') {
+      const reference = this.type.reference
+
+      if (reference instanceof Entity) {
+        return reference.assert(value)
+      }
     }
 
     return false
