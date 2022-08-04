@@ -84,9 +84,12 @@ const commands = {
                 if (typeof overrides[key] == 'string')
                   overrides[key] = rootContext.applyString(overrides[key])
               })
-              const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock(overrides))
+              const response = await runner.request(endpoint.method, rootContext.applyString(endpoint.path), endpoint.requestMock(overrides))
+              if (typeof endpoint.successResponse != 'undefined') {
+                endpoint.successResponse.assert(response, ['response'])
+              }
               const receiverContext = new Context(rootContext)
-              receiverContext.setVar('response', response)
+              receiverContext.setLocalVar('response', response)
               const receiverRunner = new Runner(receiverContext)
               for (const receiver of step.receiverSteps) {
                 await receiverRunner.runCommand(receiver.commandName, ...receiver.args)

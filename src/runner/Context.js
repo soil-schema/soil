@@ -35,6 +35,14 @@ export default class Context {
   }
 
   setVar (name, value) {
+    if (typeof this.parent != 'undefined') {
+      this.parent.setVar(name, value)
+    } else {
+      this.setLocalVar(name, value)
+    }
+  }
+
+  setLocalVar (name, value) {
     if (typeof value == 'string' && value[0] == '$') {
       return this.setVar(name, this.resolveVar(value))
     }
@@ -103,27 +111,22 @@ export default class Context {
   }
 
   applyString (string) {
-    return string.split(' ')
-      .map(token => {
-        if (token.length == 0) return token
-        if (token[0] == '$') {
-          var keys = token.split('.')
-          while (keys.length > 0) {
-            try {
-              const value = this.resolveVar(keys.join('.'))
-              if (typeof value == 'object') {
-                return `{${keys.join('.')}}`
-              } else {
-                return value
-              }
-            } catch {
-              keys.pop()
-            }
+    return string.replaceAll(/\$[a-z0-9_\.]+/g, (token) => {
+      var keys = token.split('.')
+      while (keys.length > 0) {
+        try {
+          const value = this.resolveVar(keys.join('.'))
+          if (typeof value == 'object') {
+            return `{${keys.join('.')}}`
+          } else {
+            return value
           }
+        } catch {
+          keys.pop()
         }
-        return token
-      })
-      .join(' ')
+      }
+      return token
+    })
   }
 
   spawnNestedContext () {

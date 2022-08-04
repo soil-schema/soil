@@ -1,4 +1,5 @@
 import test from 'ava'
+import AssertionError from '../src/errors/AssertionError.js'
 import Field from '../src/graph/Field.js'
 
 test('replace returns another Field', t => {
@@ -59,13 +60,17 @@ test('assert string field', t => {
 
 test('assert integer field', t => {
   const age = new Field('age', { type: 'Integer' })
-  t.not(age.assert('sample'))
+  t.throws(() => {
+    age.assert('sample')
+  }, { instanceOf: AssertionError })
   t.assert(age.assert('1'))
 })
 
 test('assert number field', t => {
   const score = new Field('score', { type: 'Number' })
-  t.not(score.assert('sample'))
+  t.throws(() => {
+    score.assert('sample')
+  }, { instanceOf: AssertionError })
   t.assert(score.assert('-1'))
   t.assert(score.assert('-12.42'))
   t.assert(score.assert('1E+2'))
@@ -77,7 +82,9 @@ test('assert boolean field', t => {
   t.assert(is_admin.assert('false'))
   t.assert(is_admin.assert(true))
   t.assert(is_admin.assert(false))
-  t.not(is_admin.assert('string'))
+  t.throws(() => {
+    is_admin.assert('string')
+  }, { instanceOf: AssertionError })
 })
 
 import '../src/swift.js'

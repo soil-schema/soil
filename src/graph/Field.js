@@ -5,6 +5,7 @@ import Type from './Type.js'
 
 import '../extension.js'
 import Entity from './Entity.js'
+import AssertionError from '../errors/AssertionError.js'
 
 export default class Field extends Node {
   /**
@@ -118,43 +119,50 @@ export default class Field extends Node {
   }
 
   /**
+   * 
    * @param {any} value 
+   * @param {string[]} path
    * @returns {boolean}
    */
-  assert (value) {
+  assert (value, path = []) {
 
-    if (typeof value == 'object' && value === null) {
-      return this.type.isOptional
+    if (typeof value == 'object' && value === null && this.type.isOptional == false) {
+      throw new AssertionError(`Get null, but non-null field at ${path.join('.')}`)
     }
 
     if (typeof value == 'string') {
       if (this.type.referenceName == 'String') {
         return true
-      }
-      if (this.type.referenceName == 'Integer') {
-        return /^-?(0|[1-9][0-9]*)$/.test(value)
-      }
-      if (this.type.referenceName == 'Number') {
-        return /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([Ee][\-+]?[0-9]+)?$/.test(value)
-      }
-      if (this.type.referenceName == 'Boolean') {
-        return /^(true|false)$/.test(value)
+      } else if (this.type.referenceName == 'Integer') {
+        if (/^-?(0|[1-9][0-9]*)$/.test(value) == false) {
+          throw new AssertionError(`Invalid Number value ${value} at ${path.join('.')}`)
+        }
+      } else if (this.type.referenceName == 'Number') {
+        if (/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([Ee][\-+]?[0-9]+)?$/.test(value) == false) {
+          throw new AssertionError(`Invalid Number value ${value} at ${path.join('.')}`)
+        }
+      } else if (this.type.referenceName == 'Boolean') {
+        if (/^(true|false)$/.test(value) == false) {
+          throw new AssertionError(`Invalid Boolean value ${value} at ${path.join('.')}`)
+        }
+      } else {
+        throw new AssertionError(`Actual String value, but expected not string (${this.type.referenceName}) at ${path.join('.')}`)
       }
     }
 
-    if (typeof value == 'boolean') {
-      return this.type.referenceName == 'Boolean'
+    if (typeof value == 'boolean' && this.type.referenceName != 'Boolean') {
+      throw new AssertionError(`Actual Boolean value, but expected not boolean (${this.type.referenceName}) at ${path.join('.')}`)
     }
 
     if (typeof value == 'object') {
       const reference = this.type.reference
 
       if (reference instanceof Entity) {
-        return reference.assert(value)
+        return reference.assert(value, path)
       }
     }
 
-    return false
+    return true
   }
 }
 
