@@ -3,8 +3,17 @@ export const DEFAULT_CONFIG = {
   exportDir: 'dist',
   encoding: 'utf-8',
   swift: {
+
+    // Using package, eg: "soil-swift".
+    // @see https://github.com/niaeashes/soil-swift
+    use: undefined,
+    
     indent: '    ',
+
+    // Import packages on each entity files.
     imports: ['Foundation'],
+
+    // Protocols for each element in generated code.
     protocols: {
       entity: 'Decodable',
       writer: 'Encodable',
@@ -12,6 +21,7 @@ export const DEFAULT_CONFIG = {
       requestBody: 'Encodable',
       response: 'Decodable',
     },
+
     mime: {},
   },
   profile: {

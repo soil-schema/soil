@@ -1,5 +1,6 @@
 import test from 'ava'
 import Response from '../src/graph/Response.js'
+import Entity from '../src/graph/Entity.js'
 import UnsupportedKeywordError from '../src/errors/UnsupportedKeywordError.js'
 
 import { DEFAULT_CONFIG } from '../src/const.js'
@@ -9,6 +10,33 @@ const context = {
   config: DEFAULT_CONFIG,
   ...contextUtilities,
 }
+
+test('assert with simple entity', t => {
+  const person = new Entity({
+    name: 'Person',
+    fields: {
+      id: {
+        type: 'Integer'
+      },
+      name: {
+        type: 'String',
+      },
+    },
+  })
+  t.assert(person.assert({
+    id: 0,
+    name: 'niaeashes',
+  }))
+  t.assert(person.assert({
+    id: 0,
+    name: 'nobody',
+    additional_field: true,
+  }))
+  t.not(person.assert({
+    id: 0,
+    name: 100,
+  }))
+})
 
 import '../src/swift.js'
 

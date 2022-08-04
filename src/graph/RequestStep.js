@@ -23,6 +23,8 @@ export default class RequestStep extends Node {
       Object.defineProperty(this, 'path', { value: request.path })
     }
 
+    Object.defineProperty(this, 'overrides', { value: schema.overrides })
+
     const receiver = schema.receiver
     if (receiver) {
       const steps = (receiver.steps || [])

@@ -1,10 +1,11 @@
 scenario Register Author {
   @set-header X-Api-Key testing-api-key
   Author.register {
+    name = $rand User
     receiver {
       @set-var target_id $response.author.id
     }
   }
-  GET /authors {}
+  GET /authors
   @request POST /reset
 }

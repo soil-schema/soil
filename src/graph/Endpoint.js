@@ -145,11 +145,24 @@ export default class Endpoint extends Model {
     return true
   }
 
-  requestMock () {
+  /**
+   * 
+   * @param {object} override 
+   * @returns 
+   */
+  requestMock (override) {
     if (typeof this.requestBody == 'undefined') {
       return {}
     }
-    return this.requestBody.mock()
+    const mock = this.requestBody.mock()
+    if (typeof override == 'object' && typeof mock == 'object') {
+      const overrideMock = (obj) => Object.keys(obj).forEach(key => {
+        if (typeof override[key] != 'undefined') { obj[key] = override[key] }
+        if (typeof obj[key] == 'object' && obj[key] !== null) { overrideMock(obj[key]) }
+      })
+      overrideMock(mock)
+    }
+    return mock
   }
 }
 

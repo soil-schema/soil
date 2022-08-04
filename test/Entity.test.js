@@ -283,3 +283,30 @@ test('mock with global entity and entity list', t => {
     t.assert('body' in spell)
   })
 })
+
+test('assert simple entity', t => {
+  const person = new Entity({
+    name: 'Person',
+    fields: {
+      id: {
+        type: 'Integer'
+      },
+      name: {
+        type: 'String',
+      },
+    },
+  })
+  t.assert(person.assert({
+    id: 0,
+    name: 'niaeashes',
+  }))
+  t.assert(person.assert({
+    id: 0,
+    name: 'nobody',
+    additional_field: true,
+  }))
+  t.not(person.assert({
+    id: 0,
+    name: 100,
+  }))
+})

@@ -49,12 +49,24 @@ export default class Schema {
     if (typeof swiftExportDir == 'object') {
       swiftExportDir = swiftExportDir.swift || swiftExportDir.default
     }
+
+    if (this.config.swift == 'soil-swift') {
+      this.config.swift = { use: 'soil-swift' }
+    }
+    if (this.config.swift.use == 'soil-swift') {
+      this.config.swift.protocols.endpoint = 'SoilEndpoint'
+      if (Array.isArray(this.config.swift.imports) == false) {
+        this.config.swift.imports = [this.config.swift.imports]
+      }
+      this.config.swift.imports.push('SoilSwift')
+    }
+
     await fs.mkdir(swiftExportDir, { recursive: true })
     this.entities.forEach(async (entity) => {
       const file = path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`)
       try {
         const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
-        fs.writeFile(file, body, this.config.encode)
+        await fs.writeFile(file, body, this.config.encode)
         console.log(chalk.green('[Swift]', '-', file))
       } catch (error) {
         console.error(chalk.red('[Swift]', `Failure exporting to ${file}`))

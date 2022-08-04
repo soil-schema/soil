@@ -141,10 +141,20 @@ $ npm install -g soil-schema
 soil supports Swift code generation.
 Generated code has no dependencies, use your api request / response client class.
 
-- [ ] Instead of writing your own code, you can use ~~soil-swift~~.
-
 You run soil command in your cli, export swift code.
 
 ```
 $ npx soil build
+```
+
+## with SoilSwift package
+
+Instead of writing your own code, you can use [soil-swift](https://github.com/niaeashes/soil-swift).
+
+```js soil.config.js
+module.exports = {
+  swift: {
+    use: 'soil-swift',
+  },
+}
 ```

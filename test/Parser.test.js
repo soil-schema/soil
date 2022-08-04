@@ -76,7 +76,7 @@ entity Article {
   t.is(result[0].name, 'Article')
   t.assert(result[0].endpoints['/articles'].get)
   t.is(result[0].endpoints['/articles'].get.summary, 'List Articles')
-  t.is(result[0].endpoints['/articles'].get.success.schema.articles.type, 'List<Article>')
+  t.is(result[0].endpoints['/articles'].get.success.fields.articles.type, 'List<Article>')
   t.snapshot(result)
 })
 

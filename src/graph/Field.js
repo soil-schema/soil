@@ -1,11 +1,10 @@
 // @ts-check
 
 import Node from './Node.js'
-import Root from './Root.js'
 import Type from './Type.js'
 
 import '../extension.js'
-import { DEFINED_TYPES } from '../const.js'
+import Entity from './Entity.js'
 
 export default class Field extends Node {
   /**
@@ -105,18 +104,57 @@ export default class Field extends Node {
     return this.isEnum && Array.isArray(this.schema.enum)
   }
 
-  /**
-   * @type {any}
-   */
-  get typicalValue () {
-    return this.type.mock()
-  }
-
   mock () {
     if (this.isEnum) {
       return this.enumValues[0]
     }
-    return this.typicalValue
+    if (typeof this.schema.examples == 'object') {
+      if (Array.isArray(this.schema.examples) == false) {
+        throw new SyntaxError(`${this.name}.examples is not an array.`)
+      }
+      return this.schema.examples[0]
+    }
+    return this.type.mock()
+  }
+
+  /**
+   * @param {any} value 
+   * @returns {boolean}
+   */
+  assert (value) {
+
+    if (typeof value == 'object' && value === null) {
+      return this.type.isOptional
+    }
+
+    if (typeof value == 'string') {
+      if (this.type.referenceName == 'String') {
+        return true
+      }
+      if (this.type.referenceName == 'Integer') {
+        return /^-?(0|[1-9][0-9]*)$/.test(value)
+      }
+      if (this.type.referenceName == 'Number') {
+        return /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([Ee][\-+]?[0-9]+)?$/.test(value)
+      }
+      if (this.type.referenceName == 'Boolean') {
+        return /^(true|false)$/.test(value)
+      }
+    }
+
+    if (typeof value == 'boolean') {
+      return this.type.referenceName == 'Boolean'
+    }
+
+    if (typeof value == 'object') {
+      const reference = this.type.reference
+
+      if (reference instanceof Entity) {
+        return reference.assert(value)
+      }
+    }
+
+    return false
   }
 }
 

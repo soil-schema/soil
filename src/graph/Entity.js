@@ -178,4 +178,22 @@ export default class Entity extends Node {
       return mock
     }, {})
   }
+
+  /**
+   * 
+   * @param {any} value 
+   * @returns {boolean}
+   */
+  assert (value) {
+    if (typeof value != 'object') return false
+
+    for (const key in Object.keys(value)) {
+      const field = this.findField(key)
+      if (field instanceof Field) {
+        if (field.assert(value[key]) == false) return false
+      }
+    }
+
+    return true
+  }
 }
