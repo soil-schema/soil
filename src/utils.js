@@ -38,7 +38,7 @@ export const configTemplate = new Config()
 .addDirective('kotlin', kotlin => kotlin
 
   // Kotlin code package name
-  .string('package')
+  .optionalString('package')
 
   // Using package, eg: "soil-swift".
   // @see https://github.com/niaeashes/soil-swift

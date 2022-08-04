@@ -1,6 +1,7 @@
 import Endpoint from './graph/Endpoint.js'
 import Entity from './graph/Entity.js'
 import Field from './graph/Field.js'
+import Node from './graph/Node.js'
 import Parameter from './graph/Parameter.js'
 import Response from './graph/Response.js'
 import Type from './graph/Type.js'
@@ -14,8 +15,14 @@ const pretty = (code, config) => {
   var indentLevel = 0
   var annotationBuffer = []
   var commentBuffer = []
+  var blockComment = false
   for (var line of lines) {
     line = line.trim()
+    if (isImports && line.startsWith('package ')) {
+      result.push(line)
+      result.push('')
+      continue
+    }
     if (isImports && line.startsWith('import ')) {
       result.push(line)
       continue
@@ -24,6 +31,16 @@ const pretty = (code, config) => {
     if (line.startsWith('///')) {
         commentBuffer.push(`${indent.repeat(indentLevel)}${line}`)
         continue
+    }
+    if (blockComment == false && line.startsWith('/*')) {
+      blockComment = true
+      commentBuffer.push(`${indent.repeat(indentLevel)}${line}`)
+      continue
+    }
+    if (blockComment) {
+      commentBuffer.push(`${indent.repeat(indentLevel)} ${line}`)
+      if (/\*\/$/.test(line)) blockComment = false
+      continue
     }
     if (line.startsWith('@')) {
       annotationBuffer.push(`${indent.repeat(indentLevel)}${line}`)
@@ -67,6 +84,20 @@ Array.prototype.joinParameter = function (separator = ', ') {
   Kotlin Source Code Renderer Extensions
  */
 
+Node.prototype.kt_DocComment = function (config) {
+  if (typeof this.summary != 'string') return ''
+  var comments = [this.summary]
+  if (this.description) {
+    comments.push('')
+    comments.push(this.description.replace('\n', '\n * '))
+  }
+  return `
+/**
+ * ${comments.join('\n * ')}
+ */
+`
+}
+
 Entity.prototype.renderKotlinFile = function ({ config }) {
   const { kotlin } = config
   return pretty([
@@ -98,6 +129,7 @@ Entity.prototype.kt_Imports = function (config) {
 
 Entity.prototype.kt_DataClass = function (config) {
   return `
+${this.kt_DocComment(config)}
 ${this.kt_Annotation(config)}
 @Suppress("unused")
 public data class ${this.name}(
