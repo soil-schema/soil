@@ -9,7 +9,6 @@ import Entity from './Entity.js'
 import Scenario from './Scenario.js'
 import Root from './Root.js'
 import Endpoint from './Endpoint.js'
-import RequestStep from './RequestStep.js'
 
 export default class Schema {
   constructor(config) {
@@ -80,14 +79,11 @@ export default class Schema {
 
   /**
    * 
-   * @param {RequestStep|string} reference 
+   * @param {string} reference 
    * @param {string|undefined} path 
    * @returns {Endpoint|undefined}
    */
   resolveEndpoint (reference, path = undefined) {
-    if (reference instanceof RequestStep) {
-      return this.resolveEndpoint(reference.reference || reference.method, reference.path)
-    }
     if (typeof path == 'string') {
       const method = reference
       return this.root.endpoints.find(endpoint => endpoint.match(method, path))

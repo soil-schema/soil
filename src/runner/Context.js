@@ -35,6 +35,9 @@ export default class Context {
   }
 
   setVar (name, value) {
+    if (typeof value == 'string' && value[0] == '$') {
+      return this.setVar(name, this.resolveVar(value))
+    }
     if (typeof this.parent != 'undefined') {
       this.parent.setVar(name, value)
     } else {
@@ -111,6 +114,7 @@ export default class Context {
   }
 
   applyString (string) {
+    if (typeof string != 'string') { return undefined }
     return string.replaceAll(/\$[a-z0-9_\.]+/g, (token) => {
       var keys = token.split('.')
       while (keys.length > 0) {

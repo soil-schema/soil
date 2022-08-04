@@ -479,6 +479,7 @@ export default class Parser {
 
     const scenarioSchema = {
       name,
+      uri: this.currentToken.uri,
       steps: [],
     }
 

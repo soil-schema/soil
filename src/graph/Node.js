@@ -57,6 +57,10 @@ export default class Node {
     return null
   }
 
+  get uri () {
+    return this.schema.uri
+  }
+
   /**
    * @param {Node} parentNode 
    */

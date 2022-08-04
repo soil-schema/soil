@@ -66,19 +66,22 @@ const commands = {
       schema.parse(await loader.load())
       schema.debug()
       for (const scenario of schema.scenarios) {
-        console.log('Run Scenario:', scenario.name)
         if (soil.options.verbose) {
           console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
         }
         const rootContext = new Context()
         const runner = new Runner(rootContext)
         try {
+          runner.log('scenario file:', scenario.uri)
           for (const step of scenario.steps) {
             if (step instanceof CommandStep) {
               await runner.runCommand(step.commandName, ...step.args)
             }
             if (step instanceof RequestStep) {
-              const endpoint = schema.resolveEndpoint(step)
+              const endpoint = schema.resolveEndpoint(step.reference || step.method, rootContext.applyString(step.path))
+              if (typeof endpoint == 'undefined') {
+                throw new Error(`Endpoint is not found: ${rootContext.applyString(step.path)}`)
+              }
               const overrides = step.overrides
               Object.keys(overrides).forEach(key => {
                 if (typeof overrides[key] == 'string')
@@ -97,8 +100,9 @@ const commands = {
               runner.logs.push(...receiverRunner.logs)
             }
           }
+          console.log(chalk.green('  ✔'), scenario.name)
         } finally {
-          runner.logs.forEach(log => console.log(chalk.gray(log)))
+          runner.logs.forEach(log => console.log('    ', chalk.gray(log)))
         }
       }
     } catch (error) {
