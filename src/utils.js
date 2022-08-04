@@ -37,6 +37,9 @@ export const configTemplate = new Config()
 
 .addDirective('kotlin', kotlin => kotlin
 
+  // Kotlin code package name
+  .string('package')
+
   // Using package, eg: "soil-swift".
   // @see https://github.com/niaeashes/soil-swift
   .stringArray('use')
@@ -54,12 +57,20 @@ export const configTemplate = new Config()
     response: undefined,
   })
 
+  .stringTable('interfaces', {
+    entity: undefined,
+    writer: undefined,
+    endpoint: undefined,
+    requestBody: undefined,
+    response: undefined,
+  })
+
   .anyStringTable('mime')
 )
 
 export const loadConfig = async function () {
   try {
-    return configTemplate.build(await import(path.join(process.cwd(), path.basename(soil.options.config))).default)
+    return configTemplate.build((await import(path.join(process.cwd(), path.basename(soil.options.config)))).default)
   } catch (error) {
     if (soil.options.verbose) console.log(error)
     return configTemplate.build({})

@@ -106,7 +106,7 @@ export default class Runner {
         })
         res.on('end', () => {
           try {
-            resolve(JSON.parse(body))
+            resolve({ status: res.statusCode, body: JSON.parse(body) })
             this.log(' > receive response.')
           } catch (error) {
             reject(error)

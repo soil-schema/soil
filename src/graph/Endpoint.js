@@ -118,6 +118,10 @@ export default class Endpoint extends Model {
       .filter(param => param != null)
   }
 
+  get pathParameters () {
+    return this.resolvePathParameters()
+  }
+
   /**
    * 
    * @param {string} method 

@@ -224,6 +224,10 @@ export default class Parser {
           tokens.push(new Token(this.uri, line, offset, EQUAL_SIGN, 'keyword.other.var-set'))
           i += 1
           offset += 1
+          if (body[i] == DOUBLE_QUOTE) {
+            i += 1
+            offset += 1
+          }
           while (body[i] != '\n' && i < body.length) {
             value += body[i]
             i += 1

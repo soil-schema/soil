@@ -257,7 +257,7 @@ Field.prototype.renderSwiftMember = function (context = {}) {
     ].joinCode()
   }
 
-  if (writer) {
+  if (writer || this.mutable) {
     return [
       docc(this),
       member(scope, this.name, type),

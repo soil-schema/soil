@@ -195,7 +195,7 @@ export default class Config {
    */
   build (config) {
     var result = {}
-    Object.keys(config)
+    Object.keys(config || {})
       .filter(key => key in this.directives == false)
       .forEach(key => { throw new InvalidConfigError(`Unknown soil config directive: ${key}`) })
     Object.keys(this.directives).forEach(key => {
