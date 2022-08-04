@@ -2,12 +2,12 @@ import test from "ava"
 import Endpoint from "../src/graph/Endpoint.js"
 import Field from "../src/graph/Field.js"
 
-import { DEFAULT_CONFIG } from '../src/const.js'
+import { configTemplate } from '../src/utils.js'
 import contextUtilities from '../src/context.js'
 import Parameter from "../src/graph/Parameter.js"
 
 const context = {
-  config: DEFAULT_CONFIG,
+  config: configTemplate.build({}),
   ...contextUtilities,
 }
 

@@ -3,11 +3,11 @@ import Response from '../src/graph/Response.js'
 import Entity from '../src/graph/Entity.js'
 import UnsupportedKeywordError from '../src/errors/UnsupportedKeywordError.js'
 
-import { DEFAULT_CONFIG } from '../src/const.js'
+import { configTemplate } from '../src/utils.js'
 import contextUtilities from '../src/context.js'
 
 const context = {
-  config: DEFAULT_CONFIG,
+  config: configTemplate.build({}),
   ...contextUtilities,
 }
 

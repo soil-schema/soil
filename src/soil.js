@@ -33,6 +33,7 @@ const commands = {
       await loader.prepare()
       schema.parse(await loader.load())
       await schema.exportSwiftCode()
+      await schema.exportKotlinCode()
       console.log(chalk.green('🍻 Done!'))
     } catch (error) {
       console.log(chalk.red('☄️ Crash!'), error)
@@ -87,12 +88,15 @@ const commands = {
                 if (typeof overrides[key] == 'string')
                   overrides[key] = rootContext.applyString(overrides[key])
               })
-              const response = await runner.request(endpoint.method, rootContext.applyString(endpoint.path), endpoint.requestMock(overrides))
+              const response = await runner.request(endpoint.method, rootContext.applyString(step.path || endpoint.path), endpoint.requestMock(overrides))
+              if (response.status > 299) {
+                throw new Error(`Unsuccessful Response from ${endpoint.name}`)
+              }
               if (typeof endpoint.successResponse != 'undefined') {
-                endpoint.successResponse.assert(response, ['response'])
+                endpoint.successResponse.assert(response.body, ['response'])
               }
               const receiverContext = new Context(rootContext)
-              receiverContext.setLocalVar('response', response)
+              receiverContext.setLocalVar('response', response.body)
               const receiverRunner = new Runner(receiverContext)
               for (const receiver of step.receiverSteps) {
                 await receiverRunner.runCommand(receiver.commandName, ...receiver.args)

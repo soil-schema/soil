@@ -2,11 +2,11 @@ import test from 'ava'
 import RequestBody from '../src/graph/RequestBody.js'
 import UnsupportedKeywordError from '../src/errors/UnsupportedKeywordError.js'
 
-import { DEFAULT_CONFIG } from '../src/const.js'
+import { configTemplate } from '../src/utils.js'
 import contextUtilities from '../src/context.js'
 
 const context = {
-  config: DEFAULT_CONFIG,
+  config: configTemplate.build({}),
   ...contextUtilities,
 }
 
