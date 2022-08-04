@@ -72,28 +72,31 @@ const commands = {
         }
         const rootContext = new Context()
         const runner = new Runner(rootContext)
-        for (const step of scenario.steps) {
-          if (step instanceof CommandStep) {
-            await runner.runCommand(step.commandName, ...step.args)
-          }
-          if (step instanceof RequestStep) {
-            const endpoint = schema.resolveEndpoint(step)
-            const overrides = step.overrides
-            Object.keys(overrides).forEach(key => {
-              if (typeof overrides[key] == 'string')
-                overrides[key] = rootContext.applyString(overrides[key])
-            })
-            const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock(overrides))
-            const receiverContext = new Context(rootContext)
-            receiverContext.setVar('response', response)
-            const receiverRunner = new Runner(receiverContext)
-            for (const receiver of step.receiverSteps) {
-              await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
+        try {
+          for (const step of scenario.steps) {
+            if (step instanceof CommandStep) {
+              await runner.runCommand(step.commandName, ...step.args)
             }
-            runner.logs.push(...receiverRunner.logs)
+            if (step instanceof RequestStep) {
+              const endpoint = schema.resolveEndpoint(step)
+              const overrides = step.overrides
+              Object.keys(overrides).forEach(key => {
+                if (typeof overrides[key] == 'string')
+                  overrides[key] = rootContext.applyString(overrides[key])
+              })
+              const response = await runner.request(endpoint.method, endpoint.path, endpoint.requestMock(overrides))
+              const receiverContext = new Context(rootContext)
+              receiverContext.setVar('response', response)
+              const receiverRunner = new Runner(receiverContext)
+              for (const receiver of step.receiverSteps) {
+                await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
+              }
+              runner.logs.push(...receiverRunner.logs)
+            }
           }
+        } finally {
+          runner.logs.forEach(log => console.log(chalk.gray(log)))
         }
-        runner.logs.forEach(log => console.log(chalk.gray(log)))
       }
     } catch (error) {
       console.log(chalk.red('☄️ Crash!'), error)

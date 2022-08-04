@@ -665,7 +665,7 @@ export default class Parser {
           this.push(name)
           this.log(`[Schema] .${name}`)
           const subschema = this.parseSubschema()
-          endpointSchema[name] = { schema: subschema.fields }
+          endpointSchema[name] = subschema
           this.pop(name)
           return
         case KEYWORD_PARAMETER:

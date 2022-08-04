@@ -21,9 +21,9 @@ export default class RequestBody extends Node {
 
     const { entity } = context
 
-    return Object.keys(this.schema.schema)
+    return Object.keys(this.schema.fields)
       .map(name => {
-        const schema = this.schema.schema[name]
+        const schema = this.schema.fields[name]
         const definition = typeof schema == 'string' ? schema : schema.type
         const optional = definition[definition.length - 1] == '?'
 
@@ -44,9 +44,9 @@ export default class RequestBody extends Node {
       // @ts-ignore
       return this.resolve(this.schema).mock()
     }
-    return Object.keys(this.schema.schema)
+    return Object.keys(this.schema.fields)
       .reduce((mock, name) => {
-        const value = this.resolve(this.schema.schema[name].type)
+        const value = this.resolve(this.schema.fields[name].type)
         if (value instanceof Entity && value.requireWriter) {
           mock[name] = value.writeOnly().mock()
         } else {

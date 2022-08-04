@@ -105,8 +105,12 @@ export default class Runner {
           body += chunk
         })
         res.on('end', () => {
-          resolve(JSON.parse(body))
-          this.log(' > receive response.')
+          try {
+            resolve(JSON.parse(body))
+            this.log(' > receive response.')
+          } catch (error) {
+            reject(error)
+          }
         })
       })
       if (typeof body == 'object') {

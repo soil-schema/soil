@@ -84,10 +84,12 @@ const init = function (_scope = null, ...parameters) {
   return `${scope(_scope)}init(${parameters.map(param => {
     if (typeof param == 'string') {
       return param
+    } else if (typeof param == 'undefined') {
+      return undefined
     } else {
       return parameter(param.label, param.name, param.type)
     }
-  }).join(', ')}) {`
+  }).filter(code => typeof code != 'undefined').join(', ')}) {`
 }
 
 const end = '}'
@@ -186,7 +188,7 @@ Array.prototype.joinCode = function () {
 
 Entity.prototype.renderSwiftFile = function (context) {
   return pretty([
-    'import Foundation',
+    ...context.config.swift.imports.map(name => `import ${name}`),
     this.renderSwiftStruct(context),
   ].joinCode(), context.config || {})
 }
@@ -323,14 +325,15 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
     ...this.query.map(query => query.renderSwiftMember(context)),
     ...this.query.map(query => query.renderSwiftEnum(context)),
 
-    defineIf(this.allowBody, () => member('public', 'body', 'RequestBody!', 'nil')),
+    defineIf(this.allowBody, () => readOnlyMember('public', 'body', 'RequestBody')),
 
     ...this.resolvePathParameters().map(parameter => parameter.renderSwiftEnum(context)),
 
     docc({ parameters: this.resolvePathParameters() }),
-    init('public', ...this.resolvePathParameters()),
+    init('public', ...this.resolvePathParameters(), this.requestBody.renderInitParam()),
       `self.path = "${this.path}"`,
       ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
+      defineIf(this.allowBody, () => 'self.body = body()'),
     end,
 
     this.requestBody.renderSwiftStruct(context),
@@ -404,8 +407,13 @@ Parameter.prototype.renderSwiftStringifyToken = function () {
   return this.name.camelize()
 }
 
+RequestBody.prototype.renderInitParam = function (context) {
+  if (this.schema == null) { return undefined }
+  return 'body: () -> RequestBody'
+}
+
 RequestBody.prototype.renderSwiftStruct = function (context) {
-  if (this.schema == null) { return 'public typealias RequestBody = Never' }
+  if (this.schema == null) { return 'public var body: Void' }
 
   if (typeof this.schema == 'string') {
     const { mime } = context.config.swift
