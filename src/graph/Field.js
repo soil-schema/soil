@@ -68,6 +68,13 @@ export default class Field extends Node {
   }
 
   /**
+   * @type {any}
+   */
+  get defaultValue () {
+    return this.schema.default
+  }
+
+  /**
    * @returns {object[]}
    */
   captureSubschemas () {

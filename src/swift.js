@@ -282,6 +282,7 @@ Field.prototype.renderSwiftMember = function (context = {}) {
 Field.prototype.renderArgumentSignature = function (context) {
   const { writer } = context
   var type = convertType(this.type)
+  var defaultValue = ''
   if (writer) {
     const reference = context.resolveReference(type)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
@@ -294,11 +295,21 @@ Field.prototype.renderArgumentSignature = function (context) {
         type = `Array<${element}.Writer>`
       }
     }
+    if (typeof this.defaultValue != 'undefined') {
+      if (this.type.referenceName == 'String') {
+        defaultValue = ` = "${this.defaultValue}"`
+      } else {
+        // [!] Integer, Number, Boolean
+        defaultValue = ` = ${this.defaultValue}`
+      }
+    } else if (this.type.isOptional) {
+      defaultValue = ` = nil`
+    }
   }
   if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
-  return `${this.name.camelize()}: ${type}`
+  return `${this.name.camelize()}: ${type}${defaultValue}`
 }
 
 Field.prototype.renderSwiftEnum = function (context) {
