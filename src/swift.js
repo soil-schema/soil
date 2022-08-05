@@ -424,8 +424,6 @@ RequestBody.prototype.renderInitParam = function (context) {
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
-  if (this.fields.length == 0) { return 'public var body: Void' }
-
   if (typeof this.schema == 'string') {
     const { mime } = context.config.swift
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
@@ -437,6 +435,8 @@ RequestBody.prototype.renderSwiftStruct = function (context) {
     if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = String' }
     throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
   }
+
+  if (this.fields.length == 0) { return 'public var body: Void' }
 
   const parameters = this.resolveParameters(context)
   return [
