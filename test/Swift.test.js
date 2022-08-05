@@ -4,11 +4,18 @@ import Entity from '../src/graph/Entity.js'
 
 import { configTemplate } from '../src/utils.js'
 import contextUtilities from '../src/context.js'
+import Node from '../src/graph/Node.js'
 
 const context = {
   config: configTemplate.build({}),
   ...contextUtilities,
 }
+
+class ConfigNode extends Node {
+  get config () { return context.config }
+}
+
+const configNode = new ConfigNode()
 
 test('pretty', t => {
   const tester = `
@@ -72,8 +79,10 @@ test('entity require writer', t => {
     },
   })
   const nameField = target.findField('name')
-  t.is(nameField.renderSwiftMember({ ...context, entity: target }), 'public var name: String')
-  t.is(nameField.renderSwiftMember({ ...context, entity: target, writer: target.writeOnly() }), 'public var name: String')
+  t.is(nameField.swift_Member({ ...context, entity: target }), 'public var name: String')
+  t.is(nameField.swift_Member({ ...context, entity: target, writer: target.writeOnly() }), 'public var name: String')
+
+  target.moveToParent(configNode)
 
   t.snapshot(target.renderSwiftFile(context))
 })
@@ -100,5 +109,7 @@ test('type reference to another entity', t => {
     },
   })
   const entities = [wrapper, content]
+  wrapper.moveToParent(configNode)
+  content.moveToParent(configNode)
   t.snapshot(wrapper.renderSwiftFile({ ...context, entities }))
 })

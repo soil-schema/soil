@@ -25,6 +25,7 @@ export default class Loader {
 
     await Promise.all((await fs.readdir(dirpath))
       .map(async file => {
+        if (file == 'node_modules') return
         const filepath = path.join(dirpath, file)
         const stat = await fs.stat(filepath)
 

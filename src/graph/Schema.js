@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs'
+import { inspect } from 'node:util'
 import path from 'node:path'
 
 import chalk from 'chalk'
@@ -19,7 +20,7 @@ export default class Schema {
   }
 
   parse(schemas) {
-    const root = new Root()
+    const root = new Root(this.config)
     schemas
       .entities
       .forEach(schema => root.addChild(schema.name, new Entity(schema)))
@@ -53,10 +54,6 @@ export default class Schema {
     }
     if (this.config.swift.use == 'soil-swift') {
       this.config.swift.protocols.endpoint = 'SoilEndpoint'
-      if (Array.isArray(this.config.swift.imports) == false) {
-        this.config.swift.imports = [this.config.swift.imports]
-      }
-      this.config.swift.imports.push('SoilSwift')
     }
 
     await fs.mkdir(swiftExportDir, { recursive: true })

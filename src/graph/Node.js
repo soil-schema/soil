@@ -49,6 +49,10 @@ export default class Node {
     return this.schema.summary
   }
 
+  get config () {
+    return (this._parent || {}).config || {}
+  }
+
   get description () {
     const { description } = this.schema
     if (typeof description == 'string') {
@@ -133,6 +137,10 @@ export default class Node {
       const child = this.find(child => child.name == referenceBody || child.id == referenceBody)
       if (child) {
         return child
+      }
+      if (this._parent instanceof Node) {
+        const resolved = this._parent.resolve(referenceBody, false)
+        if (typeof resolved != 'undefined') return resolved
       }
       if (allowGlobalFinding && typeof this.root != 'undefined' && this.root !== this) {
         return this.root.resolve(referenceBody, false)
