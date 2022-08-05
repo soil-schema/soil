@@ -9,7 +9,9 @@ import Entity from './Entity.js'
 import Scenario from './Scenario.js'
 import Root from './Root.js'
 import Endpoint from './Endpoint.js'
-import RequestStep from './RequestStep.js'
+
+import '../kotlin.js'
+import '../swift.js'
 
 export default class Schema {
   constructor(config) {
@@ -44,11 +46,7 @@ export default class Schema {
   }
 
   async exportSwiftCode() {
-    var swiftExportDir = this.config.exportDir
-
-    if (typeof swiftExportDir == 'object') {
-      swiftExportDir = swiftExportDir.swift || swiftExportDir.default
-    }
+    const swiftExportDir = this.config.core.exportDir.swift || this.config.core.exportDir.default
 
     if (this.config.swift == 'soil-swift') {
       this.config.swift = { use: 'soil-swift' }
@@ -66,7 +64,7 @@ export default class Schema {
       const file = path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`)
       try {
         const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
-        await fs.writeFile(file, body, this.config.encode)
+        await fs.writeFile(file, body, this.config.core.encode)
         console.log(chalk.green('[Swift]', '-', file))
       } catch (error) {
         console.error(chalk.red('[Swift]', `Failure exporting to ${file}`))
@@ -76,18 +74,29 @@ export default class Schema {
   }
 
   async exportKotlinCode() {
+    const kotlinExportDir = this.config.core.exportDir.kotlin || this.config.core.exportDir.default
+
+    await fs.mkdir(kotlinExportDir, { recursive: true })
+    this.entities.forEach(async (entity) => {
+      const file = path.join(process.cwd(), kotlinExportDir, `${entity.name}.kt`)
+      try {
+        const body = await entity.renderKotlinFile({ config: this.config, entities: this.entities, ...contextUtilities })
+        await fs.writeFile(file, body, this.config.core.encode)
+        console.log(chalk.green('[Kotlin]', '-', file))
+      } catch (error) {
+        console.error(chalk.red('[Kotlin]', `Failure exporting to ${file}`))
+        console.error(error)
+      }
+    })
   }
 
   /**
    * 
-   * @param {RequestStep|string} reference 
+   * @param {string} reference 
    * @param {string|undefined} path 
    * @returns {Endpoint|undefined}
    */
   resolveEndpoint (reference, path = undefined) {
-    if (reference instanceof RequestStep) {
-      return this.resolveEndpoint(reference.reference || reference.method, reference.path)
-    }
     if (typeof path == 'string') {
       const method = reference
       return this.root.endpoints.find(endpoint => endpoint.match(method, path))

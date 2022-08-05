@@ -17,7 +17,7 @@ export default class Loader {
   }
 
   async load () {
-    await this.loadDirectory(path.join(process.cwd(), this.config.workingDir))
+    await this.loadDirectory(path.join(process.cwd(), this.config.core.workingDir))
     return this.result
   }
 
@@ -33,7 +33,7 @@ export default class Loader {
           return
         }
 
-        const body = await fs.readFile(filepath, this.config.encoding)
+        const body = await fs.readFile(filepath, this.config.core.encoding)
         const ext = path.extname(file)
 
         if (ext == '.soil') {
@@ -42,9 +42,10 @@ export default class Loader {
           if (soil.options.verbose)
             parser.logs.forEach(log => console.log(chalk.gray(log)))
           if (soil.options.dump) {
-            await fs.mkdir(path.join(process.cwd(), this.config.exportDir), { recursive: true })
+            const exportDir = this.config.core.exportDir.default
+            await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })
             const dump = { entities: parser.entities, scenarios: parser.scenarios }
-            await fs.writeFile(path.join(process.cwd(), this.config.exportDir, `dump-${file}.json`), JSON.stringify(dump, null, 2), this.config.encode)
+            await fs.writeFile(path.join(process.cwd(), exportDir, `dump-${file}.json`), JSON.stringify(dump, null, 2), this.config.encode)
           }
           parser.entities.forEach(entity => this.result.entities.push(entity))
           parser.scenarios.forEach(scenario => this.result.scenarios.push(scenario))

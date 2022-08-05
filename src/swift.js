@@ -257,7 +257,7 @@ Field.prototype.renderSwiftMember = function (context = {}) {
     ].joinCode()
   }
 
-  if (writer) {
+  if (writer || this.mutable) {
     return [
       docc(this),
       member(scope, this.name, type),
@@ -282,6 +282,7 @@ Field.prototype.renderSwiftMember = function (context = {}) {
 Field.prototype.renderArgumentSignature = function (context) {
   const { writer } = context
   var type = convertType(this.type)
+  var defaultValue = ''
   if (writer) {
     const reference = context.resolveReference(type)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
@@ -294,11 +295,21 @@ Field.prototype.renderArgumentSignature = function (context) {
         type = `Array<${element}.Writer>`
       }
     }
+    if (typeof this.defaultValue != 'undefined') {
+      if (this.type.referenceName == 'String') {
+        defaultValue = ` = "${this.defaultValue}"`
+      } else {
+        // [!] Integer, Number, Boolean
+        defaultValue = ` = ${this.defaultValue}`
+      }
+    } else if (this.type.isOptional) {
+      defaultValue = ` = nil`
+    }
   }
   if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
-  return `${this.name.camelize()}: ${type}`
+  return `${this.name.camelize()}: ${type}${defaultValue}`
 }
 
 Field.prototype.renderSwiftEnum = function (context) {
@@ -408,13 +419,11 @@ Parameter.prototype.renderSwiftStringifyToken = function () {
 }
 
 RequestBody.prototype.renderInitParam = function (context) {
-  if (this.schema == null) { return undefined }
+  if (this.fields.length == 0) { return undefined }
   return 'body: () -> RequestBody'
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
-  if (this.schema == null) { return 'public var body: Void' }
-
   if (typeof this.schema == 'string') {
     const { mime } = context.config.swift
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
@@ -426,6 +435,8 @@ RequestBody.prototype.renderSwiftStruct = function (context) {
     if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = String' }
     throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
   }
+
+  if (this.fields.length == 0) { return 'public var body: Void' }
 
   const parameters = this.resolveParameters(context)
   return [

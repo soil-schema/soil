@@ -2,11 +2,11 @@ import test from 'ava'
 import swift from '../src/swift.js'
 import Entity from '../src/graph/Entity.js'
 
-import { DEFAULT_CONFIG } from '../src/const.js'
+import { configTemplate } from '../src/utils.js'
 import contextUtilities from '../src/context.js'
 
 const context = {
-  config: DEFAULT_CONFIG,
+  config: configTemplate.build({}),
   ...contextUtilities,
 }
 
@@ -16,7 +16,7 @@ struct Sample {
   var name: String
 }
 `
-  t.snapshot(swift.pretty(tester, DEFAULT_CONFIG))
+  t.snapshot(swift.pretty(tester, context.config))
 })
 
 test('docc case 1', t => {
@@ -72,7 +72,7 @@ test('entity require writer', t => {
     },
   })
   const nameField = target.findField('name')
-  t.is(nameField.renderSwiftMember({ ...context, entity: target }), 'public let name: String')
+  t.is(nameField.renderSwiftMember({ ...context, entity: target }), 'public var name: String')
   t.is(nameField.renderSwiftMember({ ...context, entity: target, writer: target.writeOnly() }), 'public var name: String')
 
   t.snapshot(target.renderSwiftFile(context))

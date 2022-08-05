@@ -10,3 +10,14 @@ test('apply', t => {
   t.is(context.applyString('$response.name'), 'Sample')
   t.is(context.applyString('$response'), '{$response}')
 })
+
+test('apply $rand', t => {
+  const context = new Context()
+  t.assert(/^User [0-9]+$/.test(context.applyString('User $rand')))
+})
+
+test('apply to path likes string', t => {
+  const context = new Context()
+  context.setVar('id', 10)
+  t.is(context.applyString('/users/$id'), '/users/10')
+})

@@ -7,6 +7,7 @@ import Endpoint from './Endpoint.js'
 import Writer from './Writer.js'
 
 import '../extension.js'
+import AssertionError from '../errors/AssertionError.js'
 
 export default class Entity extends Node {
 
@@ -182,15 +183,18 @@ export default class Entity extends Node {
   /**
    * 
    * @param {any} value 
+   * @param {string[]} path
    * @returns {boolean}
    */
-  assert (value) {
-    if (typeof value != 'object') return false
+   assert (value, path = []) {
+    if (typeof value != 'object') {
+      throw new AssertionError(`Expect ${this.name}, but actual value is not object (${typeof value}) at ${path.join('.')}`)
+    }
 
-    for (const key in Object.keys(value)) {
+    for (const key in value) {
       const field = this.findField(key)
       if (field instanceof Field) {
-        if (field.assert(value[key]) == false) return false
+        field.assert(value[key], path.concat([key]))
       }
     }
 

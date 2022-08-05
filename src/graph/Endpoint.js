@@ -90,6 +90,20 @@ export default class Endpoint extends Model {
   }
 
   /**
+   * @type {boolean}
+   */
+  get hasRequestBody () {
+    return this.requestBody.fields.length > 0
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get hasResponse () {
+    return typeof this.successResponse.schema != 'undefined'
+  }
+
+  /**
    * @returns {Array<Parameter>}
    */
   resolvePathParameters() {
@@ -116,6 +130,10 @@ export default class Endpoint extends Model {
         }
       })
       .filter(param => param != null)
+  }
+
+  get pathParameters () {
+    return this.resolvePathParameters()
   }
 
   /**

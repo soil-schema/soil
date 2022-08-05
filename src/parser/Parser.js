@@ -24,6 +24,7 @@ const COMMENT_MARK      = '#'
 const TYPE_SEPARATOR    = ':'
 const COMMAND_PREFIX    = '@'
 const EQUAL_SIGN        = '='
+const DOUBLE_QUOTE      = '"'
 
 const KEYWORD_ENTITY      = 'entity'
 const KEYWORD_SCENARIO    = 'scenario'
@@ -39,6 +40,8 @@ const KEYWORD_REFERENCE   = 'reference'
 const KEYWORD_IDENTIFIER  = 'identifier'
 const KEYWORD_WRITER      = 'writer'
 const KEYWORD_ID          = 'id'
+const KEYWORD_DEFAULT     = 'default'
+const KEYWORD_EXAMPLE     = 'example'
 
 export default class Parser {
 
@@ -221,12 +224,31 @@ export default class Parser {
           tokens.push(new Token(this.uri, line, offset, EQUAL_SIGN, 'keyword.other.var-set'))
           i += 1
           offset += 1
+          if (body[i] == DOUBLE_QUOTE) {
+            i += 1
+            offset += 1
+          }
           while (body[i] != '\n' && i < body.length) {
             value += body[i]
             i += 1
             offset += 1
           }
           tokens.push(new Token(this.uri, line, offset - value.trimStart().length, value.trim(), 'value'))
+          line += 1
+          offset = 1
+          break
+        case DOUBLE_QUOTE:
+          var value = ''
+          tokens.push(new Token(this.uri, line, offset, DOUBLE_QUOTE, 'keyword.other.double-quote'))
+          i += 1
+          offset += 1
+          while (body[i] != DOUBLE_QUOTE && i < body.length) {
+            value += body[i]
+            i += 1
+            offset += 1
+          }
+          tokens.push(new Token(this.uri, line, offset - value.length, value, 'string'))
+          tokens.push(new Token(this.uri, line, offset, DOUBLE_QUOTE, 'keyword.other.double-quote'))
           line += 1
           offset = 1
           break
@@ -327,7 +349,7 @@ export default class Parser {
 
     this.tokens.forEach(token => {
       if (typeof token.kind == 'undefined') {
-        throw new Error(`Unknown kind token: ${token.token} at ${token.address}`)
+        throw new Error(`Unknown kind of token: ${token.token} at ${token.address}\n[!] add this.currentToken.kind = '{kind-of-token}' on appropriate line on Parser.js`)
       }
     })
   }
@@ -479,6 +501,7 @@ export default class Parser {
 
     const scenarioSchema = {
       name,
+      uri: this.currentToken.uri,
       steps: [],
     }
 
@@ -555,8 +578,8 @@ export default class Parser {
         fieldSchema.schema = this.parseSubschema()
         this.pop(KEYWORD_SCHEMA)
         break
-      case 'example':
-        this.currentToken.kind = 'keyword.directive.example'
+      case KEYWORD_EXAMPLE:
+        this.currentToken.asDirective(KEYWORD_EXAMPLE)
         this.next()
         this.assert(EXAMPLE_BEGIN)
         const examples = this.parseExample()
@@ -564,6 +587,22 @@ export default class Parser {
           fieldSchema.examples = examples
         }
         this.assert(EXAMPLE_END)
+        this.next()
+        break
+      case KEYWORD_DEFAULT:
+        this.currentToken.asDirective(KEYWORD_DEFAULT)
+        this.next()
+        if (this.currentToken.is(DOUBLE_QUOTE)) {
+          this.next()
+          fieldSchema.default = this.currentToken.token
+          this.next()
+          this.assert(DOUBLE_QUOTE)
+        } else {
+          fieldSchema.default = this.currentToken.token
+          if (this.currentToken.is(/^(true|false)$/)) {
+            this.currentToken.kind = 'value'
+          }
+        }
         this.next()
         break
       default:
