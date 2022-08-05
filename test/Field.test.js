@@ -91,10 +91,10 @@ import '../src/swift.js'
 
 test('[Swift] render as member variable string field', t => {
   const field = new Field('name', { type: 'String' })
-  t.is(field.renderSwiftMember(), 'public let name: String')
+  t.is(field.swift_Member(), 'public let name: String')
 })
 
 test('[Swift] render as member variable mutable optional string field', t => {
   const field = new Field('bio', { annotation: 'mutable', type: 'String?' })
-  t.is(field.renderSwiftMember(), 'public var bio: String?')
+  t.is(field.swift_Member(), 'public var bio: String?')
 })

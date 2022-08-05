@@ -42,17 +42,17 @@ import '../src/swift.js'
 
 test('[Swift] with supported mime-type', t => {
   const request = new Response('mime:application/json')
-  t.is(request.renderSwiftStruct(context), 'public typealias Response = Data')
+  t.is(request.swift_Struct(context), 'public typealias Response = Data')
 })
 
 test('[Swift] with configured mime-type', t => {
   const request = new Response('mime:video/mp2t')
-  t.is(request.renderSwiftStruct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias Response = Video')
+  t.is(request.swift_Struct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias Response = Video')
 })
 
 test('[Swift] with unsupported mime-type', t => {
   const request = new Response('mime:audio/webm')
   t.throws(() => {
-    request.renderSwiftStruct(context)
+    request.swift_Struct(context)
   }, { instanceOf: UnsupportedKeywordError })
 })
