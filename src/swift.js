@@ -188,19 +188,32 @@ Array.prototype.joinCode = function () {
 
 Entity.prototype.renderSwiftFile = function (context) {
   return pretty([
-    ...context.config.swift.imports.map(name => `import ${name}`),
-    this.renderSwiftStruct(context),
+    this.swift_Imports(),
+    this.swift_Struct(context),
   ].joinCode(), context.config || {})
 }
 
-Entity.prototype.renderSwiftStruct = function (context) {
+Entity.prototype.swift_Imports = function () {
+  const { swift } = this.config
+  const { use, imports } = swift
+
+  var result = imports.map(name => name)
+
+  if (use.includes('soil-swift') && result.includes('SoilSwift') == false) {
+    result.push('SoilSwift')
+  }
+
+  return result.map(name => `import ${name}`).joinCode()
+}
+
+Entity.prototype.swift_Struct = function (context) {
   const nextContext = { entity: this, ...context }
   return [
     docc(this),
     classDef('public final', this.name, ...protocolMerge(context, 'entity', this.isWritable ? 'writer' : null)),
-    ...this.readableFields.map(field => field.renderSwiftMember(nextContext)),
-    ...this.fields.map(field => field.renderSwiftEnum(nextContext)),
-    ...this.subtypes.map(subtype => subtype.renderSwiftStruct(nextContext)),
+    ...this.readableFields.map(field => field.swift_Member(nextContext)),
+    ...this.fields.map(field => field.swift_Enum(nextContext)),
+    ...this.subtypes.map(subtype => subtype.swift_Struct(nextContext)),
     defineIf(this.isWritable, () => {
       return [
         docc({ parameters: this.fields }),
@@ -209,17 +222,17 @@ Entity.prototype.renderSwiftStruct = function (context) {
         end,
       ].joinCode()
     }),
-    defineIf(this.requireWriter && !this.isWritable, () => this.writeOnly().renderSwiftStruct(nextContext)),
-    ...this.endpoints.map(endpoint => endpoint.renderSwiftStruct(nextContext)),
+    defineIf(this.requireWriter && !this.isWritable, () => this.writeOnly().swift_Struct(nextContext)),
+    ...this.endpoints.map(endpoint => endpoint.swift_Struct(nextContext)),
     end,
   ].joinCode()
 }
 
-Writer.prototype.renderSwiftStruct = function (context) {
+Writer.prototype.swift_Struct = function (context) {
   const nextContext = { ...context, writer: this }
   return [
     struct('public', 'Writer', ...protocolMerge(nextContext, 'writer')),
-    ...this.fields.map(field => field.renderSwiftMember(nextContext)),
+    ...this.fields.map(field => field.swift_Member(nextContext)),
     docc({ parameters: this.fields }),
     init('public', ...this.fields.map(field => field.renderArgumentSignature(nextContext))),
       ...this.fields.map(field => `self.${field.name.camelize()} = ${field.name.camelize()}`),
@@ -228,7 +241,7 @@ Writer.prototype.renderSwiftStruct = function (context) {
   ].joinCode()
 }
 
-Field.prototype.renderSwiftMember = function (context = {}) {
+Field.prototype.swift_Member = function (context = {}) {
   const { writer, entity } = context
   var scope = 'public'
   var type = this.type.resolveSwift(context)
@@ -312,17 +325,17 @@ Field.prototype.renderArgumentSignature = function (context) {
   return `${this.name.camelize()}: ${type}${defaultValue}`
 }
 
-Field.prototype.renderSwiftEnum = function (context) {
+Field.prototype.swift_Enum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
   var type = convertType(this.type)
   return [
-    `public enum ${type.replace(/\?$/, '')}Value: String, Codable {`,
+    `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
     ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),
     '}',
   ].joinCode()
 }
 
-Endpoint.prototype.renderSwiftStruct = function (context) {
+Endpoint.prototype.swift_Struct = function (context) {
   return [
     docc(this),
     struct('public', this.signature, ...protocolMerge(context, 'endpoint')),
@@ -333,28 +346,28 @@ Endpoint.prototype.renderSwiftStruct = function (context) {
     docc(`${this.signature}.method: \`${this.method}\``),
     readOnlyMember('public', 'method', 'String', `"${this.method}"`),
 
-    ...this.query.map(query => query.renderSwiftMember(context)),
-    ...this.query.map(query => query.renderSwiftEnum(context)),
+    ...this.query.map(query => query.swift_Member(context)),
+    ...this.query.map(query => query.swift_Enum(context)),
 
     defineIf(this.allowBody, () => readOnlyMember('public', 'body', 'RequestBody')),
 
-    ...this.resolvePathParameters().map(parameter => parameter.renderSwiftEnum(context)),
+    ...this.resolvePathParameters().map(parameter => parameter.swift_Enum(context)),
 
     docc({ parameters: this.resolvePathParameters() }),
     init('public', ...this.resolvePathParameters(), this.requestBody.renderInitParam()),
       `self.path = "${this.path}"`,
-      ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.renderSwiftStringifyToken()})`),
+      ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.swift_StringifyToken()})`),
       defineIf(this.allowBody, () => 'self.body = body()'),
     end,
 
-    this.requestBody.renderSwiftStruct(context),
-    this.successResponse.renderSwiftStruct(context),
+    this.requestBody.swift_Struct(context),
+    this.successResponse.swift_Struct(context),
 
     end,
   ].joinCode()
 }
 
-Query.prototype.renderSwiftMember = function (context) {
+Query.prototype.swift_Member = function (context) {
   var type = convertType(this.type)
   var defaultValue = this.defaultValue
   if (this.optional) {
@@ -372,7 +385,7 @@ Query.prototype.renderSwiftMember = function (context) {
   return `public var ${this.name}: ${type} = ${defaultValue}`
 }
 
-Query.prototype.renderSwiftEnum = function (context) {
+Query.prototype.swift_Enum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
   var type = convertType(this.type)
   return `public enum ${type}: String { case ${this.enumValues.join(', ')} }`
@@ -403,12 +416,12 @@ Parameter.prototype.renderArgumentSignature = function (context) {
   return `${this.name.camelize()}: ${type}`
 }
 
-Parameter.prototype.renderSwiftEnum = function (context) {
+Parameter.prototype.swift_Enum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
   return `public enum ${this.name.classify()}Value: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
 }
 
-Parameter.prototype.renderSwiftStringifyToken = function () {
+Parameter.prototype.swift_StringifyToken = function () {
   if (this.isEnum) {
     return `${this.name.camelize()}.rawValue`
   }
@@ -423,7 +436,7 @@ RequestBody.prototype.renderInitParam = function (context) {
   return 'body: () -> RequestBody'
 }
 
-RequestBody.prototype.renderSwiftStruct = function (context) {
+RequestBody.prototype.swift_Struct = function (context) {
   if (typeof this.schema == 'string') {
     const { mime } = context.config.swift
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
@@ -454,7 +467,7 @@ RequestBody.prototype.renderSwiftStruct = function (context) {
   ].joinCode()
 }
 
-Response.prototype.renderSwiftStruct = function (context) {
+Response.prototype.swift_Struct = function (context) {
   if (this.schema == null) { return 'public typealias Response = Never' }
 
   if (typeof this.schema == 'string') {
@@ -474,7 +487,7 @@ Response.prototype.renderSwiftStruct = function (context) {
     docc(this),
     struct('public', 'Response', ...protocolMerge(context, 'response')),
 
-    ...parameters.map(parameter => readOnlyMember('public', parameter.name, convertType(parameter.type))),
+    ...this.fields.map(field => readOnlyMember('public', field.name, field.type.swift_TypeDefinition())),
 
     end,
   ].joinCode()
@@ -486,12 +499,41 @@ const SWIFT_TYPE_TABLE = {
   'Number': 'Double',
   'Boolean': 'Bool',
   'URL': 'URL',
-  'Date': 'Date',
   'Timestamp': 'Date',
 }
 
 Type.prototype.resolveSwift = function (context) {
   return convertType(this)
+}
+
+/**
+ * Return type definition for swift code.
+ */
+Type.prototype.swift_TypeDefinition = function () {
+  var type = this.referenceName
+  if (this.isDefinedType) {
+    switch (type) {
+      case 'Integer':
+        type = 'Int'
+        break
+      case 'Number':
+        type = 'Double'
+        break
+      case 'Boolean':
+        type = 'Bool'
+        break
+      case 'Timestamp':
+        type = 'Date'
+        break
+    } 
+  }
+  if (this.isList) {
+    type = `Array<${type}>`
+  }
+  if (this.isOptional) {
+    type = `${type}?`
+  }
+  return type
 }
 
 export default { docc, struct, member, pretty, end, convertType }

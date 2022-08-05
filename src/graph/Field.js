@@ -113,6 +113,13 @@ export default class Field extends Node {
   }
 
   mock () {
+    if (this.type.isOptional) return null
+    if (typeof this.defaultValue != 'undefined') {
+      if (this.defaultValue == 'null') return null
+      if (this.defaultValue == 'true') return true
+      if (this.defaultValue == 'false') return false
+      return this.defaultValue
+    }
     if (this.isEnum) {
       return this.enumValues[0]
     }

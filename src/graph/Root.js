@@ -5,6 +5,11 @@ import Scenario from './Scenario.js'
 import Endpoint from './Endpoint.js'
 
 export default class Root extends Node {
+  
+  constructor (config = {}) {
+    super('Root', {})
+    Object.defineProperty(this, 'config', { value: config })
+  }
 
   get entities () {
     return this.root.children.filter(child => child instanceof Entity)

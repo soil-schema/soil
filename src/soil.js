@@ -71,6 +71,9 @@ const commands = {
           console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
         }
         const rootContext = new Context()
+        rootContext.setHeader('User-Agent', 'Soil Scenario Runner')
+        rootContext.setHeader('Content-Type', 'application/json')
+        rootContext.setHeader('Accept', 'application/json')
         const runner = new Runner(rootContext)
         try {
           runner.log('scenario file:', scenario.uri)
@@ -79,32 +82,43 @@ const commands = {
               await runner.runCommand(step.commandName, ...step.args)
             }
             if (step instanceof RequestStep) {
-              const endpoint = schema.resolveEndpoint(step.reference || step.method, rootContext.applyString(step.path))
-              if (typeof endpoint == 'undefined') {
-                throw new Error(`Endpoint is not found: ${rootContext.applyString(step.path)}`)
-              }
+              const requestContext = new Context(rootContext)
+              const requestRunner = new Runner(requestContext)
               const overrides = step.overrides
               Object.keys(overrides).forEach(key => {
                 if (typeof overrides[key] == 'string')
-                  overrides[key] = rootContext.applyString(overrides[key])
+                  overrides[key] = requestContext.applyString(overrides[key])
+                requestContext.setVar(key, overrides[key])
               })
-              const response = await runner.request(endpoint.method, rootContext.applyString(step.path || endpoint.path), endpoint.requestMock(overrides))
+              const endpoint = schema.resolveEndpoint(step.reference || step.method, requestContext.applyString(step.path))
+              if (typeof endpoint == 'undefined') {
+                throw new Error(`Endpoint is not found: ${requestContext.applyString(step.path)}`)
+              }
+              const response = await requestRunner.request(endpoint.method, requestContext.applyString(step.path || endpoint.path), endpoint.requestMock(overrides))
+              runner.logs.push(...requestRunner.logs)
               if (response.status > 299) {
-                throw new Error(`Unsuccessful Response from ${endpoint.name}`)
+                console.log(response.body)
+                throw new Error(`Unsuccessful Response from ${endpoint.name} ${response.status}`)
               }
               if (typeof endpoint.successResponse != 'undefined') {
                 endpoint.successResponse.assert(response.body, ['response'])
               }
-              const receiverContext = new Context(rootContext)
+              const receiverContext = new Context(requestContext)
               receiverContext.setLocalVar('response', response.body)
               const receiverRunner = new Runner(receiverContext)
-              for (const receiver of step.receiverSteps) {
-                await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
+              try {
+                for (const receiver of step.receiverSteps) {
+                  await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
+                }
+              } finally {
+                runner.logs.push(...receiverRunner.logs)
               }
-              runner.logs.push(...receiverRunner.logs)
             }
           }
           console.log(chalk.green('  ✔'), scenario.name)
+        } catch (error) {
+          console.log(chalk.red('  ✖'), scenario.name)
+          console.log(chalk.red(error))
         } finally {
           runner.logs.forEach(log => console.log('    ', chalk.gray(log)))
         }

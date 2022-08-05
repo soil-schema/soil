@@ -24,7 +24,7 @@ export default class Context {
   }
 
   get headers () {
-    return Object.assign({}, this.parent.headers, this._headers)
+    return Object.assign({}, (this.parent || {}).headers || {}, this._headers)
   }
 
   setHeader (name, value) {
@@ -83,6 +83,10 @@ export default class Context {
         if (typeof this._rand == 'undefined')
           this._rand = Math.floor(Math.random() * 10000)
         return this._rand
+      case '$timestamp':
+        if (typeof this._timestamp == 'undefined')
+          this._timestamp = new Date().valueOf()
+        return this._timestamp
       default:
         if (typeof namespace == 'object' && typeof namespace[name] != 'undefined') {
           if (path.length == 0) {

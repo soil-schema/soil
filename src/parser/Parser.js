@@ -599,7 +599,7 @@ export default class Parser {
           this.assert(DOUBLE_QUOTE)
         } else {
           fieldSchema.default = this.currentToken.token
-          if (this.currentToken.is(/^(true|false)$/)) {
+          if (this.currentToken.is(/^(true|false|null)$/)) {
             this.currentToken.kind = 'value'
           }
         }

@@ -62,14 +62,22 @@ export default class RequestBody extends Node {
       // @ts-ignore
       return this.resolve(this.schema).mock()
     }
-    return Object.keys(this.schema.fields || {})
-      .reduce((mock, name) => {
-        const value = this.resolve(this.schema.fields[name].type)
-        if (value instanceof Entity && value.requireWriter) {
-          mock[name] = value.writeOnly().mock()
+    return this.fields
+      .reduce((mock, field) => {
+        if (field.type.isDefinedType) {
+          mock[field.name] = field.mock()
         } else {
-          // @ts-ignore
-          mock[name] = value.mock()
+          const value = field.type.reference
+          if (value instanceof Entity) {
+            if (value.requireWriter) {
+              mock[field.name] = value.writeOnly().mock()
+            } else {
+              // @ts-ignore
+              mock[field.name] = value.mock()
+            }
+          } else {
+            mock[field.name] = field.mock()
+          }
         }
         return mock
       }, {})

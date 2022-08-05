@@ -86,7 +86,7 @@ export default class Endpoint extends Model {
    * @type {boolean}
    */
   get allowBody () {
-    return this.method != 'GET'
+    return this.method != 'GET' && this.hasRequestBody
   }
 
   /**

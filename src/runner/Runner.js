@@ -1,6 +1,7 @@
 // @ts-check
 
 import http from 'node:http'
+import https from 'node:https'
 
 import VariableNotFoundError from '../errors/VariableNotFoundError.js'
 import Context from './Context.js'
@@ -67,7 +68,21 @@ export default class Runner {
    * @param {string} value Header Value
    */
   set_header (name, value) {
-    this.log('@set-header', name, value)
+    this.log('@set-header', name, ':', value)
+    this.context.setHeader(name, value)
+  }
+
+  /**
+   * `@set-secure-header <name> <value>`
+   * 
+   * Set http header in current context.
+   * if <value> is variable name likes `$variable-name`, it's resolved.
+   * 
+   * @param {string} name Header Name
+   * @param {string} value Header Value
+   */
+  set_secure_header (name, value) {
+    this.log('@set-secure-header', name, ':', '******')
     this.context.setHeader(name, value)
   }
 
@@ -92,13 +107,16 @@ export default class Runner {
    * @param {object} body 
    */
    async request (method, path, body) {
+    const BASE_URL = process.env.BASE_URL
+    const actualUrl = `${BASE_URL}${path}`
+    const options = {
+      method,
+      use_ssl: actualUrl.startsWith('https://'),
+    }
+    const client = options.use_ssl ? https : http
+    this.log('@request', method, actualUrl)
     return new Promise((resolve, reject) => {
-      const BASE_URL = process.env.BASE_URL
-      const actualUrl = `${BASE_URL}${path}`
-      const options = {
-        method,
-      }
-      const request = http.request(actualUrl, options, res => {
+      const request = client.request(actualUrl, options, res => {
         res.setEncoding('utf8')
         var body = ''
         res.on('data', (/** @type {string} */ chunk) => {
@@ -113,11 +131,18 @@ export default class Runner {
           }
         })
       })
+      Object.keys(this.context.headers).forEach(name => {
+        const value = this.context.headers[name]
+        request.setHeader(name, value)
+        this.log(' >', name, ':', value)
+      })
       if (typeof body == 'object') {
-        request.write(JSON.stringify(body))
+        const json = JSON.stringify(body)
+        this.log(' > request body', json)
+        request.setHeader('Content-Length', Buffer.byteLength(json))
+        request.write(json)
       }
       request.end()
-      this.log('@request', method, actualUrl)
     })
   }
 
