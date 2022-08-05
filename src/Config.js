@@ -89,7 +89,7 @@ export class ConfigDirective {
         throw new InvalidConfigError(`${directiveName}.${name} is expected string table, but actuallly not (${typeof item})`)
       if (Array.isArray(item))
         throw new InvalidConfigError(`${directiveName}.${name} is expected string table, but actuallly array`)
-      var result = Object.assign({}, expectedTable)
+      let result = Object.assign({}, expectedTable)
       Object.keys(expectedTable).forEach(key => {
         const value = item[key]
         if (typeof value != 'string' && typeof value != 'undefined') {
@@ -115,7 +115,7 @@ export class ConfigDirective {
       if (typeof item != 'object' || item === null) {
         throw new InvalidConfigError(`${directiveName}.${name} is expected string table, but actuallly not (${typeof item})`)
       }
-      var result = {}
+      let result = {}
       Object.keys(item).forEach(key => {
         const value = item[key]
         if (typeof value != 'string' && typeof value != 'undefined') {
@@ -156,7 +156,7 @@ export class ConfigDirective {
    * @returns {any}
    */
   apply (config) {
-    var result = {}
+    let result = {}
     Object.keys(this.declarations).forEach(name => {
       if (typeof this.declarations[name] == 'function') {
         result[name] = this.declarations[name](config[name])
@@ -194,7 +194,7 @@ export default class Config {
    * @param {object} config
    */
   build (config) {
-    var result = {}
+    let result = {}
     Object.keys(config || {})
       .filter(key => key in this.directives == false)
       .forEach(key => { throw new InvalidConfigError(`Unknown soil config directive: ${key}`) })

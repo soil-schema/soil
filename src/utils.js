@@ -65,6 +65,22 @@ export const configTemplate = new Config()
     response: undefined,
   })
 
+  /**
+   * About confiburation for kotlin-serialization package.
+   * @see https://kotlinlang.org/docs/serialization.html
+   */
+  .stringTable('serializable', {
+    /**
+     * Type of decoding formatter class name.
+     * 
+     * [!] StringFormat is not stable
+     * @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
+     * 
+     * @case Json with 'kotlin-serialization-json'
+     */
+    format: 'StringFormat',
+  })
+
   .anyStringTable('mime')
 )
 

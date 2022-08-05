@@ -349,7 +349,7 @@ export default class Parser {
 
     this.tokens.forEach(token => {
       if (typeof token.kind == 'undefined') {
-        throw new Error(`Unknown kind token: ${token.token} at ${token.address}`)
+        throw new Error(`Unknown kind of token: ${token.token} at ${token.address}\n[!] add this.currentToken.kind = '{kind-of-token}' on appropriate line on Parser.js`)
       }
     })
   }
@@ -599,6 +599,9 @@ export default class Parser {
           this.assert(DOUBLE_QUOTE)
         } else {
           fieldSchema.default = this.currentToken.token
+          if (this.currentToken.is(/^(true|false)$/)) {
+            this.currentToken.kind = 'value'
+          }
         }
         this.next()
         break

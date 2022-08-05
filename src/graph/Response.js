@@ -42,7 +42,7 @@ export default class Response extends Node {
   /**
    * @type {Field[]}
    */
-   get fields () {
+  get fields () {
     // @ts-ignore
     return this.findAny(node => node instanceof Field)
   }
@@ -51,7 +51,7 @@ export default class Response extends Node {
    * @param {string} name 
    * @returns {Field?}
    */
-   findField (name) {
+  findField (name) {
     return this.fields.find(field => field.name == name) || null
   }
 

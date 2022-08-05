@@ -5,7 +5,6 @@ export const DEFINED_TYPES = [
   'Boolean',
   'URL',
   'Timestamp',
-  'Date',
 ]
 
 export const HTTP_METHOD_GET = "GET"
