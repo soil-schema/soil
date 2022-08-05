@@ -419,12 +419,12 @@ Parameter.prototype.renderSwiftStringifyToken = function () {
 }
 
 RequestBody.prototype.renderInitParam = function (context) {
-  if (this.schema == null) { return undefined }
+  if (this.fields.length == 0) { return undefined }
   return 'body: () -> RequestBody'
 }
 
 RequestBody.prototype.renderSwiftStruct = function (context) {
-  if (this.schema == null) { return 'public var body: Void' }
+  if (this.fields.length == 0) { return 'public var body: Void' }
 
   if (typeof this.schema == 'string') {
     const { mime } = context.config.swift
