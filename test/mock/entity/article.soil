@@ -5,7 +5,10 @@ entity Article {
 
   endpoint GET /articles/search {
     - Search Articles
-    query q: String
+    required query q: String
     query sort: Enum [created_at, modified_at, title, score]
+    success {
+      field articles: List<Article>
+    }
   }
 }

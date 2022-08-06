@@ -139,7 +139,7 @@ const pretty = (code, config) => {
         commentBuffer.push(`${indent.repeat(indentLevel)}${line}`)
         continue
     }
-    const hasBlockSignature = /^(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias|enum)/.test(line)
+    const hasBlockSignature = /^(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias|enum)\b/.test(line)
     if (hasBlockSignature) {
         result.push('')
         result.push(...commentBuffer)
@@ -150,8 +150,11 @@ const pretty = (code, config) => {
     if (line == '}') {
       indentLevel -= 1
     }
+    if (indentLevel < 0) {
+      console.log(`Invalid indent level`, result)
+    }
     result.push(`${indent.repeat(indentLevel)}${line}`)
-    if (hasBlockSignature && line.endsWith('{')) {
+    if (line.endsWith('{')) {
       indentLevel += 1
     }
     if (line.startsWith('.')) {
@@ -175,10 +178,6 @@ const protocolMerge = ({ config }, ...keys) => {
   }
 
   return protocols
-}
-
-Array.prototype.joinCode = function () {
-  return this.filter(item => item != null).join('\n')
 }
 
 /*
@@ -346,17 +345,17 @@ Endpoint.prototype.swift_Struct = function (context) {
     docc(`${this.signature}.method: \`${this.method}\``),
     readOnlyMember('public', 'method', 'String', `"${this.method}"`),
 
-    ...this.query.map(query => query.swift_Member(context)),
-    ...this.query.map(query => query.swift_Enum(context)),
+    this.swift_Queries(),
 
     defineIf(this.allowBody, () => readOnlyMember('public', 'body', 'RequestBody')),
 
     ...this.resolvePathParameters().map(parameter => parameter.swift_Enum(context)),
 
     docc({ parameters: this.resolvePathParameters() }),
-    init('public', ...this.resolvePathParameters(), this.requestBody.renderInitParam()),
+    `init(${this.swift_InitializerParameters()}) {`,
       `self.path = "${this.path}"`,
       ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.swift_StringifyToken()})`),
+      this.swift_QueryInitializer(),
       defineIf(this.allowBody, () => 'self.body = body()'),
     end,
 
@@ -367,58 +366,119 @@ Endpoint.prototype.swift_Struct = function (context) {
   ].joinCode()
 }
 
+Endpoint.prototype.swift_InitializerParameters = function () {
+  return []
+    .concat(this.pathParameters.map(parameter => parameter.swift_InitializeParameter()))
+    .concat(this.query.filter(query => query.isRequired).map(query => query.swift_InitializeParameter()))
+    .concat([this.requestBody.swift_InitializeParameter()])
+    .joinCode(', ')
+}
+
+Endpoint.prototype.swift_Queries = function () {
+
+  if (this.hasQuery == false) return ''
+
+  var code = [
+    'public private(set) var queryData: Dictionary<String, String> = [:]',
+  ]
+
+  this.query.forEach(query => code.push(query.swift_Member()))
+
+  return code.joinCode()
+}
+
+Endpoint.prototype.swift_QueryInitializer = function () {
+  return this.query.filter(query => query.isRequired)
+    .map(query => `self.${query.name.camelize()} = ${query.name.camelize()}\nself.queryData["${query.name}"] = ${query.name.camelize()}`)
+    .joinCode()
+}
+
 Query.prototype.swift_Member = function (context) {
-  var type = convertType(this.type)
-  var defaultValue = this.defaultValue
-  if (this.optional) {
-    type = `${type}?`
+  var type = this.isRequired ? this.type : this.type.toOptional()
+  var result = [
+    `public var ${this.name.camelize()}: ${type.swift_TypeDefinition()}${this.isRequired ? '' : ' = nil'} {`,
+    'didSet {',
+    this.swift_RemoveHelper(),
+  ]
+  var valueCode = this.name.camelize()
+
+  if (this.type.referenceName == 'Boolean') {
+    const { booleanQuery } = this.config.api
+    if (booleanQuery == 'not-accepted') {
+      throw new Error('config.api.booleanQuery is `not-accepted`, but use boolean query in your soil schema.\n@see https://github.com/niaeashes/soil/issues/32')
+    }
+    const valueCodeTable = {
+      // true sets query value 1, false sets query value 0.
+      'numeric': `${this.name.camelize()} ? "1" : "0"`,
+      // Boolean value convert to string like "true" or "false".
+      'stringify': `${this.name.camelize()} ? "true" : "false"`,
+      // true sets query value 1, but false remove key from query string. (add removing helper)
+      'set-only-true': '"1"',
+      // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
+      'only-key': '""',
+    }
+    valueCode = valueCodeTable[booleanQuery]
   }
-  if (defaultValue && this.type.definition == 'String') {
-    defaultValue = `"${defaultValue}"`
-  }
-  if (defaultValue && this.isEnum) {
-    defaultValue = `.${defaultValue}`
-  }
-  if (typeof defaultValue == 'undefined') {
-    defaultValue = 'nil'
-  }
-  return `public var ${this.name}: ${type} = ${defaultValue}`
+
+  result.push(`self.queryData["${this.name}"] = ${valueCode}`, '}', '}', this.swift_Enum())
+
+  return result.joinCode()
 }
 
-Query.prototype.swift_Enum = function (context) {
+Query.prototype.swift_RemoveHelper = function (context) {
+
+  /**
+   * If this is boolean query and config.api.booleanQuery is `set-only-true` or `only-key`,
+   * insert boolean specialized removing helper.
+   */
+  if (this.type.referenceName == 'Boolean') {
+    const { booleanQuery } = this.config.api
+    if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
+      return [
+        `guard let ${this.name.camelize()} = ${this.name.camelize()}, ${this.name.camelize()} == true else {`,
+          `self.queryData.removeValue(forKey: "${this.name}")`,
+          'return',
+        '}',
+      ].joinCode()
+    }
+  }
+
+  /**
+   * If query is required only set to queryData,
+   * but when it's optional require checking and removing key from queryData with nil.
+   */
+  if (this.isRequired == false) {
+    return [
+      `guard let ${this.name.camelize()} = ${this.name.camelize()} else {`,
+        `self.queryData.removeValue(forKey: "${this.name}")`,
+        'return',
+      '}',
+    ].joinCode()
+  }
+
+  return null
+}
+
+Query.prototype.swift_InitializeParameter = function () {
+  return `${this.name.camelize()}: ${this.type.swift_TypeDefinition()}`
+}
+
+Query.prototype.swift_Enum = function () {
   if (!this.isSelfDefinedEnum) { return null }
-  var type = convertType(this.type)
-  return `public enum ${type}: String { case ${this.enumValues.join(', ')} }`
+  return [
+    `public enum ${this.type.swift_TypeDefinition()}: String {`,
+    ...this.enumValues.map(value => `case ${/^[a-z_]+$/.test(value) ? value : `\`${value}\``}`),
+    '}'
+  ].joinCode()
 }
 
-Parameter.prototype.renderArgumentSignature = function (context) {
-  const { writer } = context
-  var type = convertType(this.type)
-  if (this.isSelfDefinedEnum) {
-    type = convertType(this.name.classify())
-  }
-  if (writer) {
-    const reference = context.resolveReference(type)
-    if (reference instanceof Entity && reference.requireWriter) {
-      type = `${type}.Writer`
-    }
-    if (/^Array\<.+\>$/.test(type)) {
-      const element = type.match(/^Array\<(.+)\>$/)[1]
-      const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter) {
-        type = `Array<${element}.Writer>`
-      }
-    }
-  }
-  if (this.optional) {
-    type = `${type}?`
-  }
-  return `${this.name.camelize()}: ${type}`
+Parameter.prototype.swift_InitializeParameter = function (context) {
+  return `${this.name.camelize()}: ${this.type.swift_TypeDefinition()}`
 }
 
 Parameter.prototype.swift_Enum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
-  return `public enum ${this.name.classify()}Value: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
+  return `public enum ${this.type.swift_TypeDefinition()}: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
 }
 
 Parameter.prototype.swift_StringifyToken = function () {
@@ -431,8 +491,8 @@ Parameter.prototype.swift_StringifyToken = function () {
   return this.name.camelize()
 }
 
-RequestBody.prototype.renderInitParam = function (context) {
-  if (this.fields.length == 0) { return undefined }
+RequestBody.prototype.swift_InitializeParameter = function (context) {
+  if (this.fields.length == 0) { return null }
   return 'body: () -> RequestBody'
 }
 

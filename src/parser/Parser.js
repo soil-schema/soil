@@ -39,6 +39,7 @@ const KEYWORD_MUTABLE     = 'mutable'
 const KEYWORD_REFERENCE   = 'reference'
 const KEYWORD_IDENTIFIER  = 'identifier'
 const KEYWORD_WRITER      = 'writer'
+const KEYWORD_REQUIRED    = 'required'
 const KEYWORD_ID          = 'id'
 const KEYWORD_DEFAULT     = 'default'
 const KEYWORD_EXAMPLE     = 'example'
@@ -715,6 +716,10 @@ export default class Parser {
           const query = this.parseQuery()
           endpointSchema.query[query.name] = query
           return
+        case KEYWORD_REQUIRED:
+          this.next()
+          this.assert(KEYWORD_QUERY)
+          break
         default:
           throw new SyntaxError(this.currentToken)
       }
@@ -799,6 +804,8 @@ export default class Parser {
     this.assert(KEYWORD_QUERY)
     this.currentToken.asDirective(KEYWORD_QUERY)
 
+    const annotation = this.tokens[this.offset - 1]
+
     this.next()
     this.assertSematicEntity(KEYWORD_QUERY, QYERY_NAME_PATTERN)
     const name = this.currentToken.token
@@ -816,6 +823,11 @@ export default class Parser {
     const querySchema = {
       name,
       type,
+    }
+
+    if ([KEYWORD_REQUIRED].includes(annotation.token)) {
+      querySchema.annotation = annotation.token
+      annotation.kind = `keyword.annotation.${annotation.token}`
     }
 
     this.next()
@@ -871,11 +883,28 @@ export default class Parser {
         this.next()
         this.push(`Request ${stepSchema.request.method} ${stepSchema.request.path}`)
       } else {
-        const reference = this.currentToken.token
-        this.currentToken.kind = 'function.request'
-        stepSchema.request.reference = reference
+        const target = this.currentToken
         this.next()
-        this.push(`Request *${reference}`)
+        if (this.currentToken.is(EQUAL_SIGN)) {
+          target.kind = 'parameter'
+          const stepSchema = {
+            command: '@set-var',
+            args: [target.token],
+          }
+          this.next()
+          while (this.currentToken.kind == 'parameter' || this.currentToken.kind == 'value') {
+            // @ts-ignore
+            stepSchema.args.push(this.currentToken.token)
+            this.next()
+          }
+          // @ts-ignore
+          schema.steps.push(stepSchema)
+          return
+        } else {
+          target.kind = 'function.request'
+          stepSchema.request.reference = target.token
+          this.push(`Request *${target.token}`)
+        }
       }
       this.parseBlock(stepSchema, () => {
         switch (this.currentToken.token) {

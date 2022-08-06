@@ -13,6 +13,21 @@ export const configTemplate = new Config()
   .string('encoding', 'utf-8')
 )
 
+.addDirective('api', core => core
+  /**
+   * Boolean type query parsing strategy.
+   * 
+   * - not-accepted: if a soil schema has Boolean query parameter, crash soil command with error message.
+   * - numeric: true sets query value 1, false sets query value 0.
+   * - stringify: Boolean value convert to string like "true" or "false".
+   * - set-only-true: true sets query value 1, but false remove key from query string.
+   * - only-key: true sets key but no-value likes `?key`. false remove key from query string.
+   * 
+   * @see https://github.com/niaeashes/soil/issues/32
+   */
+  .string('booleanQuery', 'set-only-true')
+)
+
 .addDirective('swift', swift => swift
 
   // Using package, eg: "soil-swift".

@@ -20,6 +20,7 @@
   "scripts": {
     "test": "ava",
     "test:api": "node test/mock/api/server.js",
-    "test:update-snapshot": "ava --update-snapshots"
+    "test:update-snapshot": "ava --update-snapshots",
+    "mock": "node src/soil.js --config test/mock/soil.config.js"
   }
 }

@@ -30,11 +30,6 @@ export default class Endpoint extends Model {
   successResponse
 
   /**
-   * @type {Query[]}
-   */
-  query
-
-  /**
    * 
    * @param {string} path 
    * @param {string} method 
@@ -42,7 +37,11 @@ export default class Endpoint extends Model {
    */
   constructor(path, method, schema = {}) {
     super(`${method} ${path}`, { path, method, ...schema })
-    Object.defineProperty(this, 'query', { value: Query.parse(this.schema.query) })
+
+    Object.keys(this.schema.query || {}).forEach(name => {
+      this.addChild(name, new Query(name, this.schema.query[name]))
+    })
+
     Object.defineProperty(this, 'requestBody', { value: new RequestBody(schema.request), enumerable: true })
     Object.defineProperty(this, 'successResponse', { value: new Response(schema.success), enumerable: true })
 
@@ -80,6 +79,21 @@ export default class Endpoint extends Model {
    */
   get method () {
     return this.schema.method.toUpperCase()
+  }
+
+  /**
+   * @type {Query[]}
+   */
+  get query () {
+    // @ts-ignore
+    return this.findAny(child => child instanceof Query)
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get hasQuery () {
+    return this.query.length > 0
   }
 
   /**
@@ -145,7 +159,7 @@ export default class Endpoint extends Model {
     if (this.method != method.toUpperCase()) { return false }
     const actualPath = path.split('/').filter(part => part.length)
     const exceptPath = this.path.split('/').filter(part => part.length)
-    const parameters = this.resolvePathParameters()
+    const parameters = this.pathParameters
     if (actualPath.length != exceptPath.length) { return false }
     for (const index in actualPath) {
       const actualElement = actualPath[index]

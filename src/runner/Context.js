@@ -113,6 +113,20 @@ export default class Context {
     throw new VariableNotFoundError(`Variable not found \`${code}\``)
   }
 
+  /**
+   * 
+   * @param {string} code 
+   * @returns {boolean}
+   */
+  existsVar (code) {
+    try {
+      this.resolveVar(code)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   clearMemo () {
     delete this._rand
   }
