@@ -9,6 +9,7 @@ import Type from './graph/Type.js'
 import Writer from './graph/Writer.js'
 
 import './extension.js'
+import Query from './graph/Query.js'
 
 const USE_KOTLIN_SERIALIZATION = 'kotlin-serialization'
 
@@ -69,7 +70,7 @@ const pretty = (code, config) => {
       inParameters = false
     }
     result.push(`${indent.repeat(indentLevel)}${line}`)
-    if (line.endsWith('{')) {
+    if (line.endsWith('{') || line.endsWith(' ->')) {
       indentLevel += 1
     }
     if (line.endsWith('(')) {
@@ -134,6 +135,10 @@ Entity.prototype.ktPackage = function (config) {
 Entity.prototype.kt_Imports = function (config) {
   const { use, imports } = config
   var result = imports.map(name => `import ${name}`)
+
+  // Delegates use at non-required query to use didSet like code block with Delegates.observable
+  result.push('import kotlin.properties.Delegates')
+  
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
     result.push('import kotlinx.serialization.*')
   }
@@ -144,17 +149,18 @@ Entity.prototype.kt_Imports = function (config) {
 }
 
 Entity.prototype.kt_DataClass = function (config) {
-  return `
-${this.kt_DocComment(config)}
-${this.kt_Annotation(config)}
-@Suppress("unused")
-public data class ${this.name}(
-  ${this.kt_Initializer(config)}
-) {
-${this.kt_Writer(config)}
-${this.kt_Endpoints(config)}
-}
-`
+  return [
+    this.kt_DocComment(config),
+    this.kt_Annotation(config),
+    '@Suppress("unused")',
+    `public data class ${this.name}(`,
+      this.kt_Initializer(config),
+    ') {',
+    this.kt_Writer(config),
+    this.kt_InnerType(config),
+    this.kt_Endpoints(config),
+    '}',
+  ].joinCode()
 }
 
 Entity.prototype.kt_Annotation = function (config) {
@@ -176,11 +182,11 @@ Entity.prototype.kt_Initializer = function (config) {
 }
 
 Entity.prototype.kt_Writer = function (config) {
-  if (this.requireWriter == false) {
-    return null
-  }
+  return this.requireWriter ? this.writeOnly().kt_DataClass(config) : null
+}
 
-  return this.writeOnly().kt_DataClass(config)
+Entity.prototype.kt_InnerType = function (config) {
+  return this.subtypes.map(subtype => subtype.kt_DataClass(config))
 }
 
 Entity.prototype.kt_Endpoints =  function (config) {
@@ -198,10 +204,10 @@ Field.prototype.kt_Annotation = function (config) {
 
   let annotations = []
 
-  // Use 'kotlin-serialization-json' and mismatch kotlin field name and api field name.
-  // @see https://github.com/Kotlin/kotlinx.serialization/blob/master/docs/json.md#alternative-json-names
-  if (use.indexOf('kotlin-serialization-json') != -1 && this.name != this.name.camelize()) {
-    annotations.push(`@JsonNames("${this.name}")`)
+  // Use 'kotlin-serialization' and mismatch between kotlin field name and api field name.
+  // @see https://github.com/Kotlin/kotlinx.serialization/blob/master/docs/basic-serialization.md#serial-field-names
+  if (use.indexOf('kotlin-serialization') != -1 && this.name != this.name.camelize()) {
+    annotations.push(`@SerialName("${this.name}")`)
   }
 
   // Use 'kotlin-serialization'
@@ -274,19 +280,22 @@ Writer.prototype.kt_InitializerParameters = function (config) {
 }
 
 Endpoint.prototype.kt_Definition = function (config) {
-  return `
-public class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.signature}.Response> {
-  override val path: String = "${this.path}"${this.kt_PathReplacer()}
-  override val method: String = "${this.method.toUpperCase()}"
-${this.kt_FunGetBody(config)}
-${this.kt_FunDecode(config)}
-${this.kt_Request(config)}
-${this.kt_Response(config)}
-}`
+  return [
+    `public class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.signature}.Response> {`,
+    `override val path: String = "${this.kt_ParameterizedPath()}"`,
+    `override val method: String = "${this.method.toUpperCase()}"`,
+    this.kt_QueryData(config),
+    this.kt_QueryMembers(config),
+    this.kt_FunGetBody(config),
+    this.kt_FunDecode(config),
+    this.kt_Request(config),
+    this.kt_Response(config),
+    '}',
+  ].joinCode()
 }
 
 Endpoint.prototype.kt_Initializer = function (config) {
-  if (this.pathParameters.length == 0 && this.hasRequestBody == false) {
+  if (this.pathParameters.length == 0 && this.query.length == 0 && this.hasRequestBody == false) {
     return ''
   } else {
     return `(\n${this.kt_InitializerParameters(config)}\n)`
@@ -294,19 +303,33 @@ Endpoint.prototype.kt_Initializer = function (config) {
 }
 
 Endpoint.prototype.kt_InitializerParameters = function () {
-  let parameters = this.pathParameters.map(parameter => parameter.kt_EndpointClassParameter())
-  if (this.hasRequestBody) {
-    parameters.push(`val body: () -> RequestBody`)
-  }
-  return parameters.joinParameter(',\n')
+  return []
+    .concat(this.pathParameters.map(parameter => parameter.kt_EndpointClassParameter()))
+    .concat(this.query.map(query => query.kt_EndpointClassParameter()))
+    .concat(this.hasRequestBody ? [`val body: () -> RequestBody`] : [])
+    .joinParameter(',\n')
 }
 
-Endpoint.prototype.kt_PathReplacer = function () {
-  if (this.pathParameters.length > 0) {
-    return '\n' + this.pathParameters.map(parameter => `.replace("\\$${parameter.name}", ${parameter.name})`).join('\n')
+Endpoint.prototype.kt_ParameterizedPath = function () {
+  return this.pathParameters.reduce((path, parameter) => path.replace(`$${parameter.name}`, parameter.kt_Stringify()), this.path)
+}
+
+Endpoint.prototype.kt_QueryData = function () {
+  if (this.query.length == 0) return null
+  if (this.query.filter(query => query.isRequired).length == 0) {
+    return `override var queryData: MutableMap<String, String> = mutableMapOf()`
   } else {
-    return ''
+    return [
+      `override var queryData: MutableMap<String, String> = mutableMapOf(`,
+      ...this.query.filter(query => query.isRequired).map(query => query.kt_MutableListMember()),
+      ')',
+    ].joinCode()
   }
+}
+
+Endpoint.prototype.kt_QueryMembers = function () {
+  if (this.query.length == 0) return null
+  return this.query.map(query => query.kt_EndpointMember()).joinCode()
 }
 
 Endpoint.prototype.kt_FunGetBody = function (config) {
@@ -341,7 +364,7 @@ Endpoint.prototype.kt_FunDecode = function (config) {
   let annotations = []
 
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
-    // [!] StringFormat is not stable, should set @ExperimentalSerializationApi annotation.
+    // [!] StringFormat is not stable, thereforeinsert @ExperimentalSerializationApi annotation.
     // @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
     if (serializable.format == 'StringFormat') {
       annotations.push('@ExperimentalSerializationApi')
@@ -373,7 +396,35 @@ Endpoint.prototype.kt_Response = function (config) {
 }
 
 Parameter.prototype.kt_EndpointClassParameter = function () {
-  return `val ${this.name}: ${this.type.kt_TypeArgument()}`
+  return `val ${this.name.camelize()}: ${this.type.kt_TypeArgument()}`
+}
+
+Parameter.prototype.kt_Stringify = function () {
+  return `$\{${this.name.camelize()}\}`
+}
+
+Query.prototype.kt_EndpointClassParameter = function () {
+  return `${this.name.camelize()}: ${this.type.kt_TypeArgument()}`
+}
+
+Query.prototype.kt_EndpointMember = function () {
+  if (this.isRequired) {
+    return `var ${this.name.camelize()}: String by Delegates.observable(q) { _, _, new ->\nqueryData["${this.name}"] = new\n}`
+  } else {
+    return `var ${this.name.camelize()}: String by Delegates.observable(q) { _, _, new ->\nnew?.let { queryData["${this.name}"] = it } ?: queryData.remove("${this.name}")\n}`
+  }
+}
+
+Query.prototype.kt_SetQueryData = function () {
+  if (this.isRequired) {
+    return `queryData["${this.name}"] = ${this.name.camelize()}`
+  } else {
+    return ``
+  }
+}
+
+Query.prototype.kt_MutableListMember = function () {
+  return `"${this.name}" to ${this.name.camelize()}`
 }
 
 RequestBody.prototype.kt_DataClass = function (config) {
