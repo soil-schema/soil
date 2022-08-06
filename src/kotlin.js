@@ -8,6 +8,8 @@ import Response from './graph/Response.js'
 import Type from './graph/Type.js'
 import Writer from './graph/Writer.js'
 
+import './extension.js'
+
 const USE_KOTLIN_SERIALIZATION = 'kotlin-serialization'
 
 const pretty = (code, config) => {
@@ -81,14 +83,6 @@ const pretty = (code, config) => {
     commentBuffer = []
   }
   return result.join('\n')
-}
-
-Array.prototype.joinCode = function () {
-  return this.filter(item => item != null).join('\n')
-}
-
-Array.prototype.joinParameter = function (separator = ', ') {
-  return this.filter(item => typeof item == 'string').join(separator)
 }
 
 /*

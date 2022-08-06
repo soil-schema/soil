@@ -30,9 +30,14 @@ export default class Type {
   get referenceName () {
     if (this.isList) {
       return this.definition.replace(/^List<(.+)\??>\??/, '$1')
-    } else {
-      return this.definition.replace(/\?$/, '')
     }
+    if (/^Enum\??$/.test(this.definition)) {
+      if (this.owner) {
+        // @ts-ignore
+        return `${this.owner.name.classify()}Value`
+      }
+    }
+    return this.definition.replace(/\?$/, '')
   }
 
   /**
@@ -64,7 +69,7 @@ export default class Type {
    * @type {boolean}
    */
   get isEnum () {
-    return this.referenceName == 'Enum'
+    return this.definition == 'Enum'
   }
 
   /**
@@ -86,6 +91,17 @@ export default class Type {
    */
   get isOptional () {
     return /\?$/.test(this.definition)
+  }
+
+  /**
+   * @returns {Type}
+   */
+  toOptional () {
+    if (this.isOptional) {
+      return this
+    } else {
+      return new Type(`${this.definition}?`, this.owner)
+    }
   }
 
   mock () {

@@ -33,3 +33,13 @@ String.prototype.camelize = function () {
   }
   return camelize
 }
+
+Array.prototype.joinCode = function (separator = '\n') {
+  return this
+    .filter(item => item != null && item != '')
+    .join(separator)
+}
+
+Array.prototype.joinParameter = function (separator = ', ') {
+  return this.filter(item => typeof item == 'string').join(separator)
+}

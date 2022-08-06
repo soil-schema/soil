@@ -23,12 +23,12 @@ export default class Query extends Node {
   }
 
   get defaultValue () {
-    return this.schema.default
+    return this.schema.default || null
   }
 
   get enumValues () {
     const enumValues = this.schema.enum
-    if (Array.isArray(enumValues)) {
+    if (Array.isArray(enumValues) && this.type.isEnum) {
       return enumValues
     }
     return []
@@ -44,6 +44,13 @@ export default class Query extends Node {
   /**
    * @type {boolean}
    */
+   get isRequired () {
+    return this.schema.annotation == 'required'
+  }
+
+  /**
+   * @type {boolean}
+   */
   get isSelfDefinedEnum () {
     return this.isEnum && Array.isArray(this.schema.enum)
   }
@@ -51,11 +58,11 @@ export default class Query extends Node {
   /**
    * @returns {boolean}
    */
-  get optional () {
-    if (this.schema.default) {
-      return false
+  get required () {
+    if (this.schema.required == true) {
+      return true
     }
-    return true
+    return false
   }
 }
 
