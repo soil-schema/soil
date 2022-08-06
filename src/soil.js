@@ -97,7 +97,30 @@ const commands = {
               var path = requestContext.applyString(step.path || endpoint.path)
               const query = endpoint.query.filter(query => requestContext.existsVar(`$${query.name}`))
               if (query.length > 0) {
-                path += '?' + query.map(query => `${query.name}=${encodeURIComponent(requestContext.resolveVar(`$${query.name}`))}`).join("&")
+                const { booleanQuery } = config.api
+                path += '?' + query.map(query => {
+                  var value = requestContext.resolveVar(`$${query.name}`)
+                  if (query.type.referenceName == 'Boolean') {
+                    if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return ''
+                    switch (booleanQuery) {
+                      // true sets query value 1, false sets query value 0.
+                      case 'numeric':
+                        value = value == 'true' ? "1" : "0"
+                        break
+                      // Boolean value convert to string like "true" or "false".
+                      case 'stringify':
+                        break
+                      // true sets query value 1, but false remove key from query string. (add removing helper)
+                      case 'set-only-true':
+                        value = '1'
+                        break
+                      // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
+                      case 'only-key':
+                        return query.name
+                    }
+                  }
+                 return `${query.name}=${encodeURIComponent(value)}`
+                }).filter(value => value != '').join("&")
               }
               const response = await requestRunner.request(endpoint.method, path, endpoint.requestMock(overrides))
               runner.logs.push(...requestRunner.logs)
