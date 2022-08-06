@@ -398,23 +398,65 @@ Query.prototype.swift_Member = function (context) {
   var result = [
     `public var ${this.name.camelize()}: ${type.swift_TypeDefinition()}${this.isRequired ? '' : ' = nil'} {`,
     'didSet {',
+    this.swift_RemoveHelper(),
   ]
+  var valueCode = this.name.camelize()
+
+  if (this.type.referenceName == 'Boolean') {
+    const { booleanQuery } = this.config.api
+    if (booleanQuery == 'not-accepted') {
+      throw new Error('config.api.booleanQuery is `not-accepted`, but use boolean query in your soil schema.\n@see https://github.com/niaeashes/soil/issues/32')
+    }
+    const valueCodeTable = {
+      // true sets query value 1, false sets query value 0.
+      'numeric': `${this.name.camelize()} ? "1" : "0"`,
+      // Boolean value convert to string like "true" or "false".
+      'stringify': `${this.name.camelize()} ? "true" : "false"`,
+      // true sets query value 1, but false remove key from query string. (add removing helper)
+      'set-only-true': '"1"',
+      // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
+      'only-key': '""',
+    }
+    valueCode = valueCodeTable[booleanQuery]
+  }
+
+  result.push(`self.queryData["${this.name}"] = ${valueCode}`, '}', '}', this.swift_Enum())
+
+  return result.joinCode()
+}
+
+Query.prototype.swift_RemoveHelper = function (context) {
+
+  /**
+   * If this is boolean query and config.api.booleanQuery is `set-only-true` or `only-key`,
+   * insert boolean specialized removing helper.
+   */
+  if (this.type.referenceName == 'Boolean') {
+    const { booleanQuery } = this.config.api
+    if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
+      return [
+        `guard let ${this.name.camelize()} = ${this.name.camelize()}, ${this.name.camelize()} == true else {`,
+          `self.queryData.removeValue(forKey: "${this.name}")`,
+          'return',
+        '}',
+      ].joinCode()
+    }
+  }
 
   /**
    * If query is required only set to queryData,
    * but when it's optional require checking and removing key from queryData with nil.
    */
   if (this.isRequired == false) {
-    result.push(
+    return [
       `guard let ${this.name.camelize()} = ${this.name.camelize()} else {`,
         `self.queryData.removeValue(forKey: "${this.name}")`,
+        'return',
       '}',
-    )
+    ].joinCode()
   }
 
-  result.push(`self.queryData["${this.name}"] = ${this.name.camelize()}`, '}', '}', this.swift_Enum())
-
-  return result.joinCode()
+  return null
 }
 
 Query.prototype.swift_InitializeParameter = function () {

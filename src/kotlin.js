@@ -305,7 +305,7 @@ Endpoint.prototype.kt_Initializer = function (config) {
 Endpoint.prototype.kt_InitializerParameters = function () {
   return []
     .concat(this.pathParameters.map(parameter => parameter.kt_EndpointClassParameter()))
-    .concat(this.query.map(query => query.kt_EndpointClassParameter()))
+    .concat(this.query.filter(query => query.isRequired).map(query => query.kt_EndpointClassParameter()))
     .concat(this.hasRequestBody ? [`val body: () -> RequestBody`] : [])
     .joinParameter(',\n')
 }
@@ -408,10 +408,51 @@ Query.prototype.kt_EndpointClassParameter = function () {
 }
 
 Query.prototype.kt_EndpointMember = function () {
+  return [
+    `var ${this.name.camelize()}: ${this.kt_TypeDefinition()} by Delegates.observable(${this.kt_DefaultValue()}) { _, _, new ->`,
+    this.kt_Observer(),
+    '}',
+  ].joinCode()
+}
+
+Query.prototype.kt_TypeDefinition = function () {
+  return `${this.type.kt_TypeDefinition()}${this.isRequired ? '' : '?'}`
+}
+
+Query.prototype.kt_DefaultValue = function () {
   if (this.isRequired) {
-    return `var ${this.name.camelize()}: String by Delegates.observable(q) { _, _, new ->\nqueryData["${this.name}"] = new\n}`
+    // Set query value in Endpoint constructor with camelize named variable.
+    return this.name.camelize()
   } else {
-    return `var ${this.name.camelize()}: String by Delegates.observable(q) { _, _, new ->\nnew?.let { queryData["${this.name}"] = it } ?: queryData.remove("${this.name}")\n}`
+    // non-required query initial valie is always `null`.
+    return 'null'
+  }
+}
+
+Query.prototype.kt_Observer = function () {
+  var removalHelper = !this.isRequired
+  var valueCode = removalHelper ? "it" : "new"
+  var setCode = `queryData["${this.name}"] = ${valueCode}`
+  if (this.type.referenceName == 'Boolean') {
+    const { booleanQuery } = this.config.api
+    if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
+    }
+    const valueCodeTable = {
+      // true sets query value 1, false sets query value 0.
+      'numeric': `queryData["${this.name}"] = if (${valueCode}) "1" else "0"`,
+      // Boolean value convert to string like "true" or "false".
+      'stringify': `queryData["${this.name}"] = if (${valueCode}) ? "true" else "false"`,
+      // true sets query value 1, but false remove key from query string. (add removing helper)
+      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "1" } else { queryData.remove("${this.name}") }`,
+      // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
+      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "" } else { queryData.remove("${this.name}") }`,
+    }
+    setCode = valueCodeTable[booleanQuery]
+  }
+  if (removalHelper) {
+    return `new?.let { ${setCode} } ?: queryData.remove("${this.name}")`
+  } else {
+    return setCode
   }
 }
 

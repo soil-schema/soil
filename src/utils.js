@@ -21,11 +21,11 @@ export const configTemplate = new Config()
    * - numeric: true sets query value 1, false sets query value 0.
    * - stringify: Boolean value convert to string like "true" or "false".
    * - set-only-true: true sets query value 1, but false remove key from query string.
-   * - only-key: true sets key but no-value likes ?key. false remove key from query string.
+   * - only-key: true sets key but no-value likes `?key`. false remove key from query string.
    * 
    * @see https://github.com/niaeashes/soil/issues/32
    */
-  .string('boolean_query', 'set-only-true')
+  .string('booleanQuery', 'set-only-true')
 )
 
 .addDirective('swift', swift => swift
