@@ -94,7 +94,12 @@ const commands = {
               if (typeof endpoint == 'undefined') {
                 throw new Error(`Endpoint is not found: ${requestContext.applyString(step.path)}`)
               }
-              const response = await requestRunner.request(endpoint.method, requestContext.applyString(step.path || endpoint.path), endpoint.requestMock(overrides))
+              var path = requestContext.applyString(step.path || endpoint.path)
+              const query = endpoint.query.filter(query => requestContext.existsVar(`$${query.name}`))
+              if (query.length > 0) {
+                path += '?' + query.map(query => `${query.name}=${encodeURIComponent(requestContext.resolveVar(`$${query.name}`))}`).join("&")
+              }
+              const response = await requestRunner.request(endpoint.method, path, endpoint.requestMock(overrides))
               runner.logs.push(...requestRunner.logs)
               if (response.status > 299) {
                 console.log(response.body)

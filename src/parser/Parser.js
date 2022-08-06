@@ -883,11 +883,28 @@ export default class Parser {
         this.next()
         this.push(`Request ${stepSchema.request.method} ${stepSchema.request.path}`)
       } else {
-        const reference = this.currentToken.token
-        this.currentToken.kind = 'function.request'
-        stepSchema.request.reference = reference
+        const target = this.currentToken
         this.next()
-        this.push(`Request *${reference}`)
+        if (this.currentToken.is(EQUAL_SIGN)) {
+          target.kind = 'parameter'
+          const stepSchema = {
+            command: '@set-var',
+            args: [target.token],
+          }
+          this.next()
+          while (this.currentToken.kind == 'parameter' || this.currentToken.kind == 'value') {
+            // @ts-ignore
+            stepSchema.args.push(this.currentToken.token)
+            this.next()
+          }
+          // @ts-ignore
+          schema.steps.push(stepSchema)
+          return
+        } else {
+          target.kind = 'function.request'
+          stepSchema.request.reference = target.token
+          this.push(`Request *${target.token}`)
+        }
       }
       this.parseBlock(stepSchema, () => {
         switch (this.currentToken.token) {
