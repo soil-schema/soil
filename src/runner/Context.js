@@ -1,4 +1,5 @@
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
+import ContextHeader from './ContextHeader.js'
 import ContextVariable from './ContextVariable.js'
 import FunctionalVariable from './FunctionalVariable.js'
 
@@ -14,7 +15,7 @@ export default class Context {
   constructor (name) {
     Object.defineProperty(this, 'name', { value: name })
     this._space = {}
-    this._headers = {}
+    this._headers = []
 
     this.defineDefaultFunctionalVariables()
   }
@@ -28,15 +29,32 @@ export default class Context {
     this.defineFunctionalVar('timestamp', () => new Date().valueOf())
   }
 
-  get headers () {
-    return Object.assign({}, (this.parent || {}).headers || {}, this._headers)
+  /**
+   * 
+   * @param {string} name 
+   * @param {string} value 
+   */
+  setHeader (name, value) {
+    this._headers.push(new ContextHeader(name, this.applyString(value)))
   }
 
-  setHeader (name, value) {
-    if (typeof value == 'string' && value[0] == '$') {
-      return this.setHeader(name, this.resolveVar(value))
-    }
-    this._headers[name] = value
+  /**
+   * 
+   * @param {string} name 
+   * @param {string} value 
+   */
+  setSecureHeader (name, value) {
+    this._headers.push(new ContextHeader(name, this.applyString(value), { secure: true }))
+  }
+
+  /**
+   * 
+   * @param {{ [key: string]: string }} headers 
+   */
+  applyHeaders (headers) {
+    this._headers.forEach(header => {
+      headers[header.name] = header.value
+    })
   }
 
   setVar (name, value) {

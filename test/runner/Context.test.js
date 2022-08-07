@@ -52,3 +52,12 @@ test('$env default functional variable', t => {
   t.is(context.getVar('$env.TESTING_2'), undefined)
   t.assert(context.keys().includes('env.TESTING'))
 })
+
+test('set and apply header', t => {
+  const context = new Context()
+  context.setHeader('X-Api-Version', '2.0')
+  context.setSecureHeader('X-Api-Key', 'api-key')
+  const headers = {}
+  context.applyHeaders(headers)
+  t.deepEqual(headers, { 'X-Api-Version': '2.0', 'X-Api-Key': 'api-key' })
+})
