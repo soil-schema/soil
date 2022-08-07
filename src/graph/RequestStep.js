@@ -100,6 +100,7 @@ export default class RequestStep extends Node {
   }
 
   mock () {
+    if (this.method == 'GET') return undefined
     return this.endpoint?.requestBody?.mock()
   }
 }

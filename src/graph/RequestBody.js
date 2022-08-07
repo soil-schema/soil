@@ -62,7 +62,7 @@ export default class RequestBody extends Node {
       // @ts-ignore
       return this.resolve(this.schema).mock()
     }
-    return this.fields
+    const mock = this.fields
       .reduce((mock, field) => {
         if (field.type.isDefinedType) {
           mock[field.name] = field.mock()
@@ -81,5 +81,7 @@ export default class RequestBody extends Node {
         }
         return mock
       }, {})
+    if (Object.keys(mock).length == 0) return undefined
+    return mock
   }
 }

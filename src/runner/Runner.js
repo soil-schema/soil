@@ -164,7 +164,7 @@ export default class Runner {
    * @param {string} value Variable Value
    */
   set_var (name, value) {
-    this.log('@set-var', name, value)
+    this.log('@set-var', name, '=', value)
     this.context.setVar(name, this.expandVariables(value))
   }
 
@@ -178,7 +178,7 @@ export default class Runner {
    * @param {string} value Variable Value
    */
   set_global (name, value) {
-    this.log('@set-global', name, value)
+    this.log('@set-global', name, '=', value)
     this.contextStack[0].setVar(name, this.expandVariables(value))
   }
 
@@ -224,6 +224,7 @@ export default class Runner {
 
       // Send http request
       const response = await new Promise((resolve, reject) => {
+        this.log('@request', options.method, options.url.toString())
         const request = client.request(actualUrl, options, res => {
           res.setEncoding('utf8')
           var body = ''
@@ -250,7 +251,6 @@ export default class Runner {
           request.setHeader('Content-Length', Buffer.byteLength(json))
           request.write(json)
         }
-        this.log('@request', options.method, options.url.toString())
         request.end()
       })
 
