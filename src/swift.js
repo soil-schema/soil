@@ -420,6 +420,22 @@ Query.prototype.swift_Member = function (context) {
     valueCode = valueCodeTable[booleanQuery]
   }
 
+  if (this.type.isList && this.type.referenceName == 'String') {
+    valueCode = `${this.name.camelize()}.joined(separator: "+")`
+  }
+
+  if (this.type.referenceName == 'Integer' || this.type.referenceName == 'Number') {
+    if (this.type.isList) {
+      valueCode = `${this.name.camelize()}.map { "\\($0)" }.joined(separator: "+")`
+    } else {
+      valueCode = `"\\(${this.name.camelize()})"`
+    }
+  }
+
+  if (this.isEnum) {
+    valueCode = `${this.name.camelize()}.rawValue`
+  }
+
   result.push(`self.queryData["${this.name}"] = ${valueCode}`, '}', '}', this.swift_Enum())
 
   return result.joinCode()
@@ -433,7 +449,7 @@ Query.prototype.swift_RemoveHelper = function (context) {
    */
   if (this.type.referenceName == 'Boolean') {
     const { booleanQuery } = this.config.api
-    if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
+    if (['set-only-true', 'only-key'].includes(booleanQuery)) { // Remove key when false
       return [
         `guard let ${this.name.camelize()} = ${this.name.camelize()}, ${this.name.camelize()} == true else {`,
           `self.queryData.removeValue(forKey: "${this.name}")`,
