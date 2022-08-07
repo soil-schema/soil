@@ -5,6 +5,7 @@ import ContextVariable from '../../src/runner/ContextVariable.js'
 test('name', t => {
   t.is(new ContextVariable('name', 'value').name, 'name')
   t.is(new ContextVariable('another', 'value').name, 'another')
+  // [!] `invalid.name` is incorrect variable name.
   t.throws(() => new ContextVariable('invalid.name', 'value'), { instanceOf: ScenarioRuntimeError })
 })
 
@@ -14,13 +15,17 @@ test('detect recursive', t => {
     const b = { a }
     a.b = b
     new ContextVariable('a', a)
-  }, { instanceOf: ScenarioRuntimeError })
+  }, {
+    instanceOf: ScenarioRuntimeError,
+    // [!] assert to display the variable path
+    message: /\ba\.b\b/,
+  })
 })
 
 test('variable path', t => {
   const book = { author: { name: 'Dante Alighieri' } }
   const target = new ContextVariable('book', book)
-  t.is(target.children['author'].variablePath, 'book.author')
+  t.is(target.children['author'].path, 'book.author')
 })
 
 test('array', t => {
@@ -44,4 +49,19 @@ test('ignore function', t => {
   const target = new ContextVariable('user', user)
   t.assert(target.has('name'))
   t.not(target.has('follow'))
+})
+
+test('list keys', t => {
+  const user = { name: 'User Name', contact: { tel: 'xxx-xxxx-xxxx', email: 'xxx@example.com' } }
+  t.deepEqual(new ContextVariable('user', user).keys(), ['user.name', 'user.contact.tel', 'user.contact.email'])
+  const article = { comments: [{ body: 'This is a first comment' }, { body: 'Second one' }] }
+  t.deepEqual(new ContextVariable('article', article).keys(), ['article.comments.0.body', 'article.comments.1.body'])
+})
+
+test('add child', t => {
+  const user = new ContextVariable('user', { name: 'User Name', contact: { tel: 'xxx-xxxx-xxxx', email: 'xxx@example.com' } })
+  t.not(user.get('name').canAcceptNewChild)
+  t.throws(() => {
+    user.get('name').addChild('incorrect', 'value')
+  }, { instanceOf: ScenarioRuntimeError })
 })

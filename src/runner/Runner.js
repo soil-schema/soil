@@ -4,43 +4,41 @@ import http from 'node:http'
 import https from 'node:https'
 
 import VariableNotFoundError from '../errors/VariableNotFoundError.js'
+import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
 import Context from './Context.js'
 
 export default class Runner {
   /**
-   * @type {Context}
+   * @type {Context[]}
    */
-  context
+   contextStack = []
 
   /**
    * 
-   * @param {Context} context
+   * @param {object} config
    */
-  constructor (context) {
-    this.context = context
+  constructor (config) {
+    this.config = config
     this.logs = []
   }
 
   /**
-   * @type {string|undefined}
-   * @private
+   * @param {Context} context 
    */
-  resolverLock = undefined
+  enterContext (context) {
+    this.contextStack.push(context)
+  }
+
+  leaveContext () {
+    this.contextStack.pop()
+  }
 
   /**
-   * 
-   * @param {string} code variable name
+   * @type {Context}
    */
-  resolveVar (code) {
-    if (this.resolverLock == code) { 
-      throw new VariableNotFoundError(`Variable not found \`${code}\``)
-    }
-    try {
-      this.resolverLock = code
-      return this.context.resolveVar(code)
-    } finally {
-      this.resolverLock = undefined
-    }
+  get context () {
+    if (this.contextStack.length == 0) throw new ScenarioRuntimeError(`Scenario runner use context, but stacked context is not found.`)
+    return this.contextStack[this.contextStack.length - 1]
   }
 
   /**
@@ -52,7 +50,7 @@ export default class Runner {
     if (typeof this[name] == 'function') {
       await this[name](...args)
     } else {
-      throw new Error(`Unknown Command: ${name}`)
+      throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
     }
   }
 
@@ -157,7 +155,7 @@ export default class Runner {
     this.logs.push(messages.map(message => {
       if (typeof message == 'string' && message.length > 0 && message[0] == '$') {
         try {
-          return this.resolveVar(message)
+          return this.context.resolveVar(message)
         } catch (error) {
           // skip variable not found error.
           if (error instanceof VariableNotFoundError) {

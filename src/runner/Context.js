@@ -1,26 +1,31 @@
-import Runner from './Runner.js'
-
-import VariableNotFoundError from '../errors/VariableNotFoundError.js'
+import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
+import ContextVariable from './ContextVariable.js'
+import FunctionalVariable from './FunctionalVariable.js'
 
 export default class Context {
   /**
-   * 
-   * @param {Context|undefined} parent
-   * @param {object|undefined} env 
+   * @type {{ [key: string]: ContextVariable|FunctionalVariable }}
    */
-  constructor (parent, env = undefined) {
+  _space
+
+  /**
+   * @param {name} name Context name for displaying hints. 
+   */
+  constructor (name) {
+    Object.defineProperty(this, 'name', { value: name })
     this._space = {}
     this._headers = {}
-    this._env = env
-    Object.defineProperty(this, 'parent', { value: parent, enumerable: false })
+
+    this.defineDefaultFunctionalVariables()
   }
 
-  get env () {
-    if (typeof this.parent != 'undefined') {
-      return this.parent.env
-    } else {
-      return this._env || process.env
-    }
+  /**
+   * @private
+   */
+  defineDefaultFunctionalVariables () {
+    this.defineFunctionalVar('env', () => process.env)
+    this.defineFunctionalVar('rand', () => Math.floor(Math.random() * 10000))
+    this.defineFunctionalVar('timestamp', () => new Date().valueOf())
   }
 
   get headers () {
@@ -35,123 +40,77 @@ export default class Context {
   }
 
   setVar (name, value) {
-    if (typeof value == 'string' && value[0] == '$') {
-      return this.setVar(name, this.resolveVar(value))
-    }
-    if (typeof this.parent != 'undefined') {
-      this.parent.setVar(name, value)
-    } else {
-      this.setLocalVar(name, value)
-    }
+    // [!] remove keys memo
+    this._keys = undefined
+    this._space[`$${name}`] = new ContextVariable(name, value)
   }
 
-  setLocalVar (name, value) {
-    if (typeof value == 'string' && value[0] == '$') {
-      return this.setVar(name, this.resolveVar(value))
-    }
-    this._space[`$${name}`] = value
+  defineFunctionalVar (name, calc) {
+    // [!] remove keys memo
+    this._keys = undefined
+    this._space[`$${name}`] = new FunctionalVariable(name, calc)
+  }
+
+  /**
+   * List all full keys stored context variables and functional variables.
+   * @returns [string[]]
+   */
+  keys () {
+    // [!] memorization
+    if (typeof this._keys == 'undefined')
+      this._keys = Object.values(this._space).flatMap(item => item.keys())
+    return this._keys
   }
 
   /**
    * 
-   * @param {string} code 
-   * @param {object|undefined} namespace
+   * @param {string} path
    * @returns 
    */
-  resolveVar (code, namespace = undefined) {
-    var path = code.split('.')
-    const name = path.shift()
-
-    if (path.length == 0 && typeof namespace == 'object') {
-      return namespace[name.replace(/^\$/, '')]
+   resolveVar (path) {
+    const value = this.getVar(path)
+    if (typeof value == 'undefined') {
+      throw new ScenarioRuntimeError(`Variable not found \`${path}\``)
+    } else {
+      return value
     }
-
-    switch (name) {
-      case '$env':
-        if (typeof this.env[path[0]] == 'undefined') {
-          break
-        } else {
-          return this.env[path[0]]
-        }
-      case '$header':
-        if (typeof this.headers[path[0]] == 'undefined') {
-          break
-        } else {
-          return this.headers[path[0]]
-        }
-      case '$rand':
-        if (typeof this._rand == 'undefined')
-          this._rand = Math.floor(Math.random() * 10000)
-        return this._rand
-      case '$timestamp':
-        if (typeof this._timestamp == 'undefined')
-          this._timestamp = new Date().valueOf()
-        return this._timestamp
-      default:
-        if (typeof namespace == 'object' && typeof namespace[name] != 'undefined') {
-          if (path.length == 0) {
-            return namespace[name]
-          } else {
-            return this.resolveVar(path.join('.'), namespace[name])
-          }
-        }
-        if (typeof this._space[name] == 'object') {
-          if (path.length == 0) {
-            return this._space[name]
-          } else {
-            return this.resolveVar(path.join('.'), this._space[name])
-          }
-        }
-        if (typeof this._space[name] != 'undefined') {
-          return this._space[name]
-        }
-        if (typeof this.parent != 'undefined') {
-          return this.parent.resolveVar(code)
-        }
-    }
-
-    throw new VariableNotFoundError(`Variable not found \`${code}\``)
   }
 
   /**
    * 
-   * @param {string} code 
-   * @returns {boolean}
+   * @param {string} path 
+   * @returns 
    */
-  existsVar (code) {
-    try {
-      this.resolveVar(code)
-      return true
-    } catch {
-      return false
+  getVar (path) {
+    var tokens = path.split('.')
+    const name = tokens.shift()
+
+    if (name in this._space) {
+      return this._space[name].resolve(tokens.join('.'))
     }
+
+    return undefined
   }
 
-  clearMemo () {
-    delete this._rand
+  /**
+   * 
+   * @param {string} path 
+   * @returns {boolean}
+   */
+  existsVar (path) {
+    return typeof this.getVar(path) != 'undefined'
   }
 
   applyString (string) {
-    if (typeof string != 'string') { return undefined }
-    return string.replaceAll(/\$[a-z0-9_\.]+/g, (token) => {
-      var keys = token.split('.')
-      while (keys.length > 0) {
-        try {
-          const value = this.resolveVar(keys.join('.'))
-          if (typeof value == 'object') {
-            return `{${keys.join('.')}}`
-          } else {
-            return value
-          }
-        } catch {
-          keys.pop()
-        }
+    if (typeof string != 'string') throw new ScenarioRuntimeError(`Invalid arguments Context.applyString, string is expected but not in Context<${this.name}>`)
+    const keys = this.keys()
+      .map(key => `$${key}`) // Insert $ at head.
+    return string.replaceAll(/\$(?:([a-z0-9_]+)\.)*([a-z0-9_]+)\b/g, matches => {
+      if (keys.includes(matches)) {
+        return this.getVar(matches)
+      } else {
+        throw new ScenarioRuntimeError(`Can't find or resolve to non-object value with variable name ${matches}\n${string} in Context<${this.name}>`)
       }
-      return token
     })
-  }
-
-  spawnNestedContext () {
-    return new Context(this)
   }
 }
