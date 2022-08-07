@@ -24,5 +24,9 @@ export default class Scenario extends Node {
         }
       })
     Object.defineProperty(this, 'steps', { value: steps })
+
+    this.steps
+      .filter(step => step instanceof Node)
+      .forEach(step => step.moveToParent(this))
   }
 }

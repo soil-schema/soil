@@ -27,6 +27,16 @@ export default class Root extends Node {
   }
 
   /**
+   * 
+   * @param {string} method 
+   * @param {string} path 
+   * @returns {Endpoint|undefined}
+   */
+  findEndpoint (method, path) {
+    return this.endpoints.find(endpoint => endpoint.match(method, path))
+  }
+
+  /**
    * @param {string} referenceBody 
    * @param {boolean} allowGlobalFinding 
    * @returns {Node|undefined}

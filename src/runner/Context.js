@@ -50,17 +50,23 @@ export default class Context {
   /**
    * 
    * @param {{ [key: string]: string }} headers 
+   * @returns {{ [key: string]: string }}
    */
   applyHeaders (headers) {
     this._headers.forEach(header => {
       headers[header.name] = header.value
     })
+    return headers
   }
 
   setVar (name, value) {
     // [!] remove keys memo
     this._keys = undefined
     this._space[`$${name}`] = new ContextVariable(name, value)
+  }
+
+  importVars (vars) {
+    Object.entries(vars).forEach(([key, value]) => this.setVar(key, value))
   }
 
   defineFunctionalVar (name, calc) {
@@ -127,7 +133,7 @@ export default class Context {
       if (keys.includes(matches)) {
         return this.getVar(matches)
       } else {
-        throw new ScenarioRuntimeError(`Can't find or resolve to non-object value with variable name ${matches}\n${string} in Context<${this.name}>`)
+        return matches
       }
     })
   }

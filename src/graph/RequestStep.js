@@ -2,12 +2,38 @@
 
 import Node from './Node.js'
 import CommandStep from './CommandStep.js'
+import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
+import Endpoint from './Endpoint.js'
 
 export default class RequestStep extends Node {
   /**
    * @type {CommandStep[]}
    */
   receiverSteps
+
+  /**
+   * @type {string|undefined}
+   * @readonly
+   */
+  reference
+
+  /**
+   * @type {string}
+   * @readonly
+   */
+  method
+
+  /**
+   * @type {string}
+   * @readonly
+   */
+  path
+
+  /**
+   * @type {{ [key: string]: string }}}
+   * @readonly
+   */
+  overrides
 
   /**
    * @param {object} request 
@@ -47,6 +73,26 @@ export default class RequestStep extends Node {
   }
 
   get args () {
-    return []
+    return [this]
+  }
+
+  /**
+   * Find an referenced endpoint and load method and path from it for preparing.
+   * @returns 
+   */
+  prepare () {
+    if (typeof this.reference == 'undefined') return
+    const endpoint = this.resolve(this.reference)
+    if (typeof endpoint == 'undefined') throw new ScenarioRuntimeError(`Referenced endpoint is not found \`${this.reference}\``)
+    if (endpoint instanceof Endpoint) {
+      Object.defineProperty(this, 'method', { value: endpoint.method })
+      Object.defineProperty(this, 'path', { value: endpoint.path })
+    } else {
+      throw new ScenarioRuntimeError(`Referenced node \`${this.reference}\` is not Endpoint.`)
+    }
+  }
+
+  mock () {
+    return this.root.findEndpoint(this.method, this.path)?.requestBody?.mock()
   }
 }

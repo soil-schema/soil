@@ -17,7 +17,7 @@ test('resolve $env var', t => {
   try {
     process.env.ENV_VAR = 'value'
     t.is(runner.get_var('$env.ENV_VAR'), 'value')
-    t.throws(() => runner.get_var('$env.NOT_FOUND'), { instanceOf: ScenarioRuntimeError })
+    t.is(runner.get_var('$env.NOT_FOUND'), undefined)
   } finally {
     delete process.env.ENV_VAR
   }
@@ -28,5 +28,5 @@ test('set and resolve nested var', t => {
   runner.enterContext(new Context('test'))
   runner.set_var('person', { name: 'value' })
   t.is(runner.get_var('$person.name'), 'value')
-  t.throws(() => runner.get_var('$not_found'), { instanceOf: ScenarioRuntimeError })
+  t.is(runner.get_var('$not_found'), undefined)
 })

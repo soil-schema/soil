@@ -9,9 +9,7 @@ test('apply', t => {
   t.is(context.applyString('no-change'), 'no-change')
   t.not(context.applyString('$rand'), '$rand')
   t.is(context.applyString('$response.name'), 'Sample')
-  t.throws(() => {
-    context.applyString('$response')
-  }, { instanceOf: ScenarioRuntimeError })
+  t.is(context.applyString('$response'), '$response')
   t.throws(() => {
     context.applyString({}) // pass no-string
   }, { instanceOf: ScenarioRuntimeError })
