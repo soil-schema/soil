@@ -46,19 +46,6 @@ export default class Runner {
 
   /**
    * 
-   * @param {string} string 
-   * @returns {string}
-   */
-  applyString (string) {
-    if (typeof string == 'string') {
-      return this.contextStack.reverse().reduce((string, context) => context.applyString(string), string)
-    } else {
-      return string
-    }
-  }
-
-  /**
-   * 
    * @param {any} target 
    * @returns {any}
    */
@@ -134,7 +121,7 @@ export default class Runner {
    */
   set_header (name, value) {
     this.log('@set-header', name, ':', value)
-    this.context.setHeader(name, this.applyString(value))
+    this.context.setHeader(name, this.expandVariables(value))
   }
 
   /**
@@ -148,7 +135,7 @@ export default class Runner {
    */
   set_secure_header (name, value) {
     this.log('@set-secure-header', name, ':', '******')
-    this.context.setSecureHeader(name, this.applyString(value))
+    this.context.setSecureHeader(name, this.expandVariables(value))
   }
 
   /**
@@ -162,7 +149,7 @@ export default class Runner {
    */
   set_var (name, value) {
     this.log('@set-var', name, value)
-    this.context.setVar(name, this.applyString(value))
+    this.context.setVar(name, this.expandVariables(value))
   }
 
   /**
