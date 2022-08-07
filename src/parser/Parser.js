@@ -19,6 +19,8 @@ const BLOCK_BEGIN       = '{'
 const BLOCK_END         = '}'
 const EXAMPLE_BEGIN     = '['
 const EXAMPLE_END       = ']'
+const ARGS_BEGIN        = '('
+const ARGS_END          = ')'
 const DESCRIPTION_MARK  = '-'
 const COMMENT_MARK      = '#'
 const TYPE_SEPARATOR    = ':'
@@ -133,65 +135,78 @@ export default class Parser {
         case BLOCK_BEGIN:
         case BLOCK_END:
         case TYPE_SEPARATOR:
-        case EXAMPLE_BEGIN:
-        case EXAMPLE_END:
-          const trim = buffer.trim()
-          if (trim.length > 0)
-            tokens.push(new Token(this.uri, line, offset - buffer.length, trim))
+          if (buffer.trim().length > 0)
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
           tokens.push(new Token(this.uri, line, offset, c, 'keyword'))
           buffer = ''
-          if (c == EXAMPLE_BEGIN) {
+          break
+        case EXAMPLE_BEGIN:
+          if (buffer.trim().length > 0)
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
+          tokens.push(new Token(this.uri, line, offset, c, 'keyword'))
+          buffer = ''
+          i += 1
+          offset += 1
+          var inStringLiteral = false
+          while (body[i] != EXAMPLE_END) {
+            const t = body[i]
             i += 1
             offset += 1
-            var inStringLiteral = false
-            while (body[i] != EXAMPLE_END) {
-              const t = body[i]
-              i += 1
-              offset += 1
-              if (t == ',' && inStringLiteral == false) {
-                tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
-                buffer = ''
-                continue
-              }
-              if (t == '"') {
-                inStringLiteral = !inStringLiteral
-                offset += 1
-                continue
-              }
-              buffer += t
+            if (t == ',' && inStringLiteral == false) {
+              tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
+              buffer = ''
+              continue
             }
-            tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
-            buffer = ''
-            tokens.push(new Token(this.uri, line, offset, "]", 'keyword'))
+            if (t == '"') {
+              inStringLiteral = !inStringLiteral
+              offset += 1
+              continue
+            }
+            buffer += t
           }
+          tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'value'))
+          buffer = ''
+          tokens.push(new Token(this.uri, line, offset, EXAMPLE_END, 'keyword'))
+          break
+        case ARGS_BEGIN:
+          if (buffer.trim().length > 0)
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
+          tokens.push(new Token(this.uri, line, offset, ARGS_BEGIN, 'keyword'))
+          buffer = ''
+          i += 1
+          offset += 1
+          var inStringLiteral = false
+          while (body[i] != ARGS_END) {
+            const t = body[i]
+            i += 1
+            offset += 1
+            if (t == ',' && inStringLiteral == false) {
+              tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'parameter'))
+              buffer = ''
+              continue
+            }
+            if (t == '"') {
+              inStringLiteral = !inStringLiteral
+              offset += 1
+              continue
+            }
+            buffer += t
+          }
+          tokens.push(new Token(this.uri, line, offset - buffer.trimStart().length, buffer.trim(), 'parameter'))
+          buffer = ''
+          tokens.push(new Token(this.uri, line, offset, ARGS_END, 'keyword'))
           break
         case COMMAND_PREFIX:
+          if (buffer.trim().length > 0)
+            tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
           var command = ''
-          while (/\s/.test(body[i]) == false && i < body.length) {
+          while (body[i] != ARGS_BEGIN && i < body.length) {
             command += body[i]
             i += 1
             offset += 1
           }
-          tokens.push(new Token(this.uri, line, offset - command.length, command, 'keyword'))
-          var arg = ''
-          while (body[i] != '\n' && i < body.length) {
-            if (/\s/.test(body[i])) {
-              if (arg.trim() != '') {
-                tokens.push(new Token(this.uri, line, offset - arg.trimStart().length, arg.trim(), 'parameter'))
-              }
-              arg = ''
-            } else {
-              arg += body[i]
-            }
-            i += 1
-            offset += 1
-          }
-          if (arg.trim() != '') {
-            tokens.push(new Token(this.uri, line, offset - arg.trimStart().length, arg.trim(), 'parameter'))
-          }
-          line += 1
-          offset = 1
-          break
+          tokens.push(new Token(this.uri, line, offset - command.length, command, 'method'))
+          continue
         case DESCRIPTION_MARK:
           var comment = ''
           tokens.push(new Token(this.uri, line, offset, DESCRIPTION_MARK, 'keyword'))
@@ -859,11 +874,14 @@ export default class Parser {
           args: [],
         }
         this.next()
-        while (this.currentToken.kind == 'parameter') {
+        this.assert('(')
+        this.next()
+        while (this.currentToken.not(')')) {
           // @ts-ignore
           stepSchema.args.push(this.currentToken.token)
           this.next()
         }
+        this.next()
         // @ts-ignore
         schema.steps.push(stepSchema)
         return
