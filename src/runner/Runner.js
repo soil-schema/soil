@@ -2,45 +2,116 @@
 
 import http from 'node:http'
 import https from 'node:https'
+import { URL } from 'node:url'
+
+import Scenario from '../graph/Scenario.js'
 
 import VariableNotFoundError from '../errors/VariableNotFoundError.js'
+import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
 import Context from './Context.js'
+import RequestStep from '../graph/RequestStep.js'
 
 export default class Runner {
   /**
-   * @type {Context}
+   * @type {Context[]}
    */
-  context
+   contextStack = []
 
   /**
    * 
-   * @param {Context} context
+   * @param {object} config
    */
-  constructor (context) {
-    this.context = context
+  constructor (config) {
+    this.config = config
     this.logs = []
   }
 
   /**
-   * @type {string|undefined}
-   * @private
+   * @param {Context} context 
    */
-  resolverLock = undefined
+  enterContext (context) {
+    this.contextStack.push(context)
+  }
+
+  leaveContext () {
+    this.contextStack.pop()
+  }
 
   /**
    * 
-   * @param {string} code variable name
+   * @param {string} name 
+   * @param {(context: Context) => Promise<void>} contextBlock 
    */
-  resolveVar (code) {
-    if (this.resolverLock == code) { 
-      throw new VariableNotFoundError(`Variable not found \`${code}\``)
-    }
+  async doContext (name, contextBlock) {
     try {
-      this.resolverLock = code
-      return this.context.resolveVar(code)
+      const nextContext = new Context(name)
+      this.enterContext(nextContext)
+      await contextBlock(nextContext)
     } finally {
-      this.resolverLock = undefined
+      this.leaveContext()
     }
+  }
+
+  /**
+   * @type {Context}
+   */
+  get context () {
+    if (this.contextStack.length == 0) throw new ScenarioRuntimeError(`Scenario runner use context, but stacked context is not found.`)
+    return this.contextStack[this.contextStack.length - 1]
+  }
+
+  /**
+   * 
+   * @param {any} target 
+   * @returns {any}
+   */
+  expandVariables (target) {
+    if (typeof target == 'string') {
+      return this.contextStack.reverse().reduce((target, context) => context.applyString(target), target)
+    } else if (typeof target == 'object') {
+      if (target == null) return target
+      return Object.keys(target)
+        .reduce((result, key) => { return { ...result, [key]: this.expandVariables(target[key]) } }, {})
+    } else {
+      return target
+    }
+  }
+
+  /**
+   * 
+   * @param {any} target 
+   * @param {{ [key: string]: string }} overrides
+   * @returns {any}
+   */
+  overrideKeys (target, overrides) {
+    if (typeof target == 'object' && target != null) {
+      return Object.keys(target)
+        .reduce((result, key) => {
+          return { ...result, [key]: key in overrides ? overrides[key] : this.overrideKeys(target[key], overrides) }
+        }, {})
+    }
+    return target
+  }
+
+  /**
+   * 
+   * @returns {{ [key: string]: string }}
+   */
+  getHeaders () {
+    // @ts-ignore
+    return this.contextStack.reduce((headers, context) => context.applyHeaders(headers), {
+      'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
+      'Accept': 'application/json, */*;q=0.8'
+    })
+  }
+
+  /**
+   * 
+   * @param {Scenario} scenario 
+   */
+  async runScenario (scenario) {
+    this.enterContext(new Context('scenario'))
+    scenario.steps.forEach(async (step) => await this.runCommand(step.commandName, ...step.args))
   }
 
   /**
@@ -49,11 +120,8 @@ export default class Runner {
    * @param  {...any} args 
    */
   async runCommand (name, ...args) {
-    if (typeof this[name] == 'function') {
-      await this[name](...args)
-    } else {
-      throw new Error(`Unknown Command: ${name}`)
-    }
+    if (typeof this[name] == 'function') await this[name](...args)
+    else throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
   }
 
   // Commands
@@ -69,7 +137,7 @@ export default class Runner {
    */
   set_header (name, value) {
     this.log('@set-header', name, ':', value)
-    this.context.setHeader(name, value)
+    this.context.setHeader(name, this.expandVariables(value))
   }
 
   /**
@@ -83,7 +151,7 @@ export default class Runner {
    */
   set_secure_header (name, value) {
     this.log('@set-secure-header', name, ':', '******')
-    this.context.setHeader(name, value)
+    this.context.setSecureHeader(name, this.expandVariables(value))
   }
 
   /**
@@ -97,52 +165,100 @@ export default class Runner {
    */
   set_var (name, value) {
     this.log('@set-var', name, value)
-    this.context.setVar(name, value)
+    this.context.setVar(name, this.expandVariables(value))
+  }
+
+  /**
+   * `@set-global <name> <value>`
+   * 
+   * Set varible in root context.
+   * if <value> is variable name likes `$variable-name`, it's resolved in current context.
+   * 
+   * @param {string} name Variable Name
+   * @param {string} value Variable Value
+   */
+  set_global (name, value) {
+    this.log('@set-global', name, value)
+    this.contextStack[0].setVar(name, this.expandVariables(value))
+  }
+
+  /**
+   * `@get-var <name>`
+   * 
+   * Get varible in current context.
+   * This command is for debugging and testing.
+   * 
+   * @param {string} name Variable Name like `$name`
+   */
+  get_var (name) {
+    this.log('@get-var', name)
+    return this.contextStack.reverse()
+      .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
   }
 
   /**
    * 
-   * @param {string} method 
-   * @param {string} path 
-   * @param {object} body 
+   * @param  {RequestStep} requestStep
    */
-   async request (method, path, body) {
+  async request (requestStep) {
+    requestStep.prepare()
     const BASE_URL = process.env.BASE_URL
-    const actualUrl = `${BASE_URL}${path}`
-    const options = {
-      method,
-      use_ssl: actualUrl.startsWith('https://'),
-    }
-    const client = options.use_ssl ? https : http
-    this.log('@request', method, actualUrl)
-    return new Promise((resolve, reject) => {
-      const request = client.request(actualUrl, options, res => {
-        res.setEncoding('utf8')
-        var body = ''
-        res.on('data', (/** @type {string} */ chunk) => {
-          body += chunk
-        })
-        res.on('end', () => {
-          try {
-            resolve({ status: res.statusCode, body: JSON.parse(body) })
-            this.log(' > receive response.')
-          } catch (error) {
-            reject(error)
-          }
-        })
-      })
-      Object.keys(this.context.headers).forEach(name => {
-        const value = this.context.headers[name]
-        request.setHeader(name, value)
-        this.log(' >', name, ':', value)
-      })
-      if (typeof body == 'object') {
-        const json = JSON.stringify(body)
-        this.log(' > request body', json)
-        request.setHeader('Content-Length', Buffer.byteLength(json))
-        request.write(json)
+    this.doContext('request', async requestContext => {
+
+      // Prepare overrides in request block
+      const overrides = this.expandVariables(requestStep.overrides)
+      requestContext.importVars(overrides)
+
+      // Prepare http request
+      const path = this.expandVariables(requestStep.path)
+      const queryString = requestStep.endpoint?.buildQueryString(name => this.get_var(`$${name}`)) || ''
+      const actualUrl = new URL(`${path}${queryString}`, BASE_URL)
+      const options = {
+        method: requestStep.method,
+        url: actualUrl,
+        use_ssl: actualUrl.protocol == 'https',
+        headers: this.getHeaders(),
+        body: this.overrideKeys(this.expandVariables(requestStep.mock()), overrides),
       }
-      request.end()
+      const client = options.use_ssl ? https : http
+
+      // Send http request
+      const response = await new Promise((resolve, reject) => {
+        const request = client.request(actualUrl, options, res => {
+          res.setEncoding('utf8')
+          var body = ''
+          res.on('data', (/** @type {string} */ chunk) => {
+            body += chunk
+          })
+          res.on('end', () => {
+            try {
+              resolve({ status: res.statusCode, body: JSON.parse(body) })
+              this.log(' > receive response.')
+            } catch (error) {
+              reject(error)
+            }
+          })
+        })
+        Object.entries(options.headers).forEach(([name, value]) => {
+          request.setHeader(name, value)
+          this.log(' >', name, ':', value)
+        })
+        if (typeof options.body == 'object') {
+          const json = JSON.stringify(options.body)
+          this.log(' > request body', json)
+          request.setHeader('Content-Type', 'application/json; charset=utf8')
+          request.setHeader('Content-Length', Buffer.byteLength(json))
+          request.write(json)
+        }
+        this.log('@request', options.method, options.url.toString())
+        request.end()
+      })
+
+      this.doContext('response', async responseContext => {
+        responseContext.setVar('response', response.body)
+        requestStep.receiverSteps
+          .forEach(step => this.runCommand(step.commandName, ...step.args))
+      })
     })
   }
 
@@ -153,22 +269,8 @@ export default class Runner {
    * If <messages> contains variable name likes `$variable-name`, it's resolved.
    * @param  {...string} messages 
    */
-   log (...messages) {
-    this.logs.push(messages.map(message => {
-      if (typeof message == 'string' && message.length > 0 && message[0] == '$') {
-        try {
-          return this.resolveVar(message)
-        } catch (error) {
-          // skip variable not found error.
-          if (error instanceof VariableNotFoundError) {
-            return 'undefined'
-          }
-          throw error
-        }
-      } else {
-        return message
-      }
-    }).join(' '))
+  log (...messages) {
+    this.logs.push(messages.map(message => this.expandVariables(message)).join(' '))
   }
 
 }

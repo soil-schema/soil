@@ -70,79 +70,10 @@ const commands = {
         if (soil.options.verbose) {
           console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
         }
-        const rootContext = new Context()
-        rootContext.setHeader('User-Agent', 'Soil Scenario Runner')
-        rootContext.setHeader('Content-Type', 'application/json')
-        rootContext.setHeader('Accept', 'application/json')
-        const runner = new Runner(rootContext)
+        const runner = new Runner()
         try {
           runner.log('scenario file:', scenario.uri)
-          for (const step of scenario.steps) {
-            if (step instanceof CommandStep) {
-              await runner.runCommand(step.commandName, ...step.args)
-            }
-            if (step instanceof RequestStep) {
-              const requestContext = new Context(rootContext)
-              const requestRunner = new Runner(requestContext)
-              const overrides = step.overrides
-              Object.keys(overrides).forEach(key => {
-                if (typeof overrides[key] == 'string')
-                  overrides[key] = requestContext.applyString(overrides[key])
-                requestContext.setVar(key, overrides[key])
-              })
-              const endpoint = schema.resolveEndpoint(step.reference || step.method, requestContext.applyString(step.path))
-              if (typeof endpoint == 'undefined') {
-                throw new Error(`Endpoint is not found: ${requestContext.applyString(step.path)}`)
-              }
-              var path = requestContext.applyString(step.path || endpoint.path)
-              const query = endpoint.query.filter(query => requestContext.existsVar(`$${query.name}`))
-              if (query.length > 0) {
-                const { booleanQuery } = config.api
-                path += '?' + query.map(query => {
-                  var value = requestContext.resolveVar(`$${query.name}`)
-                  if (query.type.referenceName == 'Boolean') {
-                    if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return ''
-                    switch (booleanQuery) {
-                      // true sets query value 1, false sets query value 0.
-                      case 'numeric':
-                        value = value == 'true' ? "1" : "0"
-                        break
-                      // Boolean value convert to string like "true" or "false".
-                      case 'stringify':
-                        break
-                      // true sets query value 1, but false remove key from query string. (add removing helper)
-                      case 'set-only-true':
-                        value = '1'
-                        break
-                      // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
-                      case 'only-key':
-                        return query.name
-                    }
-                  }
-                 return `${query.name}=${encodeURIComponent(value)}`
-                }).filter(value => value != '').join("&")
-              }
-              const response = await requestRunner.request(endpoint.method, path, endpoint.requestMock(overrides))
-              runner.logs.push(...requestRunner.logs)
-              if (response.status > 299) {
-                console.log(response.body)
-                throw new Error(`Unsuccessful Response from ${endpoint.name} ${response.status}`)
-              }
-              if (typeof endpoint.successResponse != 'undefined') {
-                endpoint.successResponse.assert(response.body, ['response'])
-              }
-              const receiverContext = new Context(requestContext)
-              receiverContext.setLocalVar('response', response.body)
-              const receiverRunner = new Runner(receiverContext)
-              try {
-                for (const receiver of step.receiverSteps) {
-                  await receiverRunner.runCommand(receiver.commandName, ...receiver.args)
-                }
-              } finally {
-                runner.logs.push(...receiverRunner.logs)
-              }
-            }
-          }
+          runner.runScenario(scenario)
           console.log(chalk.green('  ✔'), scenario.name)
         } catch (error) {
           console.log(chalk.red('  ✖'), scenario.name)
