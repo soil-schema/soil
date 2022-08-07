@@ -4,7 +4,7 @@ import RequestStep from './RequestStep.js'
 
 export default class Scenario extends Node {
   /**
-   * @type {(CommandStep|RequestStep|undefined)[]}
+   * @type {(CommandStep|RequestStep)[]}
    */
   steps
 

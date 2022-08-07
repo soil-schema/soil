@@ -41,4 +41,12 @@ export default class RequestStep extends Node {
       Object.defineProperty(this, 'receiverSteps', { value: [], enumerable: false })
     }
   }
+
+  get commandName () {
+    return 'request'
+  }
+
+  get args () {
+    return []
+  }
 }

@@ -3,6 +3,8 @@
 import http from 'node:http'
 import https from 'node:https'
 
+import Scenario from '../graph/Scenario.js'
+
 import VariableNotFoundError from '../errors/VariableNotFoundError.js'
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
 import Context from './Context.js'
@@ -43,15 +45,21 @@ export default class Runner {
 
   /**
    * 
+   * @param {Scenario} scenario 
+   */
+  async runScenario (scenario) {
+    this.enterContext(new Context('scenario'))
+    scenario.steps.forEach(async (step) => await this.runCommand(step.commandName, ...step.args))
+  }
+
+  /**
+   * 
    * @param {string} name 
    * @param  {...any} args 
    */
   async runCommand (name, ...args) {
-    if (typeof this[name] == 'function') {
-      await this[name](...args)
-    } else {
-      throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
-    }
+    if (typeof this[name] == 'function') await this[name](...args)
+    else throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
   }
 
   // Commands
@@ -81,7 +89,7 @@ export default class Runner {
    */
   set_secure_header (name, value) {
     this.log('@set-secure-header', name, ':', '******')
-    this.context.setHeader(name, value)
+    this.context.setSecureHeader(name, value)
   }
 
   /**
@@ -99,49 +107,62 @@ export default class Runner {
   }
 
   /**
+   * `@get-var <name>`
    * 
-   * @param {string} method 
-   * @param {string} path 
-   * @param {object} body 
+   * Get varible in current context.
+   * This command is for debugging and testing.
+   * 
+   * @param {string} name Variable Name
    */
-   async request (method, path, body) {
-    const BASE_URL = process.env.BASE_URL
-    const actualUrl = `${BASE_URL}${path}`
-    const options = {
-      method,
-      use_ssl: actualUrl.startsWith('https://'),
-    }
-    const client = options.use_ssl ? https : http
-    this.log('@request', method, actualUrl)
-    return new Promise((resolve, reject) => {
-      const request = client.request(actualUrl, options, res => {
-        res.setEncoding('utf8')
-        var body = ''
-        res.on('data', (/** @type {string} */ chunk) => {
-          body += chunk
-        })
-        res.on('end', () => {
-          try {
-            resolve({ status: res.statusCode, body: JSON.parse(body) })
-            this.log(' > receive response.')
-          } catch (error) {
-            reject(error)
-          }
-        })
-      })
-      Object.keys(this.context.headers).forEach(name => {
-        const value = this.context.headers[name]
-        request.setHeader(name, value)
-        this.log(' >', name, ':', value)
-      })
-      if (typeof body == 'object') {
-        const json = JSON.stringify(body)
-        this.log(' > request body', json)
-        request.setHeader('Content-Length', Buffer.byteLength(json))
-        request.write(json)
-      }
-      request.end()
-    })
+  get_var (name) {
+    this.log('@get-var', name)
+    return this.contextStack.reverse()
+      .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
+  }
+
+  /**
+   * 
+   * @param  {...string} args 
+   */
+   async request (...args) {
+    console.log(args)
+    // const BASE_URL = process.env.BASE_URL
+    // const actualUrl = `${BASE_URL}${path}`
+    // const options = {
+    //   method,
+    //   use_ssl: actualUrl.startsWith('https://'),
+    // }
+    // const client = options.use_ssl ? https : http
+    // this.log('@request', method, actualUrl)
+    // return new Promise((resolve, reject) => {
+    //   const request = client.request(actualUrl, options, res => {
+    //     res.setEncoding('utf8')
+    //     var body = ''
+    //     res.on('data', (/** @type {string} */ chunk) => {
+    //       body += chunk
+    //     })
+    //     res.on('end', () => {
+    //       try {
+    //         resolve({ status: res.statusCode, body: JSON.parse(body) })
+    //         this.log(' > receive response.')
+    //       } catch (error) {
+    //         reject(error)
+    //       }
+    //     })
+    //   })
+    //   Object.keys(this.context.headers).forEach(name => {
+    //     const value = this.context.headers[name]
+    //     request.setHeader(name, value)
+    //     this.log(' >', name, ':', value)
+    //   })
+    //   if (typeof body == 'object') {
+    //     const json = JSON.stringify(body)
+    //     this.log(' > request body', json)
+    //     request.setHeader('Content-Length', Buffer.byteLength(json))
+    //     request.write(json)
+    //   }
+    //   request.end()
+    // })
   }
 
   /**
@@ -151,7 +172,7 @@ export default class Runner {
    * If <messages> contains variable name likes `$variable-name`, it's resolved.
    * @param  {...string} messages 
    */
-   log (...messages) {
+  log (...messages) {
     this.logs.push(messages.map(message => {
       if (typeof message == 'string' && message.length > 0 && message[0] == '$') {
         try {

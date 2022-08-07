@@ -10,7 +10,7 @@ export default class Context {
   _space
 
   /**
-   * @param {name} name Context name for displaying hints. 
+   * @param {string} name Context name for displaying hints. 
    */
   constructor (name) {
     Object.defineProperty(this, 'name', { value: name })
