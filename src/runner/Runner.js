@@ -53,6 +53,13 @@ export default class Runner {
   }
 
   /**
+   * @type {string}
+   */
+  get contextPath () {
+    return this.contextStack.map(context => context.name).join(' » ')
+  }
+
+  /**
    * @type {Context}
    */
   get context () {
@@ -106,12 +113,23 @@ export default class Runner {
   }
 
   /**
+   * @param {string} name
+   * @returns {any}
+   */
+  getVar (name) {
+    return this.contextStack.reverse()
+      .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
+  }
+
+  /**
    * 
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
     this.enterContext(new Context('scenario'))
-    scenario.steps.forEach(async (step) => await this.runCommand(step.commandName, ...step.args))
+    for (const step of scenario.steps) {
+      await this.runCommand(step.commandName, ...step.args)
+    }
   }
 
   /**
@@ -120,7 +138,7 @@ export default class Runner {
    * @param  {...any} args 
    */
   async runCommand (name, ...args) {
-    if (typeof this[name] == 'function') await this[name](...args)
+    if (typeof this[`command_${name}`] == 'function') await this[`command_${name}`](...args)
     else throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
   }
 
@@ -129,57 +147,57 @@ export default class Runner {
   /**
    * `@set-header <name> <value>`
    * 
-   * Set http header in current context.
-   * if <value> is variable name likes `$variable-name`, it's resolved.
+   * Set http header in root context.
+   * variable literal is expanding in current context.
    * 
    * @param {string} name Header Name
    * @param {string} value Header Value
    */
-  set_header (name, value) {
+  command_set_header (name, value) {
     this.log('@set-header', name, ':', value)
-    this.context.setHeader(name, this.expandVariables(value))
+    this.contextStack[0].setHeader(name, this.expandVariables(value))
   }
 
   /**
    * `@set-secure-header <name> <value>`
    * 
-   * Set http header in current context.
-   * if <value> is variable name likes `$variable-name`, it's resolved.
+   * Set http header in root context.
+   * variable literal is expanding in current context.
    * 
    * @param {string} name Header Name
    * @param {string} value Header Value
    */
-  set_secure_header (name, value) {
+  command_set_secure_header (name, value) {
     this.log('@set-secure-header', name, ':', '******')
-    this.context.setSecureHeader(name, this.expandVariables(value))
+    this.contextStack[0].setSecureHeader(name, this.expandVariables(value))
   }
 
   /**
    * `@set-var <name> <value>`
    * 
-   * Set varible in current context.
-   * if <value> is variable name likes `$variable-name`, it's resolved.
+   * Set varible in root context.
+   * variable literal is expanding in current context.
    * 
    * @param {string} name Variable Name
    * @param {string} value Variable Value
    */
-  set_var (name, value) {
+  command_set_var (name, value) {
     this.log('@set-var', name, '=', value)
-    this.context.setVar(name, this.expandVariables(value))
+    this.contextStack[0].setVar(name, this.expandVariables(value))
   }
 
   /**
-   * `@set-global <name> <value>`
+   * `@set-local-var <name> <value>`
    * 
-   * Set varible in root context.
-   * if <value> is variable name likes `$variable-name`, it's resolved in current context.
+   * Set varible in current context.
+   * variable literal is expanding in current context.
    * 
    * @param {string} name Variable Name
    * @param {string} value Variable Value
    */
-  set_global (name, value) {
-    this.log('@set-global', name, '=', value)
-    this.contextStack[0].setVar(name, this.expandVariables(value))
+  command_set_local_var (name, value) {
+    this.log('@set-local-var', name, '=', value, 'in', this.contextPath)
+    this.context.setVar(name, this.expandVariables(value))
   }
 
   /**
@@ -189,21 +207,35 @@ export default class Runner {
    * This command is for debugging and testing.
    * 
    * @param {string} name Variable Name like `$name`
+   * @returns {any}
    */
-  get_var (name) {
-    this.log('@get-var', name)
-    return this.contextStack.reverse()
-      .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
+  command_get_var (name) {
+    const value = this.getVar(name)
+    this.log('@get-var', name, value)
+    return value
+  }
+
+  /**
+   * `@inspect`
+   * 
+   * Show variables in this context.
+   * 
+   * @returns {any}
+   */
+  command_inspect () {
+    this.log('@inspect')
+    this.log(` > response:\n${JSON.stringify(this.getVar('$response'), null, 2)}`)
   }
 
   /**
    * 
    * @param  {RequestStep} requestStep
    */
-  async request (requestStep) {
+  async command_request (requestStep) {
     requestStep.prepare()
+    const id = Math.floor(Math.random() * 1000)
     const BASE_URL = process.env.BASE_URL
-    this.doContext('request', async requestContext => {
+    await this.doContext('request', async requestContext => {
 
       // Prepare overrides in request block
       const overrides = this.expandVariables(requestStep.overrides)
@@ -211,7 +243,7 @@ export default class Runner {
 
       // Prepare http request
       const path = this.expandVariables(requestStep.path)
-      const queryString = requestStep.endpoint?.buildQueryString(name => this.get_var(`$${name}`)) || ''
+      const queryString = requestStep.endpoint?.buildQueryString(name => this.getVar(`$${name}`)) || ''
       const actualUrl = new URL(`${path}${queryString}`, BASE_URL)
       const options = {
         method: requestStep.method,
@@ -254,10 +286,16 @@ export default class Runner {
         request.end()
       })
 
-      this.doContext('response', async responseContext => {
+      if (response.statusCode > 299) {
+        console.log('unsuccessful', response.statusCode)
+        throw new ScenarioRuntimeError(`Unsuccessful response: ${response.statusCode}`)
+      }
+
+      await this.doContext('response', async responseContext => {
         responseContext.setVar('response', response.body)
-        requestStep.receiverSteps
-          .forEach(step => this.runCommand(step.commandName, ...step.args))
+        for (const step of requestStep.receiverSteps) {
+          await this.runCommand(step.commandName, ...step.args)
+        }
       })
     })
   }
@@ -270,7 +308,7 @@ export default class Runner {
    * @param  {...string} messages 
    */
   log (...messages) {
-    this.logs.push(messages.map(message => this.expandVariables(message)).join(' '))
+    this.logs.push(messages.map(message => message).join(' '))
   }
 
 }

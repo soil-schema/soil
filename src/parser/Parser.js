@@ -9,7 +9,7 @@ import Token from './Token.js'
 
 const ENTITY_NAME_PATTERN = /^[A-Z][A-Za-z0-9_]+$/
 const SCENARIO_NAME_PATTERN = /^[A-Za-z0-9_]+$/
-const SCENARIO_STEP_PATTERN = /^@[A-Za-z\-]+$/
+const COMMAND_PATTERN = /^@[A-Za-z\-]+$/
 const FIELD_NAME_PATTERN = /^[a-z0-9_]+$/
 const QYERY_NAME_PATTERN = FIELD_NAME_PATTERN
 const PARAMETER_NAME_PATTERN = FIELD_NAME_PATTERN
@@ -200,7 +200,7 @@ export default class Parser {
           if (buffer.trim().length > 0)
             tokens.push(new Token(this.uri, line, offset - buffer.length, buffer.trim()))
           var command = ''
-          while (body[i] != ARGS_BEGIN && i < body.length) {
+          while (i < body.length && (/^@?$/.test(command) || COMMAND_PATTERN.test(`${command}${body[i]}`))) {
             command += body[i]
             i += 1
             offset += 1
@@ -867,21 +867,22 @@ export default class Parser {
 
     this.parseBlock(schema, () => {
       // Test match scenario step: like `@command-name`
-      if (SCENARIO_STEP_PATTERN.test(this.currentToken.token)) {
-        this.currentToken.kind = 'entity.name.function.scenario-step'
+      if (COMMAND_PATTERN.test(this.currentToken.token)) {
+        this.currentToken.kind = 'entity.name.function.command'
         const stepSchema = {
           command: this.currentToken.token,
           args: [],
         }
         this.next()
-        this.assert('(')
-        this.next()
-        while (this.currentToken.not(')')) {
-          // @ts-ignore
-          stepSchema.args.push(this.currentToken.token)
+        if (this.currentToken.is('(')) {
+          this.next()
+          while (this.currentToken.not(')')) {
+            // @ts-ignore
+            stepSchema.args.push(this.currentToken.token)
+            this.next()
+          }
           this.next()
         }
-        this.next()
         // @ts-ignore
         schema.steps.push(stepSchema)
         return
