@@ -118,6 +118,22 @@ export default class Endpoint extends Model {
   }
 
   /**
+   * @returns {object[]}
+   */
+   captureSubschemas () {
+    const subschemas = []
+    this.requestBody.fields.forEach(field => {
+      field.captureSubschemas()
+        .forEach(schema => subschemas.push(schema))
+    })
+    this.successResponse.fields.forEach(field => {
+      field.captureSubschemas()
+        .forEach(schema => subschemas.push(schema))
+    })
+    return subschemas
+  }
+
+  /**
    * @returns {Array<Parameter>}
    */
   resolvePathParameters() {
