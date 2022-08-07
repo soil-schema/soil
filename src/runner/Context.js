@@ -10,6 +10,11 @@ export default class Context {
   _space
 
   /**
+   * @type {string}
+   */
+  name
+
+  /**
    * @param {string} name Context name for displaying hints. 
    */
   constructor (name) {

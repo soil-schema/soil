@@ -6,8 +6,8 @@ import ScenarioRuntimeError from '../../src/errors/ScenarioRuntimeError.js'
 test('set and resolve var', t => {
   const runner = new Runner()
   runner.enterContext(new Context('test'))
-  runner.set_var('name', 'value')
-  t.is(runner.get_var('$name'), 'value')
+  runner.command_set_var('name', 'value')
+  t.is(runner.command_get_var('$name'), 'value')
   t.throws(() => runner.context.resolveVar('$not_found'), { instanceOf: ScenarioRuntimeError })
 })
 
@@ -16,8 +16,8 @@ test('resolve $env var', t => {
   runner.enterContext(new Context('test'))
   try {
     process.env.ENV_VAR = 'value'
-    t.is(runner.get_var('$env.ENV_VAR'), 'value')
-    t.is(runner.get_var('$env.NOT_FOUND'), undefined)
+    t.is(runner.command_get_var('$env.ENV_VAR'), 'value')
+    t.is(runner.command_get_var('$env.NOT_FOUND'), undefined)
   } finally {
     delete process.env.ENV_VAR
   }
@@ -26,7 +26,7 @@ test('resolve $env var', t => {
 test('set and resolve nested var', t => {
   const runner = new Runner()
   runner.enterContext(new Context('test'))
-  runner.set_var('person', { name: 'value' })
-  t.is(runner.get_var('$person.name'), 'value')
-  t.is(runner.get_var('$not_found'), undefined)
+  runner.command_set_var('person', { name: 'value' })
+  t.is(runner.command_get_var('$person.name'), 'value')
+  t.is(runner.command_get_var('$not_found'), undefined)
 })

@@ -73,7 +73,7 @@ const commands = {
         const runner = new Runner()
         try {
           runner.log('scenario file:', scenario.uri)
-          runner.runScenario(scenario)
+          await runner.runScenario(scenario)
           console.log(chalk.green('  ✔'), scenario.name)
         } catch (error) {
           console.log(chalk.red('  ✖'), scenario.name)
