@@ -2,6 +2,7 @@
 
 import http from 'node:http'
 import https from 'node:https'
+import { URL } from 'node:url'
 
 import Scenario from '../graph/Scenario.js'
 
@@ -34,6 +35,21 @@ export default class Runner {
 
   leaveContext () {
     this.contextStack.pop()
+  }
+
+  /**
+   * 
+   * @param {string} name 
+   * @param {(context: Context) => Promise<void>} contextBlock 
+   */
+  async doContext (name, contextBlock) {
+    try {
+      const nextContext = new Context(name)
+      this.enterContext(nextContext)
+      await contextBlock(nextContext)
+    } finally {
+      this.leaveContext()
+    }
   }
 
   /**
@@ -172,7 +188,7 @@ export default class Runner {
    * Get varible in current context.
    * This command is for debugging and testing.
    * 
-   * @param {string} name Variable Name
+   * @param {string} name Variable Name like `$name`
    */
   get_var (name) {
     this.log('@get-var', name)
@@ -187,19 +203,26 @@ export default class Runner {
   async request (requestStep) {
     requestStep.prepare()
     const BASE_URL = process.env.BASE_URL
-    try {
-      this.enterContext(new Context('request'))
+    this.doContext('request', async requestContext => {
+
+      // Prepare overrides in request block
       const overrides = this.expandVariables(requestStep.overrides)
-      this.context.importVars(overrides)
-      const actualUrl = `${BASE_URL}${this.expandVariables(requestStep.path)}`
+      requestContext.importVars(overrides)
+
+      // Prepare http request
+      const path = this.expandVariables(requestStep.path)
+      const queryString = requestStep.endpoint?.buildQueryString(name => this.get_var(`$${name}`)) || ''
+      const actualUrl = new URL(`${path}${queryString}`, BASE_URL)
       const options = {
         method: requestStep.method,
         url: actualUrl,
-        use_ssl: actualUrl.startsWith('https://'),
+        use_ssl: actualUrl.protocol == 'https',
         headers: this.getHeaders(),
         body: this.overrideKeys(this.expandVariables(requestStep.mock()), overrides),
       }
       const client = options.use_ssl ? https : http
+
+      // Send http request
       const response = await new Promise((resolve, reject) => {
         const request = client.request(actualUrl, options, res => {
           res.setEncoding('utf8')
@@ -227,21 +250,16 @@ export default class Runner {
           request.setHeader('Content-Length', Buffer.byteLength(json))
           request.write(json)
         }
-        this.log('@request', options.method, options.url)
+        this.log('@request', options.method, options.url.toString())
         request.end()
       })
 
-      try {
-        this.enterContext(new Context('response'))
-        this.context.setVar('response', response.body)
+      this.doContext('response', async responseContext => {
+        responseContext.setVar('response', response.body)
         requestStep.receiverSteps
           .forEach(step => this.runCommand(step.commandName, ...step.args))
-      } finally {
-        this.leaveContext() // Leave from response context
-      }
-    } finally {
-      this.leaveContext() // Leave from request context
-    }
+      })
+    })
   }
 
   /**

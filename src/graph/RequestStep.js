@@ -92,7 +92,14 @@ export default class RequestStep extends Node {
     }
   }
 
+  /**
+   * @type {Endpoint|undefined}
+   */
+  get endpoint () {
+    return this.root.findEndpoint(this.method, this.path)
+  }
+
   mock () {
-    return this.root.findEndpoint(this.method, this.path)?.requestBody?.mock()
+    return this.endpoint?.requestBody?.mock()
   }
 }

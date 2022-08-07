@@ -196,6 +196,47 @@ export default class Endpoint extends Model {
     }
     return mock
   }
+
+  /**
+   * 
+   * @param {(name: string) => any} queryProvider 
+   * @returns {string}
+   */
+  buildQueryString (queryProvider) {
+    const { booleanQuery } = this.config.api
+    const query = this.query.reduce((/** @type {string[]} */ result, query) => {
+
+      var value = queryProvider(query.name)
+      
+      if (typeof value == 'undefined') return result
+      
+      if (query.type.referenceName == 'Boolean') {
+        // Apply config.api.booleanQuery strategy
+        if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return result
+        switch (booleanQuery) {	
+          // true sets query value 1, false sets query value 0.
+          case 'numeric':
+            value = value == 'true' ? "1" : "0"
+            break
+          // Boolean value convert to string like "true" or "false".
+          case 'stringify':
+            /* Nothing to do */
+            break
+          // true sets query value 1, but false remove key from query string. (add removing helper)
+          case 'set-only-true':
+            value = '1'
+            break
+          // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
+          case 'only-key':
+            return [ ...result, query.name ]
+        }
+      }
+
+      return [ ...result, `${query.name}=${encodeURIComponent(value)}` ]
+    }, [])
+
+    return query.length > 0 ? `?${query.join('&')}` : ''
+  }
 }
 
 /*
