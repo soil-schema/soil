@@ -159,6 +159,10 @@ export default class Field extends Node {
         if (/^(true|false)$/.test(value) == false) {
           throw new AssertionError(`Invalid Boolean value ${value} at ${path.join('.')}`)
         }
+      } else if (this.type.isEnum) {
+        if (this.enumValues.includes(value) == false) {
+          throw new AssertionError(`Incorrect enum value "${value}", ${this.type.referenceName} allows only ${this.enumValues.join(', ')} at ${path.join('.')}`)
+        }
       } else {
         throw new AssertionError(`Actual String value, but expected not string (${this.type.referenceName}) at ${path.join('.')}`)
       }
