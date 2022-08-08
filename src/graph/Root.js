@@ -37,6 +37,15 @@ export default class Root extends Node {
   }
 
   /**
+   * 
+   * @param {string} name
+   * @returns {Scenario|undefined}
+   */
+  findScenario (name) {
+    return this.scenarios.find(scenario => scenario.name == name)
+  }
+
+  /**
    * @param {string} referenceBody 
    * @param {boolean} allowGlobalFinding 
    * @returns {Node|undefined}

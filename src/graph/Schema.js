@@ -15,6 +15,15 @@ import '../kotlin.js'
 import '../swift.js'
 
 export default class Schema {
+  /**
+   * @type {Root}
+   */
+  root
+
+  /**
+   * 
+   * @param {any} config 
+   */
   constructor(config) {
     Object.defineProperty(this, 'config', { value: config })
   }

@@ -29,4 +29,11 @@ export default class Scenario extends Node {
       .filter(step => step instanceof Node)
       .forEach(step => step.moveToParent(this))
   }
+
+  /**
+   * @type {boolean}
+   */
+  get isShared () {
+    return this.schema.annotation == 'shared'
+  }
 }
