@@ -1,4 +1,7 @@
 import path from 'path'
+import http from 'node:http'
+import https from 'node:https'
+
 import Config from './Config.js'
 
 export const configTemplate = new Config()
@@ -106,4 +109,42 @@ export const loadConfig = async function () {
     if (soil.options.verbose) console.log(error)
     return configTemplate.build({})
   }
+}
+
+/**
+ * Promise http request.
+ * @param {{ url: string, method: string, body: string, headers: { [key: string]: string } }}} request 
+ */
+export const httpRequest = function (request) {
+
+  // Send http request
+  return new Promise((resolve, reject) => {
+    try {
+      const BASE_URL = process.env.BASE_URL
+      const { method, headers, body, url } = request
+      const use_ssl = url.startsWith('https://')
+      const client = use_ssl ? https : http
+
+      const req = client.request(url,  { method, headers, use_ssl }, res => {
+        res.setEncoding('utf8')
+        var body = ''
+        res.on('data', (/** @type {string} */ chunk) => body += chunk)
+        res.on('end', () => resolve({ raw: res, status: res.statusCode || 500, headers: res.headers, body }))
+      })
+
+      if (typeof body == 'object') {
+        const json = JSON.stringify(body)
+        req.setHeader('Content-Type', 'application/json; charset=utf-8')
+        req.setHeader('Content-Length', Buffer.byteLength(json))
+        req.write(json)
+      }
+
+      req.on('error', reject)
+      req.end()
+
+    } catch (error) {
+      reject(error)
+    }
+  })
+
 }

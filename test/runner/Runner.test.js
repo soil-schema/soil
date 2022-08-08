@@ -41,3 +41,33 @@ test('interpolate call with not string or object', t => {
   t.is(runner.interpolate(true), true)
   t.is(runner.interpolate(null), null)
 })
+
+test('enter and leave context', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('root'))
+  runner.enterContext(new Context('leaf'))
+
+  t.is(runner.context.name, 'leaf')
+  t.is(runner.contextPath, 'root » leaf')
+
+  runner.leaveContext()
+
+  t.is(runner.context.name, 'root')
+})
+
+test('get headers from context stack', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('root'))
+  runner.context.setHeader('X-Api-Version', '3.0')
+  runner.context.setHeader('X-Api-Key', 'root-api-key')
+
+  runner.enterContext(new Context('leaf'))
+  runner.context.setHeader('X-Api-Key', 'leaf-api-key')
+
+  t.is(runner.getHeaders()['X-Api-Version'], '3.0')
+  t.is(runner.getHeaders()['X-Api-Key'], 'leaf-api-key')
+
+  runner.leaveContext() // leave leaf context
+  t.is(runner.getHeaders()['X-Api-Version'], '3.0')
+  t.is(runner.getHeaders()['X-Api-Key'], 'root-api-key')
+})
