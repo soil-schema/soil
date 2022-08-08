@@ -43,7 +43,7 @@ export default class Context {
    * @param {string} value 
    */
   setHeader (name, value) {
-    this._headers.push(new ContextHeader(name, this.applyString(value)))
+    this._headers.push(new ContextHeader(name, value))
   }
 
   /**
@@ -52,7 +52,7 @@ export default class Context {
    * @param {string} value 
    */
   setSecureHeader (name, value) {
-    this._headers.push(new ContextHeader(name, this.applyString(value), { secure: true }))
+    this._headers.push(new ContextHeader(name, value, { secure: true }))
   }
 
   /**
@@ -133,16 +133,16 @@ export default class Context {
     return typeof this.getVar(path) != 'undefined'
   }
 
-  applyString (string) {
+  interpolate (string) {
     if (typeof string != 'string') throw new ScenarioRuntimeError(`Invalid arguments Context.applyString, string is expected but not in Context<${this.name}>`)
-    const keys = this.keys()
-      .map(key => `$${key}`) // Insert $ at head.
     return string.replaceAll(/\$(?:([a-zA-Z0-9_]+)\.)*([a-zA-Z0-9_]+)\b/g, matches => {
-      if (keys.includes(matches)) {
-        return this.getVar(matches)
-      } else {
-        return matches
+      var tokens = matches.replace(/^\$/, '').split('.')
+      var trailing = ''
+      while (tokens.length > 0) {
+        if (this.keys().includes(tokens.join('.'))) return `${this.getVar(`$${tokens.join('.')}`)}${trailing}`
+        trailing = `.${tokens.pop()}${trailing}`
       }
+      return matches
     })
   }
 }

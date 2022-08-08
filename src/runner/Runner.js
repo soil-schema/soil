@@ -68,24 +68,33 @@ export default class Runner {
   }
 
   /**
+   * Do string interpolation in current context.
    * 
-   * @param {any} target 
+   * soil finds embed variables e.g. `$variable-name` in string, then it will replace value of the variable.
+   * 
+   * If target is object, soil dive into object.
+   * In other words, soil recursively apply `.interpolate` method to each properties of object.
+   * 
+   * There is nested variable in current context, e.g. `$user` variable has `$name` and `$age` nested variables,
+   * these variables are referenced by dot notation.
+   * When the target string is "Name: $user.name" and the value of `$user` > `$name` is `"user-name"`, so it returns "Name: user-name".
+   *
+   * If target is not string or object, it return as is with no changes.
+   * 
+   * @param {any} target Interpolate target. It ignore when it's not string or object.
    * @returns {any}
    */
-  expandVariables (target) {
+  interpolate (target) {
     if (typeof target == 'string') {
       // [!] Non-destructively reversing
       return [...this.contextStack].reverse()
-        .reduce((target, context) => {
-          return context.applyString(target)
-        }, target)
-    } else if (typeof target == 'object') {
-      if (target == null) return target
+        .reduce((target, context) => context.interpolate(target), target)
+    } else if (typeof target == 'object' && target != null) {
+      // Recursively apply to each properties.
       return Object.keys(target)
-        .reduce((result, key) => { return { ...result, [key]: this.expandVariables(target[key]) } }, {})
-    } else {
-      return target
+        .reduce((result, key) => { return { ...result, [key]: this.interpolate(target[key]) } }, {})
     }
+    return target
   }
 
   /**
@@ -160,8 +169,8 @@ export default class Runner {
    * @param {string} value Header Value
    */
   command_set_header (name, value) {
-    this.log('@set-header', name, ':', this.expandVariables(value))
-    this.contextStack[0].setHeader(name, this.expandVariables(value))
+    this.log('@set-header', name, ':', this.interpolate(value))
+    this.contextStack[0].setHeader(name, this.interpolate(value))
   }
 
   /**
@@ -175,7 +184,7 @@ export default class Runner {
    */
   command_set_secure_header (name, value) {
     this.log('@set-secure-header', name, ':', '******')
-    this.contextStack[0].setSecureHeader(name, this.expandVariables(value))
+    this.contextStack[0].setSecureHeader(name, this.interpolate(value))
   }
 
   /**
@@ -188,8 +197,8 @@ export default class Runner {
    * @param {string} value Variable Value
    */
   command_set_var (name, value) {
-    this.log('@set-var', name, '=', this.expandVariables(value))
-    this.contextStack[0].setVar(name, this.expandVariables(value))
+    this.log('@set-var', name, '=', this.interpolate(value))
+    this.contextStack[0].setVar(name, this.interpolate(value))
   }
 
   /**
@@ -203,7 +212,7 @@ export default class Runner {
    */
   command_set_local_var (name, value) {
     this.log('@set-local-var', name, '=', value, 'in', this.contextPath)
-    this.context.setVar(name, this.expandVariables(value))
+    this.context.setVar(name, this.interpolate(value))
   }
 
   /**
@@ -245,11 +254,11 @@ export default class Runner {
     await this.doContext('request', async requestContext => {
 
       // Prepare overrides in request block
-      const overrides = this.expandVariables(requestStep.overrides)
+      const overrides = this.interpolate(requestStep.overrides)
       requestContext.importVars(overrides)
 
       // Prepare http request
-      const path = this.expandVariables(requestStep.path)
+      const path = this.interpolate(requestStep.path)
       const queryString = requestStep.endpoint?.buildQueryString(name => this.getVar(`$${name}`)) || ''
       const actualUrl = new URL(`${BASE_URL}${path}${queryString}`)
       const request = {
@@ -257,7 +266,7 @@ export default class Runner {
         path,
         url: actualUrl.toString(),
         headers: this.getHeaders(),
-        body: this.overrideKeys(this.expandVariables(requestStep.mock()), overrides),
+        body: this.overrideKeys(this.interpolate(requestStep.mock()), overrides),
       }
       const client = actualUrl.protocol == 'https:' ? https : http
 

@@ -29,4 +29,15 @@ test('set and resolve nested var', t => {
   runner.command_set_var('person', { name: 'value' })
   t.is(runner.command_get_var('$person.name'), 'value')
   t.is(runner.command_get_var('$not_found'), undefined)
+
+  t.is(runner.interpolate('Name: $person.name'), 'Name: value')
+  t.is(runner.interpolate('Value: $not_found'), 'Value: $not_found')
+})
+
+test('interpolate call with not string or object', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  t.is(runner.interpolate(1), 1)
+  t.is(runner.interpolate(true), true)
+  t.is(runner.interpolate(null), null)
 })
