@@ -32,6 +32,9 @@ export default class Context {
     this.defineFunctionalVar('env', () => process.env)
     this.defineFunctionalVar('rand', () => Math.floor(Math.random() * 10000))
     this.defineFunctionalVar('timestamp', () => new Date().valueOf())
+
+    // [!] Hide memos
+    Object.defineProperty(this, '_keys', { value: undefined, enumerable: false, writable: true })
   }
 
   /**
@@ -96,7 +99,7 @@ export default class Context {
    * @param {string} path
    * @returns 
    */
-   resolveVar (path) {
+  resolveVar (path) {
     const value = this.getVar(path)
     if (typeof value == 'undefined') {
       throw new ScenarioRuntimeError(`Variable not found \`${path}\``)
@@ -134,7 +137,7 @@ export default class Context {
     if (typeof string != 'string') throw new ScenarioRuntimeError(`Invalid arguments Context.applyString, string is expected but not in Context<${this.name}>`)
     const keys = this.keys()
       .map(key => `$${key}`) // Insert $ at head.
-    return string.replaceAll(/\$(?:([a-z0-9_]+)\.)*([a-z0-9_]+)\b/g, matches => {
+    return string.replaceAll(/\$(?:([a-zA-Z0-9_]+)\.)*([a-zA-Z0-9_]+)\b/g, matches => {
       if (keys.includes(matches)) {
         return this.getVar(matches)
       } else {
