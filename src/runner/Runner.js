@@ -77,7 +77,7 @@ export default class Runner {
       // [!] Non-destructively reversing
       return [...this.contextStack].reverse()
         .reduce((target, context) => {
-          return context.applyString(target)
+          return context.expandVariables(target)
         }, target)
     } else if (typeof target == 'object') {
       if (target == null) return target
