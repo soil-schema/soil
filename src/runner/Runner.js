@@ -365,7 +365,12 @@ export default class Runner {
    * @param  {...string} messages 
    */
   log (...messages) {
-    this.logs.push(messages.map(message => message).join(' '))
+    // @ts-ignore
+    if (global.soil?.options?.verbose) {
+      console.log(...messages)
+    } else {
+      this.logs.push(messages.map(message => message).join(' '))
+    }
   }
 
 }

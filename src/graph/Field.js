@@ -159,6 +159,23 @@ export default class Field extends Node {
         if (/^(true|false)$/.test(value) == false) {
           throw new AssertionError(`Invalid Boolean value ${value} at ${path.join('.')}`)
         }
+      } else if (this.type.isEnum) {
+        if (this.enumValues.includes(value) == false) {
+          throw new AssertionError(`Incorrect enum value "${value}", ${this.type.referenceName} allows only ${this.enumValues.join(', ')} at ${path.join('.')}`)
+        }
+      } else if (this.type.referenceName == 'URL') {
+        try {
+          new URL(value)
+        } catch {
+          throw new AssertionError(`Incorrect url value "${value}" at ${path.join('.')}`)
+        }
+      } else if (this.type.referenceName == 'Timestamp') {
+        try {
+          // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse
+          Date.parse(value)
+        } catch {
+          throw new AssertionError(`Incorrect timestamp value "${value}" (supports only iso 8601 format) at ${path.join('.')}`)
+        }
       } else {
         throw new AssertionError(`Actual String value, but expected not string (${this.type.referenceName}) at ${path.join('.')}`)
       }

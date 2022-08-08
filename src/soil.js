@@ -14,9 +14,6 @@ import { loadConfig } from './utils.js'
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
 import Runner from './runner/Runner.js'
-import CommandStep from './graph/CommandStep.js'
-import Context from './runner/Context.js'
-import RequestStep from './graph/RequestStep.js'
 import ScenarioRuntimeError from './errors/ScenarioRuntimeError.js'
 
 const commands = {
@@ -56,7 +53,7 @@ const commands = {
   replay: async () => {
     const config = await loadConfig()
 
-    if (soil.options.debug) {
+    if (soil.options.verbose) {
       console.log(util.inspect(config, { depth: null, colors: true }))
     }
 

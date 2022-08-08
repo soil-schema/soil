@@ -131,6 +131,7 @@ export const httpRequest = function (request) {
         res.setEncoding('utf8')
         var body = ''
         res.on('data', (/** @type {string} */ chunk) => body += chunk)
+        res.on('error', reject)
         res.on('end', () => resolve({ raw: res, status: res.statusCode || 500, headers: res.headers, body }))
       })
 

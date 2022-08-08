@@ -332,7 +332,7 @@ export default class Parser {
   assert (tester, message = 'Unexpected token') {
     if (this.currentToken.not(tester)) {
       // @ts-ignore
-      throw new SyntaxError(this.currentToken. message)
+      throw new SyntaxError(this.currentToken, message, `Assert with ${tester.toString()}`)
     }
   }
 
@@ -408,13 +408,6 @@ export default class Parser {
           case COMMENT_MARK:
             this.next()
             this.next() // Skip comment body
-            break
-          case KEYWORD_ID:
-            this.currentToken.kind = 'keyword.other.id'
-            this.next()
-            this.currentToken.kind = 'entity.name.id'
-            blockSchema.id = this.currentToken.token
-            this.next()
             break
           default:
             tokenResolver()
@@ -753,6 +746,13 @@ export default class Parser {
           const query = this.parseQuery()
           endpointSchema.query[query.name] = query
           return
+        case KEYWORD_ID:
+          this.currentToken.kind = 'keyword.other.id'
+          this.next()
+          this.currentToken.kind = 'entity.name.id'
+          endpointSchema.id = this.currentToken.token
+          this.next()
+          break
         case KEYWORD_REQUIRED:
           this.next()
           this.assert(KEYWORD_QUERY)
