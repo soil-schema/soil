@@ -1,10 +1,10 @@
 # soil
 
-soil is schema language for REST and JSON api and swift / ~~kotlin~~ client code generator.
+soil is schema language for REST and JSON api and swift / kotlin client code generator.
 
 - [x] Short schema based REST api.
 - [ ] Small and flexible client code.
-- [ ] Write and run api testing scenario.
+- [x] Write and run api testing scenario.
 
 Other tools are more good if you want:
 
@@ -136,18 +136,83 @@ soil is written by nodejs.
 $ npm install -g soil-schema
 ```
 
-# Swift
+# Scenario runner
 
-soil supports Swift code generation.
-Generated code has no dependencies, use your api request / response client class.
+soil scneario runner helps you test REST api.
 
-You run soil command in your cli, export swift code.
+```bash
+$ npx soil replay
+```
+
+## Write scenario file
+
+```soil test-scenario.soil
+scenario Test Scenario {
+  GET /sample
+}
+```
+
+soil http request to `GET /sample` endpoint.
+
+## Parameter overrides
+
+```
+scenario Comment {
+  GET /articles/search {
+    query = Search Query Parameter
+  }
+  POST /comments {
+    body = Comment body
+  }
+}
+```
+
+## Identifier endpoint
+
+Use `id` directive in endpoint block, endpoint is identified by id string.
+You use endpoint reference that join by dot notation entity name and endpoint id in scenario block.
+
+```soil
+entity User {
+  field id: Int
+  mutable field name: String
+
+  POST /users {
+    id register
+    request {
+      field user: User
+    }
+    success {
+      field user: User
+    }
+  }
+}
+
+scenario Register User {
+  User.register { # Actually it uses `POST /users` endpoint.
+    name = User Name
+  }
+}
+```
+
+## BASE\_URL
+
+soil scenario runner build actual url with BASE\_URL environment variable.
+
+# Code Generation
+
+You run soil command in your cli, export swift/kotlin code.
 
 ```
 $ npx soil build
 ```
 
-## with SoilSwift package
+## Swift
+
+soil supports Swift code generation.
+Generated code has no dependencies, use your api request / response client class.
+
+### with SoilSwift package
 
 Instead of writing your own code, you can use [soil-swift](https://github.com/niaeashes/soil-swift).
 
@@ -158,3 +223,7 @@ module.exports = {
   },
 }
 ```
+
+## Kotlin
+
+soil supports Kotlin code generation.
