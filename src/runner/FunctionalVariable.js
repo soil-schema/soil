@@ -26,6 +26,9 @@ export default class FunctionalVariable {
   constructor (name, calc) {
     Object.defineProperty(this, 'name', { value: name })
     Object.defineProperty(this, 'calc', { value: calc })
+
+    // [!] Hide memos
+    Object.defineProperty(this, '_cache', { value: undefined, enumerable: false, writable: true })
   }
 
   /**

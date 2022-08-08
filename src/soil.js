@@ -17,6 +17,7 @@ import Runner from './runner/Runner.js'
 import CommandStep from './graph/CommandStep.js'
 import Context from './runner/Context.js'
 import RequestStep from './graph/RequestStep.js'
+import ScenarioRuntimeError from './errors/ScenarioRuntimeError.js'
 
 const commands = {
   build: async () => {
@@ -78,6 +79,9 @@ const commands = {
         } catch (error) {
           console.log(chalk.red('  ✖'), scenario.name)
           console.log(chalk.red(error))
+          if (error instanceof ScenarioRuntimeError) {
+            error.report()
+          }
         } finally {
           runner.logs.forEach(log => console.log('    ', chalk.gray(log)))
         }

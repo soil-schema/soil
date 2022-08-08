@@ -2,7 +2,7 @@
 
 import http from 'node:http'
 import https from 'node:https'
-import { URL } from 'node:url'
+import { URL, urlToHttpOptions } from 'node:url'
 
 import Scenario from '../graph/Scenario.js'
 
@@ -74,7 +74,11 @@ export default class Runner {
    */
   expandVariables (target) {
     if (typeof target == 'string') {
-      return this.contextStack.reverse().reduce((target, context) => context.applyString(target), target)
+      // [!] Non-destructively reversing
+      return [...this.contextStack].reverse()
+        .reduce((target, context) => {
+          return context.applyString(target)
+        }, target)
     } else if (typeof target == 'object') {
       if (target == null) return target
       return Object.keys(target)
@@ -108,7 +112,7 @@ export default class Runner {
     // @ts-ignore
     return this.contextStack.reduce((headers, context) => context.applyHeaders(headers), {
       'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
-      'Accept': 'application/json, */*;q=0.8'
+      'Accept': 'application/json',
     })
   }
 
@@ -117,7 +121,8 @@ export default class Runner {
    * @returns {any}
    */
   getVar (name) {
-    return this.contextStack.reverse()
+    // [!] Non-destructively reversing
+    return [...this.contextStack].reverse()
       .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
   }
 
@@ -126,10 +131,11 @@ export default class Runner {
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
-    this.enterContext(new Context('scenario'))
-    for (const step of scenario.steps) {
-      await this.runCommand(step.commandName, ...step.args)
-    }
+    await this.doContext('scenario', async () => {
+      for (const step of scenario.steps) {
+        await this.runCommand(step.commandName, ...step.args)
+      }
+    })
   }
 
   /**
@@ -154,7 +160,7 @@ export default class Runner {
    * @param {string} value Header Value
    */
   command_set_header (name, value) {
-    this.log('@set-header', name, ':', value)
+    this.log('@set-header', name, ':', this.expandVariables(value))
     this.contextStack[0].setHeader(name, this.expandVariables(value))
   }
 
@@ -182,7 +188,7 @@ export default class Runner {
    * @param {string} value Variable Value
    */
   command_set_var (name, value) {
-    this.log('@set-var', name, '=', value)
+    this.log('@set-var', name, '=', this.expandVariables(value))
     this.contextStack[0].setVar(name, this.expandVariables(value))
   }
 
@@ -224,6 +230,7 @@ export default class Runner {
    */
   command_inspect () {
     this.log('@inspect')
+    this.log(` > request:\n${JSON.stringify(this.getVar('$request'), null, 2)}`)
     this.log(` > response:\n${JSON.stringify(this.getVar('$response'), null, 2)}`)
   }
 
@@ -244,20 +251,32 @@ export default class Runner {
       // Prepare http request
       const path = this.expandVariables(requestStep.path)
       const queryString = requestStep.endpoint?.buildQueryString(name => this.getVar(`$${name}`)) || ''
-      const actualUrl = new URL(`${path}${queryString}`, BASE_URL)
-      const options = {
+      const actualUrl = new URL(`${BASE_URL}${path}${queryString}`)
+      const request = {
         method: requestStep.method,
-        url: actualUrl,
-        use_ssl: actualUrl.protocol == 'https',
+        path,
+        url: actualUrl.toString(),
         headers: this.getHeaders(),
         body: this.overrideKeys(this.expandVariables(requestStep.mock()), overrides),
       }
-      const client = options.use_ssl ? https : http
+      const client = actualUrl.protocol == 'https:' ? https : http
+
+      requestContext.setVar('request', request)
 
       // Send http request
       const response = await new Promise((resolve, reject) => {
-        this.log('@request', options.method, options.url.toString())
-        const request = client.request(actualUrl, options, res => {
+        const options = {
+          method: request.method,
+          headers: request.headers,
+        }
+        var body = undefined
+        if (typeof request.body == 'object') {
+          body = JSON.stringify(request.body)
+          options.headers['Content-Type'] = 'application/json; charset=utf-8'
+          options.headers['Content-Length'] = Buffer.byteLength(body).toString()
+        }
+        this.log('@request', request.method, request.url.toString())
+        const req = client.request(actualUrl, options, res => {
           res.setEncoding('utf8')
           var body = ''
           res.on('data', (/** @type {string} */ chunk) => {
@@ -265,34 +284,42 @@ export default class Runner {
           })
           res.on('end', () => {
             try {
-              resolve({ status: res.statusCode, body: JSON.parse(body) })
-              this.log(' > receive response.')
+              if (/^application\/json;?/.test(res.headers['content-type'] ?? '') && body != '') {
+                body = JSON.parse(body)
+              }
+              resolve({ status: res.statusCode, body, headers: res.headers })
+              this.log(' > receive response:', res.statusCode?.toString() || '???')
+              const contentType = res.headers['Content-Type']
+              if (typeof contentType == 'string' && contentType.startsWith('application/json') == false) {
+                this.log(` > Invalid response header: Content-Type is set but not equals "application/json", actual ${contentType}`)
+              }
             } catch (error) {
               reject(error)
             }
           })
         })
-        Object.entries(options.headers).forEach(([name, value]) => {
-          request.setHeader(name, value)
-          this.log(' >', name, ':', value)
-        })
-        if (typeof options.body == 'object') {
-          const json = JSON.stringify(options.body)
-          this.log(' > request body', json)
-          request.setHeader('Content-Type', 'application/json; charset=utf8')
-          request.setHeader('Content-Length', Buffer.byteLength(json))
-          request.write(json)
-        }
-        request.end()
+        if (body) req.write(body)
+        req.end()
       })
-
-      if (response.statusCode > 299) {
-        console.log('unsuccessful', response.statusCode)
-        throw new ScenarioRuntimeError(`Unsuccessful response: ${response.statusCode}`)
-      }
 
       await this.doContext('response', async responseContext => {
         responseContext.setVar('response', response.body)
+
+        if (response.status > 299) {
+          const captureStack = this.contextStack
+          throw new ScenarioRuntimeError(`Unsuccessful response: ${response.status}`, () => {
+            console.log('=== Request ===')
+            console.log(JSON.stringify(request, null, 2))
+            console.log('=== Response ===')
+            console.log(JSON.stringify(response, null, 2))
+            console.log('=== Context ===')
+            captureStack.forEach(context => {
+              console.log('Context:', context.name)
+              console.log(context._space)
+            })
+          })
+        }
+
         for (const step of requestStep.receiverSteps) {
           await this.runCommand(step.commandName, ...step.args)
         }

@@ -1,6 +1,6 @@
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
 
-export const CONTEXT_VARIABLE_PATTERN = /^[a-z0-9_]+$/
+export const CONTEXT_VARIABLE_PATTERN = /^[a-zA-Z0-9_\-]+$/
 
 export default class ContextVariable {
   /**
