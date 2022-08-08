@@ -7,19 +7,27 @@ import Context from './Context.js'
 import RequestStep from '../graph/RequestStep.js'
 import AssertionError from '../errors/AssertionError.js'
 import { httpRequest } from '../utils.js'
+import Root from '../graph/Root.js'
 
 export default class Runner {
   /**
    * @type {Context[]}
    */
-   contextStack = []
+  contextStack = []
+
+  /**
+   * @type {Root|undefined}
+   */
+  root
 
   /**
    * 
    * @param {object} config
+   * @param {Root|undefined} root
    */
-  constructor (config) {
+  constructor (config, root) {
     this.config = config
+    this.root = root
     this.logs = []
   }
 
@@ -123,8 +131,14 @@ export default class Runner {
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
+    // Assert: skip shared scenario
+    if (scenario.isShared) return
+
     this.enterContext(new Context('scenario'))
     try {
+      Object.entries(this.config.api.headers).forEach(([key, value]) => {
+        this.context.setHeader(key, value)
+      })  
       for (const step of scenario.steps) {
         await this.runCommand(step.commandName, ...step.args)
       }
@@ -316,6 +330,30 @@ export default class Runner {
       }
     } finally {
       this.leaveContext()
+    }
+  }
+
+  /**
+   * `@use(<scenario-name>)`
+   * 
+   * Call shared scenario.
+   * 
+   * @param {string} name Scenario Name
+   */
+  async command_use (name) {
+    this.log('@use', name)
+    const scenario = this.root?.findScenario(name)
+    if (scenario instanceof Scenario) {
+      this.enterContext(new Context(`scenario(${name})`))
+      try {
+        for (const step of scenario.steps) {
+          await this.runCommand(step.commandName, ...step.args)
+        }
+      } finally {
+        this.leaveContext()
+      }
+    } else {
+      throw new ScenarioRuntimeError(`Scenario not found: ${name}${typeof this.root == 'undefined' ? '- undefined root node' : ''}`)
     }
   }
 

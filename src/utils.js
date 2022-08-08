@@ -29,6 +29,8 @@ export const configTemplate = new Config()
    * @see https://github.com/niaeashes/soil/issues/32
    */
   .string('booleanQuery', 'set-only-true')
+
+  .anyStringTable('headers')
 )
 
 .addDirective('swift', swift => swift

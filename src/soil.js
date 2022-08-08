@@ -68,10 +68,11 @@ const commands = {
       schema.parse(await loader.load())
       schema.debug()
       for (const scenario of schema.scenarios) {
+        if (scenario.isShared) continue
         if (soil.options.verbose) {
           console.log(util.inspect(scenario.steps, { depth: null, colors: true }))
         }
-        const runner = new Runner()
+        const runner = new Runner(config, schema.root)
         try {
           runner.log('scenario file:', scenario.uri)
           await runner.runScenario(scenario)

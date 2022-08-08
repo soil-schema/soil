@@ -37,11 +37,19 @@ const KEYWORD_PARAMETER   = 'parameter'
 const KEYWORD_QUERY       = 'query'
 const KEYWORD_SCHEMA      = 'schema'
 const KEYWORD_RECEIVER    = 'receiver'
+
+// Field annotation
 const KEYWORD_MUTABLE     = 'mutable'
 const KEYWORD_REFERENCE   = 'reference'
 const KEYWORD_IDENTIFIER  = 'identifier'
 const KEYWORD_WRITER      = 'writer'
+
+// Query annotation
 const KEYWORD_REQUIRED    = 'required'
+
+// Scenario annotation
+const KEYWORD_SHARED      = 'shared'
+
 const KEYWORD_ID          = 'id'
 const KEYWORD_DEFAULT     = 'default'
 const KEYWORD_EXAMPLE     = 'example'
@@ -358,6 +366,12 @@ export default class Parser {
         case KEYWORD_SCENARIO:
           this.scenarios.push(this.parseScenario())
           break
+        // scenario annotation
+        case KEYWORD_SHARED:
+          this.currentToken.kind = `keyword.other.shared`
+          this.next()
+          this.assert(KEYWORD_SCENARIO)
+          break
         default:
           throw new SyntaxError(this.currentToken)
       }
@@ -504,6 +518,9 @@ export default class Parser {
   parseScenario () {
     this.assert(KEYWORD_SCENARIO)
     this.currentToken.asDirective(KEYWORD_SCENARIO)
+
+    const annotation = this.tokens[this.offset - 1]
+
     this.next()
     this.assertSematicEntity(KEYWORD_ENTITY, ENTITY_NAME_PATTERN)
 
@@ -519,6 +536,11 @@ export default class Parser {
       name,
       uri: this.currentToken.uri,
       steps: [],
+    }
+
+    if (annotation && annotation.is(/^(shared)$/)) {
+      scenarioSchema.annotation = annotation.token
+      annotation.kind = `keyword.annotation.${annotation.token}`
     }
 
     this.log(`[Scenario] ${name}`)
