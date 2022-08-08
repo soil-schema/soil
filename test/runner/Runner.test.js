@@ -41,3 +41,16 @@ test('interpolate call with not string or object', t => {
   t.is(runner.interpolate(true), true)
   t.is(runner.interpolate(null), null)
 })
+
+test('enter and leave context', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('root'))
+  runner.enterContext(new Context('leaf'))
+
+  t.is(runner.context.name, 'leaf')
+  t.is(runner.contextPath, 'root » leaf')
+
+  runner.leaveContext()
+
+  t.is(runner.context.name, 'root')
+})

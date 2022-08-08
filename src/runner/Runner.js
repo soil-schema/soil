@@ -1,15 +1,12 @@
 // @ts-check
 
-import http from 'node:http'
-import https from 'node:https'
-import { URL, urlToHttpOptions } from 'node:url'
-
 import Scenario from '../graph/Scenario.js'
 
-import VariableNotFoundError from '../errors/VariableNotFoundError.js'
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
 import Context from './Context.js'
 import RequestStep from '../graph/RequestStep.js'
+import AssertionError from '../errors/AssertionError.js'
+import { httpRequest } from '../utils.js'
 
 export default class Runner {
   /**
@@ -35,21 +32,6 @@ export default class Runner {
 
   leaveContext () {
     this.contextStack.pop()
-  }
-
-  /**
-   * 
-   * @param {string} name 
-   * @param {(context: Context) => Promise<void>} contextBlock 
-   */
-  async doContext (name, contextBlock) {
-    try {
-      const nextContext = new Context(name)
-      this.enterContext(nextContext)
-      await contextBlock(nextContext)
-    } finally {
-      this.leaveContext()
-    }
   }
 
   /**
@@ -122,6 +104,7 @@ export default class Runner {
     return this.contextStack.reduce((headers, context) => context.applyHeaders(headers), {
       'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
       'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
     })
   }
 
@@ -140,11 +123,14 @@ export default class Runner {
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
-    await this.doContext('scenario', async () => {
+    this.enterContext(new Context('scenario'))
+    try {
       for (const step of scenario.steps) {
         await this.runCommand(step.commandName, ...step.args)
       }
-    })
+    } finally {
+      this.leaveContext()
+    }
   }
 
   /**
@@ -249,70 +235,52 @@ export default class Runner {
    */
   async command_request (requestStep) {
     requestStep.prepare()
-    const id = Math.floor(Math.random() * 1000)
-    const BASE_URL = process.env.BASE_URL
-    await this.doContext('request', async requestContext => {
 
+    const BASE_URL = process.env.BASE_URL
+    this.enterContext(new Context('request'))
+
+    try {
       // Prepare overrides in request block
       const overrides = this.interpolate(requestStep.overrides)
-      requestContext.importVars(overrides)
+      this.context.importVars(overrides)
 
       // Prepare http request
+      const endpoint = requestStep.endpoint
       const path = this.interpolate(requestStep.path)
       const queryString = requestStep.endpoint?.buildQueryString(name => this.getVar(`$${name}`)) || ''
-      const actualUrl = new URL(`${BASE_URL}${path}${queryString}`)
+      const url = `${BASE_URL}${path}${queryString}`
       const request = {
         method: requestStep.method,
-        path,
-        url: actualUrl.toString(),
+        url,
         headers: this.getHeaders(),
         body: this.overrideKeys(this.interpolate(requestStep.mock()), overrides),
       }
-      const client = actualUrl.protocol == 'https:' ? https : http
 
-      requestContext.setVar('request', request)
+      this.context.setVar('request', request)
 
-      // Send http request
-      const response = await new Promise((resolve, reject) => {
-        const options = {
-          method: request.method,
-          headers: request.headers,
+      this.log('@request', request.method, request.url)
+
+      const response = await httpRequest(request)
+      var body = undefined
+      if (/^application\/json;?/.test(response.headers['content-type'] ?? '') && response.body != '') {
+        try {
+          body = JSON.parse(response.body)
+        } catch (error) {
+          if (error instanceof SyntaxError) {
+            throw new AssertionError(' > response content-type header is `application/json`, but failed to parse response as JSON')
+          }
         }
-        var body = undefined
-        if (typeof request.body == 'object') {
-          body = JSON.stringify(request.body)
-          options.headers['Content-Type'] = 'application/json; charset=utf-8'
-          options.headers['Content-Length'] = Buffer.byteLength(body).toString()
-        }
-        this.log('@request', request.method, request.url.toString())
-        const req = client.request(actualUrl, options, res => {
-          res.setEncoding('utf8')
-          var body = ''
-          res.on('data', (/** @type {string} */ chunk) => {
-            body += chunk
-          })
-          res.on('end', () => {
-            try {
-              if (/^application\/json;?/.test(res.headers['content-type'] ?? '') && body != '') {
-                body = JSON.parse(body)
-              }
-              resolve({ status: res.statusCode, body, headers: res.headers })
-              this.log(' > receive response:', res.statusCode?.toString() || '???')
-              const contentType = res.headers['Content-Type']
-              if (typeof contentType == 'string' && contentType.startsWith('application/json') == false) {
-                this.log(` > Invalid response header: Content-Type is set but not equals "application/json", actual ${contentType}`)
-              }
-            } catch (error) {
-              reject(error)
-            }
-          })
-        })
-        if (body) req.write(body)
-        req.end()
-      })
+      } else {
+        this.log(` > Invalid response header: Content-Type is set but not \`application/json\`, actual ${response.headers['content-type']}`)
+      }
 
-      await this.doContext('response', async responseContext => {
-        responseContext.setVar('response', response.body)
+      this.log(' > receive response:', response.status)
+
+      this.enterContext(new Context('response'))
+
+      try {
+        // [!] response context
+        this.context.setVar('response', body)
 
         if (response.status > 299) {
           const captureStack = this.contextStack
@@ -320,7 +288,7 @@ export default class Runner {
             console.log('=== Request ===')
             console.log(JSON.stringify(request, null, 2))
             console.log('=== Response ===')
-            console.log(JSON.stringify(response, null, 2))
+            console.log(JSON.stringify({ headers: response.headers, body }, null, 2))
             console.log('=== Context ===')
             captureStack.forEach(context => {
               console.log('Context:', context.name)
@@ -329,11 +297,26 @@ export default class Runner {
           })
         }
 
+        /**
+         * > A 204 response is terminated by the end of the header section; it cannot contain content or trailers.
+         * 
+         * so skip content body assertion.
+         * 
+         * @see https://www.rfc-editor.org/rfc/rfc9110.html#name-204-no-content
+         */
+        if (response.status != 204) {
+          endpoint?.successResponse.assert(body)
+        }
+
         for (const step of requestStep.receiverSteps) {
           await this.runCommand(step.commandName, ...step.args)
         }
-      })
-    })
+      } finally {
+        this.leaveContext()
+      }
+    } finally {
+      this.leaveContext()
+    }
   }
 
   /**

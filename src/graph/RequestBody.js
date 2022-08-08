@@ -3,6 +3,7 @@
 import Node from './Node.js'
 import Entity from './Entity.js'
 import Field from './Field.js'
+import AssertionError from '../errors/AssertionError.js'
 
 export default class RequestBody extends Node {
   /**
@@ -83,5 +84,26 @@ export default class RequestBody extends Node {
       }, {})
     if (Object.keys(mock).length == 0) return undefined
     return mock
+  }
+
+  /**
+   * 
+   * @param {any} value 
+   * @param {string[]} path
+   * @returns {boolean}
+   */
+  assert (value, path = []) {
+    if (typeof value != 'object') {
+      throw new AssertionError(`Expect object, but actual response is not object (${typeof value}) at ${path.join('.')}`)
+    }
+
+    for (const key in value) {
+      const field = this.findField(key)
+      if (field instanceof Field) {
+        field.assert(value[key], path.concat([key]))
+      }
+    }
+
+    return true
   }
 }

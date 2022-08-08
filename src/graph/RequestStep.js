@@ -96,7 +96,16 @@ export default class RequestStep extends Node {
    * @type {Endpoint|undefined}
    */
   get endpoint () {
-    return this.root.findEndpoint(this.method, this.path)
+    if (typeof this.reference == 'undefined') {
+      return this.root.findEndpoint(this.method, this.path)
+    } else {
+      const endpoint = this.resolve(this.reference)
+      if (endpoint instanceof Endpoint) {
+        return endpoint
+      } else {
+        throw new ScenarioRuntimeError(`Referenced endpoint is not found \`${this.reference}\``)
+      }
+    }
   }
 
   mock () {

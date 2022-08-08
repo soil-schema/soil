@@ -120,7 +120,7 @@ export default class Endpoint extends Model {
   /**
    * @returns {object[]}
    */
-   captureSubschemas () {
+  captureSubschemas () {
     const subschemas = []
     this.requestBody.fields.forEach(field => {
       field.captureSubschemas()
@@ -180,7 +180,9 @@ export default class Endpoint extends Model {
     for (const index in actualPath) {
       const actualElement = actualPath[index]
       const exceptElement = exceptPath[index]
-      if (exceptElement[0] == '$') {
+      if (exceptElement[0] == '$' && actualElement[0] == '$') {
+        // Skip false check.
+      } else if (exceptElement[0] == '$') {
         const parameterName = exceptElement.replace(/^\$/, '')
         const parameter = parameters.find(parameter => parameter.name == parameterName)
         if (parameter instanceof Parameter && parameter.match(actualElement) == false) {
@@ -220,12 +222,13 @@ export default class Endpoint extends Model {
    */
   buildQueryString (queryProvider) {
     const { booleanQuery } = this.config.api
+
     const query = this.query.reduce((/** @type {string[]} */ result, query) => {
 
       var value = queryProvider(query.name)
-      
+
       if (typeof value == 'undefined') return result
-      
+
       if (query.type.referenceName == 'Boolean') {
         // Apply config.api.booleanQuery strategy
         if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return result
