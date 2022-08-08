@@ -133,7 +133,7 @@ export default class Context {
     return typeof this.getVar(path) != 'undefined'
   }
 
-  expandVariables (string) {
+  interpolate (string) {
     if (typeof string != 'string') throw new ScenarioRuntimeError(`Invalid arguments Context.applyString, string is expected but not in Context<${this.name}>`)
     return string.replaceAll(/\$(?:([a-zA-Z0-9_]+)\.)*([a-zA-Z0-9_]+)\b/g, matches => {
       var tokens = matches.replace(/^\$/, '').split('.')

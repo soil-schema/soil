@@ -6,29 +6,29 @@ import ScenarioRuntimeError from '../../src/errors/ScenarioRuntimeError.js'
 test('apply', t => {
   const context = new Context()
   context.setVar('response', { name: 'Sample' })
-  t.is(context.expandVariables('no-change'), 'no-change')
-  t.not(context.expandVariables('$rand'), '$rand')
-  t.is(context.expandVariables('$response.name'), 'Sample')
-  t.is(context.expandVariables('$response'), '$response')
+  t.is(context.interpolate('no-change'), 'no-change')
+  t.not(context.interpolate('$rand'), '$rand')
+  t.is(context.interpolate('$response.name'), 'Sample')
+  t.is(context.interpolate('$response'), '$response')
   t.throws(() => {
-    context.expandVariables({}) // pass no-string
+    context.interpolate({}) // pass no-string
   }, { instanceOf: ScenarioRuntimeError })
 })
 
 test('$rand', t => {
   const context = new Context()
-  t.regex(context.expandVariables('User $rand'), /^User [0-9]+$/)
+  t.regex(context.interpolate('User $rand'), /^User [0-9]+$/)
 })
 
 test('$timestamp', t => {
   const context = new Context()
-  t.regex(context.expandVariables('$timestamp@example.com'), /^[0-9]+@example.com$/)
+  t.regex(context.interpolate('$timestamp@example.com'), /^[0-9]+@example.com$/)
 })
 
 test('apply to path likes string', t => {
   const context = new Context()
   context.setVar('id', 10)
-  t.is(context.expandVariables('/users/$id'), '/users/10')
+  t.is(context.interpolate('/users/$id'), '/users/10')
 })
 
 test('bug case: dot annotation', t => {
@@ -38,7 +38,7 @@ test('bug case: dot annotation', t => {
    *   $rand.$timestamp.user matches $rand, $timestamp correctly.
    *   but incorrect match `$timestamp.user` string pattern and don't replace $timestamp.
    */
-  t.regex(context.expandVariables('$rand.$timestamp.user@example.com'), /^[0-9]+.[0-9]+.user@example.com$/)
+  t.regex(context.interpolate('$rand.$timestamp.user@example.com'), /^[0-9]+.[0-9]+.user@example.com$/)
 })
 
 test('setVar and resolveVar', t => {
