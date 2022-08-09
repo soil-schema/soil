@@ -195,9 +195,15 @@ scenario Register User {
 }
 ```
 
-## BASE\_URL
+## `api` config
 
-soil scenario runner build actual url with BASE\_URL environment variable.
+soil can be configured for your REST Api in the `api` section of `soil.config.js`.
+
+|key|description|default
+|:---|:---|:---
+|api.base|Base URL for scenario runner. e.g. `https://api.example.com/v1`. Overridable by `SOIL_BASE_URL` environment variable.|`undefined`
+|api.booleanQuery|`Boolean` type parsing and stringify strategy.|`'set-only-true'`
+|api.headers|Custom headers collection used by scenario runner.|`{}`
 
 # Code Generation
 

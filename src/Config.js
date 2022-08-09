@@ -78,7 +78,7 @@ export class ConfigDirective {
    * @param {object} expectedTable 
    * @returns {ConfigDirective}
    */
-   stringTable (name, expectedTable = {}, defaultKey = undefined) {
+  stringTable (name, expectedTable = {}, defaultKey = undefined) {
     const directiveName = this.name
     this.declarations[name] = function (/** @type {any} */ item) {
       if (typeof item == 'string' && typeof defaultKey == 'string') {
@@ -108,7 +108,7 @@ export class ConfigDirective {
    * @param {string} name 
    * @returns {ConfigDirective}
    */
-   anyStringTable (name) {
+  anyStringTable (name) {
     const directiveName = this.name
     this.declarations[name] = function (/** @type {any} */ item) {
       if (typeof item == 'undefined') return {}
@@ -122,6 +122,7 @@ export class ConfigDirective {
           throw new InvalidConfigError(`${directiveName}.${name}.${key} is expected string, but actuallly not (${typeof value})`)
         }
         if (typeof value == 'string') return result[key] = value
+        if (typeof value == 'undefined') return // skip InvalidConfigError
         throw new InvalidConfigError(`${directiveName}.${name}.${key} is unpermitted key, but actually contains in ${directiveName}.${name}`)
       })
       return result

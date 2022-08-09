@@ -30,6 +30,8 @@ export const configTemplate = new Config()
    */
   .string('booleanQuery', 'set-only-true')
 
+  .string('base', process.env.SOIL_BASE_URL || '')
+
   .anyStringTable('headers')
 )
 

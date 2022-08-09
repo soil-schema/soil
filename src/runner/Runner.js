@@ -94,10 +94,19 @@ export default class Runner {
    * @returns {any}
    */
   overrideKeys (target, overrides) {
+    const override = (source, distination) => {
+      if (typeof source == 'number') return Number.parseFloat(distination)
+      if (typeof source == 'boolean') {
+        if (distination == 'true' || distination == '1') return true
+        if (distination == 'false' || distination == '0') return false
+        return !!distination
+      }
+      return distination
+    }
     if (typeof target == 'object' && target != null) {
       return Object.keys(target)
         .reduce((result, key) => {
-          return { ...result, [key]: key in overrides ? overrides[key] : this.overrideKeys(target[key], overrides) }
+          return { ...result, [key]: key in overrides ? override(target[key], overrides[key]) : this.overrideKeys(target[key], overrides) }
         }, {})
     }
     return target
@@ -250,7 +259,7 @@ export default class Runner {
   async command_request (requestStep) {
     requestStep.prepare()
 
-    const BASE_URL = process.env.BASE_URL
+    const BASE_URL = this.config.api.base
     this.enterContext(new Context('request'))
 
     try {
