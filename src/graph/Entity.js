@@ -18,11 +18,6 @@ export default class Entity extends Node {
   _inReference = false
 
   /**
-   * @type {Endpoint[]}
-   */
-  endpoints
-
-  /**
    * @param {object} schema 
    */
   constructor(schema) {
@@ -31,24 +26,26 @@ export default class Entity extends Node {
     }
     super(schema.name, schema)
 
-    Object.keys(this.schema.fields || {}).forEach(name => {
-      this.addChild(name, new Field(name, this.schema.fields[name]))
+    this.schema.fields?.forEach(field => {
+      this.addChild(new Field(field.name, field))
     })
 
-    Object.defineProperty(this, 'endpoints', { value: Endpoint.parse(this.schema.endpoints) })
+    this.schema.endpoints?.forEach(endpoint => {
+      this.addChild(new Endpoint(endpoint))
+    })
 
     this.fields.forEach(field => {
       field.captureSubschemas()
         // @ts-ignore
         .map(subschema => new Entity(subschema))
-        .forEach(entity => this.addChild(entity.name, entity))
+        .forEach(entity => this.addChild(entity))
     })
 
     this.endpoints.forEach(endpoint => {
       endpoint.captureSubschemas()
         // @ts-ignore
         .map(subschema => new Entity(subschema))
-        .forEach(entity => this.addChild(entity.name, entity))
+        .forEach(entity => this.addChild(entity))
     })
 
     if (this.schema.subtypes) {
@@ -75,7 +72,7 @@ export default class Entity extends Node {
   /**
    * @type {Field[]}
    */
-   get fields () {
+  get fields () {
     // @ts-ignore
     return this.findAny(node => node instanceof Field)
   }
@@ -83,9 +80,17 @@ export default class Entity extends Node {
   /**
    * @type {Entity[]}
    */
-   get subtypes () {
+  get subtypes () {
     // @ts-ignore
     return this.findAny(node => node instanceof Entity)
+  }
+
+  /**
+   * @type {Endpoint[]}
+   */
+  get endpoints () {
+    // @ts-ignore
+    return this.findAny(node => node instanceof Endpoint)
   }
 
   /**

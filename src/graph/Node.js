@@ -23,10 +23,17 @@ export default class Node {
   schema
 
   /**
-   * @type {object}
+   * @type {object[]}
    * @private
    */
-  _children
+  _children = []
+
+  /**
+   * for checking duplicates
+   * @type {string[]}
+   * @private
+   */
+  _childrenNames = []
 
   /**
    * @type {Node|undefined}
@@ -41,7 +48,6 @@ export default class Node {
   constructor(name, schema) {
     Object.defineProperty(this, 'name', { value: name, enumerable: true })
     Object.defineProperty(this, 'schema', { value: Object.freeze(schema) })
-    Object.defineProperty(this, '_children', { value: {}, enumerable: false })
     Object.defineProperty(this, 'id', { value: (schema || {}).id, enumerable: true })
   }
 
@@ -75,18 +81,20 @@ export default class Node {
   }
 
   /**
-   * @param {string} name name of child
    * @param {Node} node actual node model (instance of Node class)
    */
-  addChild (name, node) {
+  addChild (node) {
+    const { name } = node
     if ((node instanceof Node) == false) {
       throw new Error(`Invalid instance: ${node.constructor.name}`)
     }
-    if (typeof this._children[name] == 'undefined') {
-      this._children[name] = node
-    } else {
-      throw new DuplicatedNameError(name, this._children[name], node)
+    if (typeof name == 'string') {
+      if (this._childrenNames.includes(name)) {
+        throw new DuplicatedNameError(name, this.findByName(name), node)
+      }
+      this._childrenNames.push(name)
     }
+    this._children.push(node)
     if (!node.hasParent) {
       node.moveToParent(this)
     }
@@ -94,6 +102,10 @@ export default class Node {
 
   get children () {
     return Object.values(this._children)
+  }
+
+  findByName (name) {
+    return this._children.find(child => child.name == name)
   }
 
   get root () {

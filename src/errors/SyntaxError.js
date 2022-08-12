@@ -14,7 +14,7 @@ export default class SyntaxError extends Error {
     var message = []
     args.forEach(arg => {
       if (arg instanceof Token) {
-        message.push(`Token \`${arg.token}\` at ${arg.address}`)
+        message.push(`Token \`${arg.semantic}\` at ${arg.address}`)
         tokens.push(arg)
       }
       if (typeof arg == 'string') {
