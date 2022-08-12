@@ -14,14 +14,16 @@ const context = {
 test('assert with simple entity', t => {
   const person = new Entity({
     name: 'Person',
-    fields: {
-      id: {
+    fields: [
+      {
+        name: 'id',
         type: 'Integer'
       },
-      name: {
+      {
+        name: 'name',
         type: 'String',
       },
-    },
+    ],
   })
   t.assert(person.assert({
     id: 0,
@@ -41,18 +43,31 @@ test('assert with simple entity', t => {
 import '../src/swift.js'
 
 test('[Swift] with supported mime-type', t => {
-  const request = new Response('mime:application/json')
-  t.is(request.swift_Struct(context), 'public typealias Response = Data')
+  const response = new Response('mime:application/json')
+  const config = {
+    ...context.config,
+  }
+  Object.defineProperty(response, 'config', { value: config })
+  t.is(response.swift_Struct(context), 'public typealias Response = Data')
 })
 
 test('[Swift] with configured mime-type', t => {
-  const request = new Response('mime:video/mp2t')
-  t.is(request.swift_Struct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias Response = Video')
+  const response = new Response('mime:video/mp2t')
+  const config = {
+    ...context.config,
+    swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } },
+  }
+  Object.defineProperty(response, 'config', { value: config })
+  t.is(response.swift_Struct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias Response = Video')
 })
 
 test('[Swift] with unsupported mime-type', t => {
-  const request = new Response('mime:audio/webm')
+  const response = new Response('mime:audio/webm')
+  const config = {
+    ...context.config,
+  }
+  Object.defineProperty(response, 'config', { value: config })
   t.throws(() => {
-    request.swift_Struct(context)
+    response.swift_Struct(context)
   }, { instanceOf: UnsupportedKeywordError })
 })

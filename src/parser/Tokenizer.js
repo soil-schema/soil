@@ -30,8 +30,8 @@ export const offsetToPosition = function (offset, lineMap) {
   return { line: 0, column: 0 }
 }
 
-const COMMENT_PATTERN = /^(\-\s[^\n]+)[\n$]/
-const DESCRIPTION_PATTERN = /^(#\s[^\n]+|#)[\n$]/
+const COMMENT_PATTERN = /^(\- [^\n]+)[\n$]/
+const DESCRIPTION_PATTERN = /^(# [^\n]+|#)[\n$]/
 const TYPE_DEFINITION_PATTERN = /^:\s+(?<type>(?:List\<(?:[\w\.]+|\*)\>|[\w\.]+|\*)\??)/
 const ENTITY_PATTERN = /^entity\s+([A-Z][a-zA-Z0-9]+)\b/
 const FIELD_PATTERN = /^(?:(?<annotation>mutable|writer)\s+)?field\s+(?<name>[a-z][\w]*)\b/

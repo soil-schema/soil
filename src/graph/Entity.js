@@ -37,21 +37,19 @@ export default class Entity extends Node {
     this.fields.forEach(field => {
       field.captureSubschemas()
         // @ts-ignore
-        .map(subschema => new Entity(subschema))
-        .forEach(entity => this.addChild(entity))
+        .map(subschema => this.addChild(new Entity(subschema)))
     })
 
     this.endpoints.forEach(endpoint => {
       endpoint.captureSubschemas()
         // @ts-ignore
-        .map(subschema => new Entity(subschema))
-        .forEach(entity => this.addChild(entity))
+        .map(subschema => this.addChild(new Entity(subschema)))
     })
 
     if (this.schema.subtypes) {
       this.schema.subtypes.forEach((/** @type {object} */ subschema) => {
         // @ts-ignore
-        this.addChild(subschema.name, new Entity(subschema))
+        this.addChild(new Entity(subschema))
       })
     }
 

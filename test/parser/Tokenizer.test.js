@@ -55,8 +55,8 @@ test('comment and description entity', t => {
 # Description
 entity BlankEntity {}
 `
-  const result = new Tokenizer(FILE_PATH, body).parse()
-  t.fail(result)
+  const result = new Tokenizer(FILE_PATH, body).tokenize()
+  t.snapshot(result)
 })
 
 test('complete case', t => {
@@ -131,6 +131,5 @@ scenario Register Person {
 }
 `
   const result = new Tokenizer(FILE_PATH, body).tokenize()
-  //console.dir(new Parser().parse(result), { depth: 10 })
-  t.fail(result)
+  t.snapshot(result)
 })

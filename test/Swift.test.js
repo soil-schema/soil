@@ -63,20 +63,23 @@ When they eat food, a sloth's \`energyLevel\` increases by the food's \`energy\`
 test('entity require writer', t => {
   const target = new Entity({
     name: 'Account',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
         annotation: 'mutable',
       },
-      email: {
+      {
+        name: 'email',
         type: 'String',
         annotation: 'writer',
       },
-      password: {
+      {
+        name: 'password',
         type: 'String',
         annotation: 'writer',
       },
-    },
+    ],
   })
   const nameField = target.findField('name')
   t.is(nameField.swift_Member({ ...context, entity: target }), 'public var name: String')
@@ -90,26 +93,34 @@ test('entity require writer', t => {
 test('type reference to another entity', t => {
   const wrapper = new Entity({
     name: 'Wrapper',
-    fields: {
-      id: 'Integer',
-      content: {
+    fields: [
+      {
+        name: 'id',
+        type: 'Integer',
+      },
+      {
+        name: 'content',
         annotation: 'mutable',
         type: 'Content',
       },
-    },
+    ],
   })
   const content = new Entity({
     name: 'Content',
-    fields: {
-      id: 'Integer',
-      body: {
+    fields: [
+      {
+        name: 'id',
+        type: 'Integer',
+      },
+      {
+        name: 'body',
         annotation: 'mutable',
         type: 'String',
       },
-    },
+    ],
   })
-  const entities = [wrapper, content]
-  wrapper.moveToParent(configNode)
-  content.moveToParent(configNode)
-  t.snapshot(wrapper.renderSwiftFile({ ...context, entities }))
+  const configNode = new ConfigNode()
+  configNode.addChild(wrapper)
+  configNode.addChild(content)
+  t.snapshot(wrapper.renderSwiftFile({ ...context, entities: [wrapper, content] }))
 })

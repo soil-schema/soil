@@ -6,12 +6,12 @@ const FILE_PATH = '/tmp/test.soil'
 
 test('blank entity', t => {
   const result = new Parser().parse(new Tokenizer(FILE_PATH, 'entity BlankEntity {}').tokenize())
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('entity has one field', t => {
   const result = new Parser().parse(new Tokenizer(FILE_PATH, 'entity Person { field name: String }').tokenize())
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('scenario has annotated fields', t => {
@@ -25,12 +25,12 @@ entity Person {
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
   tokens.forEach(token => t.not(token.errors.length))
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('entity has one endpoint', t => {
   const result = new Parser().parse(new Tokenizer(FILE_PATH, 'entity Person { endpoint GET /person {} }').tokenize())
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('entity has one named endpoint', t => {
@@ -45,7 +45,7 @@ entity Person {
 }`
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
   tokens.forEach(token => t.not(token.errors.length))
 })
 
@@ -61,7 +61,7 @@ entity Person {
 }`
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
   tokens.forEach(token => t.not(token.errors.length))
 })
 
@@ -77,7 +77,7 @@ entity Person {
 }`
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
   tokens.forEach(token => t.not(token.errors.length))
 })
 
@@ -95,7 +95,7 @@ entity Person {
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
   tokens.forEach(token => t.not(token.errors.length))
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('scenario has subschema field', t => {
@@ -113,14 +113,14 @@ entity Person {
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
   tokens.forEach(token => t.not(token.errors.length))
-  t.is(result.length, 1)
+  t.is(result.entities.length, 1)
 })
 
 test('scenario has one command', t => {
   const tokens = new Tokenizer(FILE_PATH, 'scenario Register Person { @inspect }').tokenize()
   const result = new Parser().parse(tokens)
   tokens.forEach(token => t.not(token.errors.length))
-  t.is(result.length, 1)
+  t.is(result.scenarios.length, 1)
 })
 
 test('scenario', t => {
@@ -157,5 +157,5 @@ scenario Register Person {
   const tokens = new Tokenizer(FILE_PATH, body).tokenize()
   const result = new Parser().parse(tokens)
   tokens.forEach(token => t.not(token.errors.length))
-  t.is(result.length, 2)
+  t.is(result.scenarios.length, 2)
 })

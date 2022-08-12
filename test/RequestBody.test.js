@@ -14,16 +14,23 @@ import '../src/swift.js'
 
 test('[Swift] with supported mime-type', t => {
   const request = new RequestBody('mime:application/json')
+  Object.defineProperty(request, 'config', { value: context.config })
   t.is(request.swift_Struct(context), 'public typealias RequestBody = Data')
 })
 
 test('[Swift] with configured mime-type', t => {
   const request = new RequestBody('mime:video/mp2t')
-  t.is(request.swift_Struct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias RequestBody = Video')
+  const config = {
+    ...context.config,
+    swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } },
+  }
+  Object.defineProperty(request, 'config', { value: config })
+  t.is(request.swift_Struct(context), 'public typealias RequestBody = Video')
 })
 
 test('[Swift] with unsupported mime-type', t => {
   const request = new RequestBody('mime:audio/webm')
+  Object.defineProperty(request, 'config', { value: context.config })
   t.throws(() => {
     request.swift_Struct(context)
   }, { instanceOf: UnsupportedKeywordError })

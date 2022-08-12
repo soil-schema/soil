@@ -101,7 +101,7 @@ export default class Node {
   }
 
   get children () {
-    return Object.values(this._children)
+    return this._children.map(child => child)
   }
 
   findByName (name) {
@@ -123,7 +123,7 @@ export default class Node {
    * @returns {Node[]}
    */
   findAny (filter) {
-    return Object.values(this._children).filter(filter)
+    return this._children.filter(filter)
   }
 
   /**
@@ -131,7 +131,7 @@ export default class Node {
    * @returns {Node|undefined}
    */
   find (finder) {
-    return Object.values(this._children).find(finder)
+    return this._children.find(finder)
   }
 
   /**
@@ -176,7 +176,7 @@ export default class Node {
     if (this.summary)
       inspector.push('-', this.summary)
     console.log(indent, chalk.yellow(...inspector))
-    Object.values(this._children).forEach(child => child.inspect({ indent: `${indent}  ` }))
+    this._children.forEach(child => child.inspect({ indent: `${indent}  ` }))
   }
 
   /**
