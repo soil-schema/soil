@@ -12,8 +12,8 @@ export default class Response extends Node {
   constructor(schema) {
     super('Response', schema || {})
 
-    Object.keys(this.schema.fields || {}).forEach(name => {
-      this.addChild(name, new Field(name, this.schema.fields[name]))
+    this.schema.fields?.forEach(field => {
+      this.addChild(new Field(field.name, field))
     })
   }
 

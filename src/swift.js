@@ -189,7 +189,7 @@ Entity.prototype.renderSwiftFile = function (context) {
   return pretty([
     this.swift_Imports(),
     this.swift_Struct(context),
-  ].joinCode(), context.config || {})
+  ].joinCode(), this.config || {})
 }
 
 Entity.prototype.swift_Imports = function () {
@@ -246,13 +246,13 @@ Field.prototype.swift_Member = function (context = {}) {
   var type = this.type.resolveSwift(context)
 
   if (writer) {
-    const reference = context.resolveReference(type)
+    const reference = this.type.reference
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = `${type}.Writer`
     }
     if (/^Array\<.+\>$/.test(type)) {
       const element = type.match(/^Array\<(.+)\>$/)[1]
-      const reference = context.resolveReference(element)
+      const reference =  context.resolveReference(element)
       if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
         type = `Array<${element}.Writer>`
       }
@@ -514,7 +514,7 @@ RequestBody.prototype.swift_InitializeParameter = function (context) {
 
 RequestBody.prototype.swift_Struct = function (context) {
   if (typeof this.schema == 'string') {
-    const { mime } = context.config.swift
+    const { mime } = this.config.swift
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias RequestBody = ${mime[mimeTypeValue]}`
@@ -547,7 +547,7 @@ Response.prototype.swift_Struct = function (context) {
   if (this.schema == null) { return 'public typealias Response = Never' }
 
   if (typeof this.schema == 'string') {
-    const { mime } = context.config.swift
+    const { mime } = this.config.swift
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias Response = ${mime[mimeTypeValue]}`

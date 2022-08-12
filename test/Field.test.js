@@ -18,14 +18,6 @@ test('replace returns another Field', t => {
   t.is(replaced.mutable, false)
 })
 
-test('constructor supports string schema', t => {
-  const name = new Field('name', 'String')
-  t.assert(typeof name.schema == 'object')
-  t.is(name.schema.name, 'name')
-  t.is(name.schema.type, 'String')
-  t.is(name.optional, false)
-})
-
 test('optional string field', t => {
   const name = new Field('name', { type: 'String?' })
   t.is(name.optional, true)

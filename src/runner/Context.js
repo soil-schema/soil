@@ -74,6 +74,7 @@ export default class Context {
   }
 
   importVars (vars) {
+    if (typeof vars == 'undefined') return
     Object.entries(vars).forEach(([key, value]) => this.setVar(key, value))
   }
 

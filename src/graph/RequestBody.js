@@ -12,9 +12,7 @@ export default class RequestBody extends Node {
   constructor(schema) {
     super('RequestBody', schema || {})
 
-    Object.keys(this.schema.fields || {}).forEach(name => {
-      this.addChild(name, new Field(name, this.schema.fields[name]))
-    })
+    this.schema.fields?.forEach(field => this.addChild(new Field(field.name, field)))
   }
 
   /**
@@ -24,9 +22,10 @@ export default class RequestBody extends Node {
 
     if (typeof this.schema == 'string') { return [] }
 
-    return Object.keys(this.schema.fields || {})
-      .map(name => {
-        const schema = this.schema.fields[name]
+    return this.schema.fields
+      ?.map(field => {
+        const { name } = field
+        const schema = field
         const definition = typeof schema == 'string' ? schema : schema.type
         const optional = definition[definition.length - 1] == '?'
 

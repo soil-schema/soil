@@ -13,11 +13,7 @@ export default class Field extends Node {
    * @param {object|string} schema 
    */
   constructor(name, schema) {
-    if (typeof schema == 'string') {
-      super(name, { name, type: schema })
-    } else {
-      super(name, { name, type: '*', ...schema })
-    }
+    super(name, schema)
   }
 
   /**

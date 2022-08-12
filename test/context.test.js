@@ -9,11 +9,12 @@ test('resolveReference returns null with invalid reference code', t => {
 test('resolveReference returns filed with field name from entity in current context', t => {
   const entity = new Entity({
     name: 'Article',
-    fields: {
-      title: {
-        define: 'String',
+    fields: [
+      {
+        name: 'title',
+        type: 'String',
       },
-    },
+    ],
   })
   const reference = { entity, ...context }.resolveReference('title')
   t.assert(reference.name, 'title')
@@ -22,19 +23,21 @@ test('resolveReference returns filed with field name from entity in current cont
 test('resolveReference returns field in another entity with entity and field chain code (likes "Entity.field")', t => {
   const article = new Entity({
     name: 'Article',
-    fields: {
-      title: {
-        define: 'String',
+    fields: [
+      {
+        name: 'title',
+        type: 'String',
       },
-    },
+    ],
   })
   const author = new Entity({
     name: 'Author',
-    fields: {
-      name: {
-        define: 'String',
+    fields: [
+      {
+        name: 'name',
+        type: 'String',
       },
-    },
+    ],
   })
   const reference = { entity: article, entities: [article, author], ...context }.resolveReference('Author.name')
   t.assert(reference.name, 'name')
@@ -43,19 +46,21 @@ test('resolveReference returns field in another entity with entity and field cha
 test('resolveReference returns entity', t => {
   const article = new Entity({
     name: 'Article',
-    fields: {
-      title: {
-        define: 'String',
+    fields: [
+      {
+        name: 'title',
+        type: 'String',
       },
-    },
+    ],
   })
   const author = new Entity({
     name: 'Author',
-    fields: {
-      name: {
-        define: 'String',
+    fields: [
+      {
+        name: 'name',
+        type: 'String',
       },
-    },
+    ],
   })
   const reference = { entity: article, entities: [article, author], ...context }.resolveReference('Author')
   t.assert(reference.name, 'Author')

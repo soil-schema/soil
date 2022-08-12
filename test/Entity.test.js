@@ -8,15 +8,17 @@ import Root from '../src/graph/Root.js'
 test('requireWritable returns true when has readonly fields', t => {
   const entity = new Entity({
     name: 'Order',
-    fields: {
-      timestamp: {
+    fields: [
+      {
+        name: 'timestamp',
         type: 'Timestamp',
         annotation: 'mutable',
       },
-      id: {
+      {
+        name: 'id',
         type: 'Integer',
       },
-    },
+    ],
   })
   t.assert(entity.requireWriter)
 })
@@ -24,19 +26,22 @@ test('requireWritable returns true when has readonly fields', t => {
 test('requireWritable returns true when has writeonly fields', t => {
   const entity = new Entity({
     name: 'Account',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      email: {
-        type: 'String',
-        annotation: 'writer',
-      },
-      password: {
+      {
+        name: 'email',
         type: 'String',
         annotation: 'writer',
       },
-    },
+      {
+        name: 'password',
+        type: 'String',
+        annotation: 'writer',
+      },
+    ],
   })
   t.assert(entity.requireWriter)
 })
@@ -44,14 +49,16 @@ test('requireWritable returns true when has writeonly fields', t => {
 test('requireWritable returns false when has no readonly or writeonly fields', t => {
   const entity = new Entity({
     name: 'Person',
-    fields: {
-      name: {
-        define: 'String',
+    fields: [
+      {
+        name: 'name',
+        type: 'String',
       },
-      birthday: {
-        define: 'Date',
+      {
+        name: 'birthday',
+        type: 'Date',
       },
-    },
+    ],
   })
   t.not(entity.requireWriter)
 })
@@ -61,15 +68,18 @@ test('requireWritable returns false when has no readonly or writeonly fields', t
 test('subtypes defines on schema.subtypes', t => {
   const article = new Entity({
     name: 'Article',
-    fields: {
-      author: 'Author',
-    },
+    fields: [
+      {
+        name: 'author',
+        type: 'Author',
+      },
+    ],
     subtypes: [
       {
         name: 'Author',
-        fields: {
-          name: 'String',
-        },
+        fields: [
+          { name: 'name', type: 'String' },
+        ],
       },
     ],
   })
@@ -79,15 +89,17 @@ test('subtypes defines on schema.subtypes', t => {
 test('subtypes embed in fields schema', t => {
   const article = new Entity({
     name: 'Article',
-    fields: {
-      author: {
+    fields: [
+      {
+        name: 'author',
+        type: '*',
         schema: {
-          fields: {
-            name: 'String',
-          },
+          fields: [
+            { name: 'name', type: 'String' },
+          ],
         },
       },
-    },
+    ],
   })
   t.assert(article.subtypes.length > 0)
 })
@@ -95,16 +107,17 @@ test('subtypes embed in fields schema', t => {
 test('subtypes embed  with defining as list in fields schema', t => {
   const product = new Entity({
     name: 'Product',
-    fields: {
-      old_orders: {
-        define: 'List<{schema}>',
+    fields: [
+      {
+        name: 'old_orders',
+        type: 'List<*>',
         schema: {
-          fields: {
-            name: 'String',
-          },
+          fields: [
+            { name: 'name', type: 'String' },
+          ],
         },
       },
-    },
+    ],
   })
   t.assert(product.subtypes.length > 0)
 })
@@ -112,9 +125,9 @@ test('subtypes embed  with defining as list in fields schema', t => {
 test('resolve with self entity name', t => {
   const product = new Entity({
     name: 'Product',
-    fields: {
-      name: 'String',
-    },
+    fields: [
+      { name: 'name', type: 'String' },
+    ],
   })
   t.is(product.resolve('Product'), product)
 })
@@ -122,9 +135,9 @@ test('resolve with self entity name', t => {
 test('resolve with self field name', t => {
   const product = new Entity({
     name: 'Product',
-    fields: {
-      name: 'String',
-    },
+    fields: [
+      { name: 'name', type: 'String' },
+    ],
   })
   t.is(product.resolve('name'), product.findField('name'))
 })
@@ -132,17 +145,21 @@ test('resolve with self field name', t => {
 test('resolve with subtype name', t => {
   const product = new Entity({
     name: 'Product',
-    fields: {
-      name: 'String',
-      orders: {
-        define: 'List<*>',
+    fields: [
+      {
+        name: 'name',
+        type: 'String',
+      },
+      {
+        name: 'orders',
+        type: 'List<*>',
         schema: {
-          fields: {
-            name: 'String',
-          },
+          fields: [
+            { name: 'name', type: 'String' },
+          ],
         },
       },
-    },
+    ],
   })
   t.assert(product.resolve('Order') instanceof Entity)
   t.is(product.resolve('Order').name, 'Order')
@@ -154,17 +171,19 @@ test('resolve with subtype name', t => {
 test('entity has only mutable fields, it\'s writable', t => {
   const cat = new Entity({
     name: 'Cat',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
         annotation: 'mutable',
       },
-      color: {
+      {
+        name: 'color',
         type: 'Enum',
         annotation: 'mutable',
         enum: ['black', 'white', 'gray', 'mosaic'],
       },
-    },
+    ],
   })
   t.assert(cat.isWritable)
 })
@@ -172,14 +191,16 @@ test('entity has only mutable fields, it\'s writable', t => {
 test('mock', t => {
   const monster = new Entity({
     name: 'Monster',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      level: {
+      {
+        name: 'level',
         type: 'Integer',
       },
-    },
+    ],
   })
   const mock = monster.mock()
   t.assert('name' in mock)
@@ -189,14 +210,16 @@ test('mock', t => {
 test('mock with list', t => {
   const sample = new Entity({
     name: 'Sample',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      cases: {
+      {
+        name: 'cases',
         type: 'List<String>',
       },
-    },
+    ],
   })
   const mock = sample.mock()
   t.assert('name' in mock)
@@ -207,15 +230,17 @@ test('mock with list', t => {
 test('mock with enum', t => {
   const file = new Entity({
     name: 'File',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      kind: {
+      {
+        name: 'kind',
         type: 'Enum',
         enum: ['image', 'video', 'document'],
       },
-    },
+    ],
   })
   const mock = file.mock()
   t.assert('name' in mock)
@@ -226,20 +251,22 @@ test('mock with enum', t => {
 test('mock with inner type', t => {
   const person = new Entity({
     name: 'Person',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      contact: {
+      {
+        name: 'contact',
         type: '*',
         schema: {
-          fields: {
-            kind: { type: 'String' },
-            body: { type: 'String' },
-          },
+          fields: [
+            { name: 'kind', type: 'String' },
+            { name: 'body', type: 'String' },
+          ],
         }
       },
-    },
+    ],
   })
   const mock = person.mock()
   t.assert('name' in mock)
@@ -251,29 +278,33 @@ test('mock with inner type', t => {
 test('mock with global entity and entity list', t => {
   const book = new Entity({
     name: 'Book',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      spells: {
+      {
+        name: 'spells',
         type: 'List<Spell>',
       },
-    },
+    ],
   })
   const spell = new Entity({
     name: 'Spell',
-    fields: {
-      name: {
+    fields: [
+      {
+        name: 'name',
         type: 'String',
       },
-      body: {
+      {
+        name: 'body',
         type: 'String',
       },
-    },
+    ],
   })
   const root = new Root()
-  root.addChild('Book', book)
-  root.addChild('Spell', spell)
+  root.addChild(book)
+  root.addChild(spell)
   const mock = book.mock()
   t.assert('name' in mock)
   t.assert('spells' in mock)
@@ -287,14 +318,16 @@ test('mock with global entity and entity list', t => {
 test('assert simple entity', t => {
   const person = new Entity({
     name: 'Person',
-    fields: {
-      id: {
+    fields: [
+      {
+        name: 'id',
         type: 'Integer'
       },
-      name: {
+      {
+        name: 'name',
         type: 'String',
       },
-    },
+    ],
   })
   t.assert(person.assert({
     id: 0,

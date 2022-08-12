@@ -23,10 +23,17 @@ export default class Node {
   schema
 
   /**
-   * @type {object}
+   * @type {object[]}
    * @private
    */
-  _children
+  _children = []
+
+  /**
+   * for checking duplicates
+   * @type {string[]}
+   * @private
+   */
+  _childrenNames = []
 
   /**
    * @type {Node|undefined}
@@ -41,8 +48,6 @@ export default class Node {
   constructor(name, schema) {
     Object.defineProperty(this, 'name', { value: name, enumerable: true })
     Object.defineProperty(this, 'schema', { value: Object.freeze(schema) })
-    Object.defineProperty(this, '_children', { value: {}, enumerable: false })
-    Object.defineProperty(this, 'id', { value: (schema || {}).id, enumerable: true })
   }
 
   get summary () {
@@ -75,25 +80,31 @@ export default class Node {
   }
 
   /**
-   * @param {string} name name of child
    * @param {Node} node actual node model (instance of Node class)
    */
-  addChild (name, node) {
+  addChild (node) {
+    const { name } = node
     if ((node instanceof Node) == false) {
       throw new Error(`Invalid instance: ${node.constructor.name}`)
     }
-    if (typeof this._children[name] == 'undefined') {
-      this._children[name] = node
-    } else {
-      throw new DuplicatedNameError(name, this._children[name], node)
+    if (typeof name == 'string') {
+      if (this._childrenNames.includes(name)) {
+        throw new DuplicatedNameError(name, this.findByName(name), node)
+      }
+      this._childrenNames.push(name)
     }
+    this._children.push(node)
     if (!node.hasParent) {
       node.moveToParent(this)
     }
   }
 
   get children () {
-    return Object.values(this._children)
+    return this._children.map(child => child)
+  }
+
+  findByName (name) {
+    return this._children.find(child => child.name == name)
   }
 
   get root () {
@@ -111,7 +122,7 @@ export default class Node {
    * @returns {Node[]}
    */
   findAny (filter) {
-    return Object.values(this._children).filter(filter)
+    return this._children.filter(filter)
   }
 
   /**
@@ -119,7 +130,7 @@ export default class Node {
    * @returns {Node|undefined}
    */
   find (finder) {
-    return Object.values(this._children).find(finder)
+    return this._children.find(finder)
   }
 
   /**
@@ -134,7 +145,7 @@ export default class Node {
       if (this.name == referenceBody) {
         return this
       }
-      const child = this.find(child => child.name == referenceBody || child.id == referenceBody)
+      const child = this.find(child => child.name == referenceBody)
       if (child) {
         return child
       }
@@ -164,7 +175,7 @@ export default class Node {
     if (this.summary)
       inspector.push('-', this.summary)
     console.log(indent, chalk.yellow(...inspector))
-    Object.values(this._children).forEach(child => child.inspect({ indent: `${indent}  ` }))
+    this._children.forEach(child => child.inspect({ indent: `${indent}  ` }))
   }
 
   /**

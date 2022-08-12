@@ -1,7 +1,7 @@
 export default class CommandStep {
   constructor (name, args) {
     this.name = name
-    this.args = args
+    this.args = args || []
   }
 
   get commandName () {

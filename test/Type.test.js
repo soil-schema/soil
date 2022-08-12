@@ -51,7 +51,7 @@ test('Integer?', t => {
 test('resolve entity', t => {
   const parent = new Node('Root', {})
   const authorNode = new Node('Author', {})
-  parent.addChild('Author', authorNode)
+  parent.addChild(authorNode)
 
   const type = new Type('Author', parent)
   t.not(type.isDefinedType)

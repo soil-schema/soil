@@ -3,6 +3,7 @@ import path from  'node:path'
 
 import chalk from 'chalk'
 
+import Tokenizer from './Tokenizer.js'
 import Parser from './Parser.js'
 
 export default class Loader {
@@ -38,18 +39,21 @@ export default class Loader {
         const ext = path.extname(file)
 
         if (ext == '.soil') {
-          const parser = new Parser(filepath, body)
-          parser.parse()
-          if (soil.options.verbose)
-            parser.logs.forEach(log => console.log(chalk.gray(log)))
+          const tokens = new Tokenizer(filepath, body).tokenize()
+          const parser = new Parser()
+          const schema = parser.parse(tokens)
           if (soil.options.dump) {
             const exportDir = this.config.core.exportDir.default
             await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })
-            const dump = { entities: parser.entities, scenarios: parser.scenarios }
-            await fs.writeFile(path.join(process.cwd(), exportDir, `dump-${file}.json`), JSON.stringify(dump, null, 2), this.config.encode)
+            await fs.writeFile(path.join(process.cwd(), exportDir, `dump-${file}.json`), JSON.stringify(schema, null, 2), this.config.encode)
           }
-          parser.entities.forEach(entity => this.result.entities.push(entity))
-          parser.scenarios.forEach(scenario => this.result.scenarios.push(scenario))
+          tokens.forEach(token => {
+            if (token.errors.length > 0) {
+              console.log(token.buildDebugMessage(body))
+            }
+          })
+          schema.entities.forEach(entity => this.result.entities.push(entity))
+          schema.scenarios.forEach(scenario => this.result.scenarios.push(scenario))
         }
       }))
   }

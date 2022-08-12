@@ -31,15 +31,14 @@ export default class Endpoint extends Model {
 
   /**
    * 
-   * @param {string} path 
-   * @param {string} method 
    * @param {object} schema 
    */
-  constructor(path, method, schema = {}) {
-    super(`${method} ${path}`, { path, method, ...schema })
+  constructor(schema = {}) {
+    const { method, path } = schema
+    super(schema.name || `${method} ${path}`, { path, method, ...schema })
 
-    Object.keys(this.schema.query || {}).forEach(name => {
-      this.addChild(name, new Query(name, this.schema.query[name]))
+    this.schema.query?.forEach(query => {
+      this.addChild(new Query(query.name, query))
     })
 
     Object.defineProperty(this, 'requestBody', { value: new RequestBody(schema.request), enumerable: true })
@@ -257,21 +256,3 @@ export default class Endpoint extends Model {
     return query.length > 0 ? `?${query.join('&')}` : ''
   }
 }
-
-/*
-  ================================
-  Utilities
- */
-
-Endpoint.parse = (endpoints) => Object.keys(endpoints || {}).flatMap(path => {
-  const { parameters, get, post, put, patch, head } = endpoints[path]
-  const del = endpoints[path]['delete'] // `delete` is reserved word.
-  var result = []
-  if (get)    result.push(new Endpoint(path, HTTP_METHOD_GET,    { parameters, ...get }))
-  if (post)   result.push(new Endpoint(path, HTTP_METHOD_POST,   { parameters, ...post }))
-  if (put)    result.push(new Endpoint(path, HTTP_METHOD_PUT,    { parameters, ...put }))
-  if (patch)  result.push(new Endpoint(path, HTTP_METHOD_PATCH,  { parameters, ...patch }))
-  if (del)    result.push(new Endpoint(path, HTTP_METHOD_DELETE, { parameters, ...del }))
-  if (head)   result.push(new Endpoint(path, HTTP_METHOD_HEAD,   { parameters, ...head }))
-  return result
-})

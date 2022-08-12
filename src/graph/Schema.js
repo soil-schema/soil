@@ -32,10 +32,10 @@ export default class Schema {
     const root = new Root(this.config)
     schemas
       .entities
-      .forEach(schema => root.addChild(schema.name, new Entity(schema)))
+      .forEach(schema => root.addChild(new Entity(schema)))
     schemas
       .scenarios
-      .forEach(schema => root.addChild(schema.name, new Scenario(schema)))
+      .forEach(schema => root.addChild(new Scenario(schema)))
 
     Object.defineProperty(this, 'root', { value: root, enumerable: true })
   }
