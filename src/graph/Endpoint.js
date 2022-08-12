@@ -35,7 +35,7 @@ export default class Endpoint extends Model {
    */
   constructor(schema = {}) {
     const { method, path } = schema
-    super(`${method} ${path}`, { path, method, ...schema })
+    super(schema.name || `${method} ${path}`, { path, method, ...schema })
 
     this.schema.query?.forEach(query => {
       this.addChild(new Query(query.name, query))

@@ -42,8 +42,6 @@ export default class Loader {
           const tokens = new Tokenizer(filepath, body).tokenize()
           const parser = new Parser()
           const schema = parser.parse(tokens)
-          if (soil.options.verbose)
-            parser.logs.forEach(log => console.log(chalk.gray(log)))
           if (soil.options.dump) {
             const exportDir = this.config.core.exportDir.default
             await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })

@@ -475,8 +475,17 @@ export const parseCommand = function (storage) {
   }
 
   schema.set('command', storage, 'function.command')
-  if (storage.hitAny('parameter.command')) {
-    schema.set('args', storage)
+
+  if (storage.hitAny('open.command')) {
+    storage.skip()
+  }
+
+  while (storage.hitAny('parameter.command')) {
+    schema.push('args', storage)
+  }
+
+  if (storage.hitAny('close.command')) {
+    storage.skip()
   }
 
   return schema.build()

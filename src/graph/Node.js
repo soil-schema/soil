@@ -48,7 +48,6 @@ export default class Node {
   constructor(name, schema) {
     Object.defineProperty(this, 'name', { value: name, enumerable: true })
     Object.defineProperty(this, 'schema', { value: Object.freeze(schema) })
-    Object.defineProperty(this, 'id', { value: (schema || {}).id, enumerable: true })
   }
 
   get summary () {
@@ -146,7 +145,7 @@ export default class Node {
       if (this.name == referenceBody) {
         return this
       }
-      const child = this.find(child => child.name == referenceBody || child.id == referenceBody)
+      const child = this.find(child => child.name == referenceBody)
       if (child) {
         return child
       }

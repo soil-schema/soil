@@ -166,9 +166,37 @@ export const tokenize = function (body) {
 
     test(COMMAND_BEGIN_PATTERN, (match) => {
       pushToken(match.groups?.command, `function.command`)
-      const parameterBody = match.groups?.parameter_body
-      if (parameterBody && parameterBody.trim().length > 0) {
-        pushToken(parameterBody.trim(), `parameter.command`)
+      var parameterBody = match.groups?.parameter_body
+      if (parameterBody) {
+        const isParenthesis = /^\(.*\)$/.test(parameterBody)
+        if (isParenthesis) {
+          pushToken('(', 'punctuation.parameters.open.command')
+          parameterBody = parameterBody.substring(1, parameterBody.length - 1)
+        }
+        while (parameterBody.length) {
+          const value = parameterBody.match(VALUE_PATTERN)?.groups?.value
+          if (value) {
+            pushToken(value, `${makeValueSemantic(value)}.parameter.command`)
+            parameterBody = parameterBody.substring(value.length)
+            if (parameterBody[0] == ',') {
+              parameterBody = parameterBody.substring(1)
+            }
+            continue
+          }
+          const parameter = parameterBody.match(/^(?<value>[^,\r\n ][^,\r\n]+)/)?.groups?.value
+          if (parameter) {
+            pushToken(parameter, 'string.unquote.parameter.command')
+            parameterBody = parameterBody.substring(parameter.length)
+            if (parameterBody[0] == ',') {
+              parameterBody = parameterBody.substring(1)
+            }
+            continue
+          }
+          parameterBody = parameterBody.substring(1)
+        }
+        if (isParenthesis) {
+          pushToken(')', 'punctuation.parameters.close.command')
+        }
       }
     })
 
@@ -203,24 +231,15 @@ export const tokenize = function (body) {
     test(VALUE_PATTERN, (match) => {
       // @ts-ignore
       const { value } = match.groups
-      if (['true', 'false'].includes(value)) {
-        return pushToken(value, `constant.language.boolean.${value}`)
-      }
-      if (value == 'null') {
-        return pushToken(value, `constant.language.${value}`)
-      }
-      if (/^\d+$/.test(value)) {
-        return pushToken(value, `number`)
-      }
-      return pushToken(value, `string.quoted.double`)
+      pushToken(value, makeValueSemantic(value))
     })
 
     test(/^\{/, () => {
-      pushToken('{', 'punctuation.definition.block.open')
+      pushToken('{', 'punctuation.block.open')
     })
 
     test(/^\}/, () => {
-      pushToken('}', 'punctuation.definition.block.close')
+      pushToken('}', 'punctuation.block.close')
     })
 
     if (skip == false) {
@@ -231,6 +250,24 @@ export const tokenize = function (body) {
 
   return tokens
 
+}
+
+/**
+ * 
+ * @param {string} value 
+ * @returns 
+ */
+const makeValueSemantic = function (value) {
+  if (['true', 'false'].includes(value)) {
+    return 'constant.language.boolean.${value}'
+  }
+  if (value == 'null') {
+    return 'constant.language.${value}'
+  }
+  if (/^\d+$/.test(value)) {
+    return 'number'
+  }
+  return 'string.quoted.double'
 }
 
 export default class Tokenizer {

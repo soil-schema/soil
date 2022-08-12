@@ -9,7 +9,7 @@ export default class RequestStep extends Node {
   /**
    * @type {CommandStep[]}
    */
-  receiverSteps
+  afterSteps
 
   /**
    * @type {string|undefined}
@@ -51,20 +51,20 @@ export default class RequestStep extends Node {
 
     Object.defineProperty(this, 'overrides', { value: schema.overrides })
 
-    const receiver = schema.receiver
-    if (receiver) {
-      const steps = (receiver.steps || [])
+    const after = schema.after
+    if (after) {
+      const steps = (after.steps || [])
         .map(step => {
           if (step.command) {
             return new CommandStep(step.command, step.args)
           }
           if (step.request) {
-            throw new Error('Invalid request step (can\'t run request step in receiver block)')
+            throw new Error('Invalid request step (can\'t run request step in after block)')
           }
         })
-      Object.defineProperty(this, 'receiverSteps', { value: steps, enumerable: false })
+      Object.defineProperty(this, 'afterSteps', { value: steps, enumerable: false })
     } else {
-      Object.defineProperty(this, 'receiverSteps', { value: [], enumerable: false })
+      Object.defineProperty(this, 'afterSteps', { value: [], enumerable: false })
     }
   }
 

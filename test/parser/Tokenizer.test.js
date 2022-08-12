@@ -133,3 +133,15 @@ scenario Register Person {
   const result = new Tokenizer(FILE_PATH, body).tokenize()
   t.snapshot(result)
 })
+
+test('commands', t => {
+  const body = `
+scenario Register Person {
+  @inspect
+  @set-var name, value
+  @set-var(name, value)
+}
+`
+  const result = new Tokenizer(FILE_PATH, body).tokenize()
+  t.snapshot(result)
+})

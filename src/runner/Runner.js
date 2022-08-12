@@ -306,7 +306,7 @@ export default class Runner {
         this.context.setVar('response', body)
 
         if (response.status > 299) {
-          const captureStack = this.contextStack
+          const captureStack = this.contextStack.map(context => context)
           throw new ScenarioRuntimeError(`Unsuccessful response: ${response.status}`, () => {
             console.log('=== Request ===')
             console.log(JSON.stringify(request, null, 2))
@@ -331,7 +331,7 @@ export default class Runner {
           endpoint?.successResponse.assert(body)
         }
 
-        for (const step of requestStep.receiverSteps) {
+        for (const step of requestStep.afterSteps) {
           await this.runCommand(step.commandName, ...step.args)
         }
       } finally {
