@@ -1,5 +1,7 @@
 // @ts-check
 
+import { promises as fs } from 'node:fs'
+
 import Scenario from '../graph/Scenario.js'
 
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
@@ -135,6 +137,12 @@ export default class Runner {
       .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
   }
 
+  getVarObject (name) {
+    // [!] Non-destructively reversing
+    return [...this.contextStack].reverse()
+      .find(context => context._space[name])
+  }
+
   /**
    * 
    * @param {Scenario} scenario 
@@ -235,14 +243,18 @@ export default class Runner {
    */
   command_get_var (name) {
     const value = this.getVar(name)
-    this.log('@get-var', name, value)
+    if (value instanceof Buffer) {
+      this.log('@get-var', name, '{binary}')
+    } else {
+      this.log('@get-var', name, JSON.stringify(value))
+    }
     return value
   }
 
   /**
    * `@inspect`
    * 
-   * Show variables in this context.
+   * Show request / response in this context.
    * 
    * @returns {any}
    */
@@ -250,6 +262,62 @@ export default class Runner {
     this.log('@inspect')
     this.log(` > request:\n${JSON.stringify(this.getVar('$request'), null, 2)}`)
     this.log(` > response:\n${JSON.stringify(this.getVar('$response'), null, 2)}`)
+  }
+
+  /**
+   * `@export-json <value> <filepath>`
+   * 
+   * Export the variable to JSON file.
+   * 
+   * @param {string} value Export variable-name.
+   * @param {string} filepath Export distination file path.
+   */
+   async command_export_json (value, filepath) {
+    this.log('@export', value, '=>', filepath)
+    const target = this.getVar(value)
+    if (typeof target == 'undefined') {
+      this.log(' > exporting variable not found:', value)
+      return
+    }
+    const body = typeof target == 'string' ? target : JSON.stringify(target, null, 2)
+    try {
+      await fs.writeFile(filepath, body)
+    } catch (error) {
+      this.log(' > error:', error.message)
+    }
+  }
+
+  /**
+   * `@import-json <variable-name> <filepath>`
+   * 
+   * Import JSON file to the variable.
+   * 
+   * @param {string} name Import variable-name.
+   * @param {string} filepath Import source file path.
+   */
+   async command_import_json (name, filepath) {
+    this.log('@import-json', name, '<=', filepath)
+    const settableName = name.replace(/^\$/, '')
+    try {
+      const body = await fs.readFile(filepath, { encoding: this.config.core.encoding })
+      // @ts-ignore
+      this.context.setVar(settableName, JSON.parse(body))
+      this.log(' > Import as JSON file.')
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        this.log(' > JSON Syntax Error:', error.message)
+      } else {
+        this.log(' > Error:', error.message)
+      }
+      const captureStack = this.contextStack.map(context => context)
+      throw new ScenarioRuntimeError(`Failed to run @import-json(${name}, ${filepath})`, () => {
+        console.log('=== Context ===')
+        captureStack.forEach(context => {
+          console.log('Context:', context.name)
+          console.log(context._space)
+        })
+      })
+    }
   }
 
   /**
