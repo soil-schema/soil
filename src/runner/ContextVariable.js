@@ -65,12 +65,28 @@ export default class ContextVariable {
   }
 
   /**
-   * @param {string} name 
+   * @param {string} path 
    * @param {any} value 
    */
-  addChild (name, value) {
+  addChild (path, value) {
     if (this.canAcceptNewChild) {
-      this.children[name] = new ContextVariable(name, value, this)
+
+      var tokens = path.split('.')
+      const name = tokens.shift()
+ 
+      if (tokens.length == 0) {
+        this.children[name] = new ContextVariable(name, value, this)
+      } else if (this.children[name] instanceof ContextVariable) {
+        this.children[name].addChild(tokens.join('.'), value)
+      } else {
+        this.children[name] = new ContextVariable(name, {}, this)
+        this.children[name].addChild(tokens.join('.'), value)
+      }
+
+      // Temporary code
+      if (typeof this.value[name] == 'undefined') {
+        this.value[name] = value
+      }
     } else {
       const msg = `New context variable named "${name}" is not acceptable by ${this.path} (${this.path} don't accept new child)`
       throw new ScenarioRuntimeError(msg)

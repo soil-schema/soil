@@ -67,7 +67,7 @@ export default class Node {
   }
 
   get uri () {
-    return this.schema.uri
+    return this.schema.uri || this._parent?.uri
   }
 
   /**

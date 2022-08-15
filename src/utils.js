@@ -1,4 +1,7 @@
-import path from 'path'
+import path from 'node:path'
+import { createReadStream } from 'node:fs'
+import fs from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import http from 'node:http'
 import https from 'node:https'
 
@@ -33,6 +36,8 @@ export const configTemplate = new Config()
   .string('base', process.env.SOIL_BASE_URL || '')
 
   .anyStringTable('headers')
+
+  .optionalString('unsplash')
 )
 
 .addDirective('swift', swift => swift
@@ -121,31 +126,45 @@ export const loadConfig = async function () {
  */
 export const httpRequest = function (request) {
 
-  // Send http request
-  return new Promise((resolve, reject) => {
-    try {
-      const BASE_URL = process.env.BASE_URL
-      const { method, headers, body, url } = request
-      const use_ssl = url.startsWith('https://')
-      const client = use_ssl ? https : http
+  const BASE_URL = process.env.BASE_URL
+  const { method, headers, body, url } = request
+  const use_ssl = url.startsWith('https://')
+  const client = use_ssl ? https : http
 
-      const req = client.request(url,  { method, headers, use_ssl }, res => {
-        res.setEncoding('utf8')
-        var body = ''
-        res.on('data', (/** @type {string} */ chunk) => body += chunk)
-        res.on('error', reject)
-        res.on('end', () => resolve({ raw: res, status: res.statusCode || 500, headers: res.headers, body }))
+  // Send http request
+  return new Promise(async (resolve, reject) => {
+    try {
+
+      const req = client.request(url, { method, headers, use_ssl }, res => {
+        const contentType = res.headers['content-type']
+        if (contentType.startsWith('text/') || contentType.startsWith('application/json')) {
+          res.setEncoding('utf8')
+          var body = ''
+          res.on('data', (/** @type {string} */ chunk) => body += chunk)
+          res.on('error', reject)
+          res.on('end', () => resolve({ raw: res, status: res.statusCode || 500, headers: res.headers, body }))
+        } else {
+          resolve({ raw: res, status: res.statusCode || 500, headers: res.headers, stream: res })
+        }
       })
 
-      if (typeof body == 'object') {
+      req.on('error', reject)
+
+      if (typeof body == 'string' && body.startsWith('file://')) {
+        const filepath = fileURLToPath(body)
+        const stream = createReadStream(filepath)
+        stream.on('open', () => stream.pipe(req))
+        stream.on('error', error => {
+          req.destroy(error)
+          reject(error)
+        })
+      } else if (typeof body == 'object') {
         const json = JSON.stringify(body)
         req.setHeader('Content-Type', 'application/json; charset=utf-8')
-        req.setHeader('Content-Length', Buffer.byteLength(json))
-        req.write(json)
+        req.end(json)
+      } else {
+        req.end()
       }
-
-      req.on('error', reject)
-      req.end()
 
     } catch (error) {
       reject(error)

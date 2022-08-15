@@ -1,6 +1,7 @@
 // @ts-check
 
-import { promises as fs } from 'node:fs'
+import { promises as fs, createWriteStream } from 'node:fs'
+import url, { pathToFileURL } from 'node:url'
 
 import Scenario from '../graph/Scenario.js'
 
@@ -272,7 +273,7 @@ export default class Runner {
    * @param {string} value Export variable-name.
    * @param {string} filepath Export distination file path.
    */
-   async command_export_json (value, filepath) {
+  async command_export_json (value, filepath) {
     this.log('@export', value, '=>', filepath)
     const target = this.getVar(value)
     if (typeof target == 'undefined') {
@@ -295,7 +296,7 @@ export default class Runner {
    * @param {string} name Import variable-name.
    * @param {string} filepath Import source file path.
    */
-   async command_import_json (name, filepath) {
+  async command_import_json (name, filepath) {
     this.log('@import-json', name, '<=', filepath)
     const settableName = name.replace(/^\$/, '')
     try {
@@ -318,6 +319,60 @@ export default class Runner {
         })
       })
     }
+  }
+
+  /**
+   * `@request-body-from <filepath|url>`
+   * 
+   * Use the file as `@request` command body.
+   * 
+   * @param {string} source 
+   */
+  async command_request_body_from (source) {
+    this.log('@request-body-from', source)
+    if (source.startsWith('file://')) {
+      this.log(' > Load file')
+      this.context.setVar('request.body', source)
+      return
+    }
+    if (source.startsWith('unsplash:')) {
+      const hash = Math.floor(new Date().valueOf() / 100).toString(16)
+      const cacheFileName = `/tmp/soil.${hash.split("").reverse().join("")}.image.cache`
+      try {
+        await fs.stat(cacheFileName)
+        this.log(' > Use file cache:', cacheFileName)
+        this.context.setVar('request.body', pathToFileURL(cacheFileName).toString())
+      } catch {}
+      const query = source.replace(/^unsplash:/, '')
+      const accessToken = this.config.api.unsplash
+      if (typeof accessToken == 'undefined') {
+        throw new ScenarioRuntimeError(`Request unsplash schema, but unsplash access token is not setted.`)
+      }
+      this.log(' > Fetch file from https://unsplash.com => ', cacheFileName)
+      const response = await httpRequest({
+        url: `https://api.unsplash.com/photos/random\?query=${encodeURIComponent(query)}`,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
+          'Accept': 'application/json',
+          'Authorization': `Client-ID ${accessToken}`,
+        },
+      })
+      const imageUrl = JSON.parse(response.body).urls.regular
+      const imageResponse = await httpRequest({
+        url: imageUrl,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
+        },
+      })
+      await new Promise(resolve => imageResponse.stream
+        .pipe(createWriteStream(cacheFileName))
+        .on('close', resolve))
+      this.log(' > request.body =', pathToFileURL(cacheFileName).toString())
+      this.context.setVar('request.body', pathToFileURL(cacheFileName).toString())
+    }
+    this.context.setVar('request.body', url.pathToFileURL(source).toString())
   }
 
   /**
@@ -347,11 +402,23 @@ export default class Runner {
         body: this.overrideKeys(this.interpolate(requestStep.mock()), overrides),
       }
 
+      // Set content-type from request mimeType
+      if (endpoint?.requestBody.mimeType) {
+        request.headers['Content-Type'] = endpoint?.requestBody.mimeType
+      }
+
       this.context.setVar('request', request)
 
       this.log('@request', request.method, request.url)
 
-      const response = await httpRequest(request)
+      if (requestStep.setupSteps.length) {
+        this.log(' > setup steps')
+        for (const step of requestStep.setupSteps) {
+          await this.runCommand(step.commandName, ...step.args)
+        }
+      }
+
+      const response = await httpRequest(this.context.getVar('$request'))
       var body = undefined
       if (/^application\/json;?/.test(response.headers['content-type'] ?? '') && response.body != '') {
         try {
@@ -399,7 +466,7 @@ export default class Runner {
           endpoint?.successResponse.assert(body)
         }
 
-        for (const step of requestStep.afterSteps) {
+        for (const step of requestStep.receiveSteps) {
           await this.runCommand(step.commandName, ...step.args)
         }
       } finally {

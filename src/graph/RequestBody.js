@@ -15,6 +15,10 @@ export default class RequestBody extends Node {
     this.schema.fields?.forEach(field => this.addChild(new Field(field.name, field)))
   }
 
+  get mimeType () {
+    return this.schema.mime?.replace(/^mime:/, '')
+  }
+
   /**
    * @returns {Array<object>}
    */

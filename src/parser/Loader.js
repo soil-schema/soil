@@ -5,6 +5,7 @@ import chalk from 'chalk'
 
 import Tokenizer from './Tokenizer.js'
 import Parser from './Parser.js'
+import { pathToFileURL } from 'node:url'
 
 export default class Loader {
 
@@ -18,7 +19,9 @@ export default class Loader {
   }
 
   async load () {
+    console.time('total')
     await this.loadDirectory(path.join(process.cwd(), this.config.core.workingDir))
+    console.timeEnd('total')
     return this.result
   }
 
@@ -39,9 +42,11 @@ export default class Loader {
         const ext = path.extname(file)
 
         if (ext == '.soil') {
+          console.time(filepath)
           const tokens = new Tokenizer(filepath, body).tokenize()
           const parser = new Parser()
           const schema = parser.parse(tokens)
+          console.timeEnd(filepath)
           if (soil.options.dump) {
             const exportDir = this.config.core.exportDir.default
             await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })
@@ -52,8 +57,15 @@ export default class Loader {
               console.log(token.buildDebugMessage(body))
             }
           })
-          schema.entities.forEach(entity => this.result.entities.push(entity))
-          schema.scenarios.forEach(scenario => this.result.scenarios.push(scenario))
+          const makeSchema = (schema) => {
+            return { ...schema, uri: pathToFileURL(filepath).toString() }
+          }
+          schema.entities
+            .map(makeSchema)
+            .forEach(entity => this.result.entities.push(entity))
+          schema.scenarios
+            .map(makeSchema)
+            .forEach(scenario => this.result.scenarios.push(scenario))
         }
       }))
   }

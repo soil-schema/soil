@@ -44,7 +44,7 @@ export default class Type {
    * @type {Node|undefined}
    */
   get reference () {
-    if (this.isDefinedType) {
+    if (this.isDefinedType || this.isEnum) {
       return void 0
     } else {
       if (typeof this.owner == 'undefined') {

@@ -67,10 +67,18 @@ export default class Context {
     return headers
   }
 
-  setVar (name, value) {
+  setVar (path, value) {
     // [!] remove keys memo
     this._keys = undefined
-    this._space[`$${name}`] = new ContextVariable(name, value)
+
+    var tokens = path.split('.')
+    const name = tokens.shift()
+
+    if (tokens.length == 0) {
+      this._space[`$${name}`] = new ContextVariable(name, value)
+    } else if (this._space[`$${name}`] instanceof ContextVariable) {
+      this._space[`$${name}`].addChild(tokens.join('.'), value)
+    }
   }
 
   importVars (vars) {

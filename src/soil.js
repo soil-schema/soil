@@ -15,6 +15,7 @@ import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
 import Runner from './runner/Runner.js'
 import ScenarioRuntimeError from './errors/ScenarioRuntimeError.js'
+import { pathToFileURL } from 'node:url'
 
 const commands = {
   build: async () => {
@@ -50,8 +51,9 @@ const commands = {
       }
     })
   },
-  replay: async () => {
+  replay: async ({ scenarios = undefined }) => {
     const config = await loadConfig()
+    const filters = scenarios?.map(uri => pathToFileURL(uri).toString())
 
     if (soil.options.verbose) {
       console.log(util.inspect(config, { depth: null, colors: true }))
@@ -67,6 +69,9 @@ const commands = {
       for (const scenario of schema.scenarios) {
         if (scenario.isShared) continue
         const runner = new Runner(config, schema.root)
+        if (filters?.length > 0 && filters.includes(scenario.uri) == false) {
+          continue // Skip
+        }
         try {
           runner.log('scenario file:', scenario.uri)
           await runner.runScenario(scenario)
@@ -95,7 +100,8 @@ async function main() {
     .option('--with-validate')
     .option('--verbose')
     .option('--dump')
-    .action(async (command, options) => {
+    .option('--scenarios <scenarios...>')
+    .action(async (command, options, args) => {
 
       if (options.workingDir) {
         process.chdir(options.workingDir)
