@@ -13,13 +13,13 @@ const context = {
 import '../src/swift.js'
 
 test('[Swift] with supported mime-type', t => {
-  const request = new RequestBody('mime:application/json')
+  const request = new RequestBody({ mime: 'mime:application/json' })
   Object.defineProperty(request, 'config', { value: context.config })
   t.is(request.swift_Struct(context), 'public typealias RequestBody = Data')
 })
 
 test('[Swift] with configured mime-type', t => {
-  const request = new RequestBody('mime:video/mp2t')
+  const request = new RequestBody({ mime: 'mime:video/mp2t' })
   const config = {
     ...context.config,
     swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } },
@@ -29,7 +29,7 @@ test('[Swift] with configured mime-type', t => {
 })
 
 test('[Swift] with unsupported mime-type', t => {
-  const request = new RequestBody('mime:audio/webm')
+  const request = new RequestBody({ mime: 'mime:audio/webm' })
   Object.defineProperty(request, 'config', { value: context.config })
   t.throws(() => {
     request.swift_Struct(context)

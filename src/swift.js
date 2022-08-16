@@ -248,20 +248,14 @@ Field.prototype.swift_Member = function (context = {}) {
   if (writer) {
     const reference = this.type.reference
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = `${type}.Writer`
-    }
-    if (/^Array\<.+\>$/.test(type)) {
-      const element = type.match(/^Array\<(.+)\>$/)[1]
-      const reference =  context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-        type = `Array<${element}.Writer>`
-      }
+      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
     }
   }
 
   if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
+
   if (this.mutable == false) {
     return [
       docc(this),
@@ -296,16 +290,9 @@ Field.prototype.renderArgumentSignature = function (context) {
   var type = convertType(this.type)
   var defaultValue = ''
   if (writer) {
-    const reference = context.resolveReference(type)
+    const reference = this.type.reference
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = `${type}.Writer`
-    }
-    if (/^Array\<.+\>$/.test(type)) {
-      const element = type.match(/^Array\<(.+)\>$/)[1]
-      const reference = context.resolveReference(element)
-      if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-        type = `Array<${element}.Writer>`
-      }
+      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
     }
     if (typeof this.defaultValue != 'undefined') {
       if (this.type.referenceName == 'String') {
@@ -318,6 +305,7 @@ Field.prototype.renderArgumentSignature = function (context) {
       defaultValue = ` = nil`
     }
   }
+
   if (this.optional && type[type.length - 1] != '?') {
     type = `${type}?`
   }
@@ -352,11 +340,11 @@ Endpoint.prototype.swift_Struct = function (context) {
     ...this.resolvePathParameters().map(parameter => parameter.swift_Enum(context)),
 
     docc({ parameters: this.resolvePathParameters() }),
-    `init(${this.swift_InitializerParameters()}) {`,
+    `public init(${this.swift_InitializerParameters()}) {`,
       `self.path = "${this.path}"`,
       ...this.resolvePathParameters().map(parameter => `.replacingOccurrences(of: "${parameter.token}", with: ${parameter.swift_StringifyToken()})`),
       this.swift_QueryInitializer(),
-      defineIf(this.allowBody, () => 'self.body = body()'),
+      this.requestBody.swift_InitializeCode(),
     end,
 
     this.requestBody.swift_Struct(context),
@@ -508,20 +496,39 @@ Parameter.prototype.swift_StringifyToken = function () {
 }
 
 RequestBody.prototype.swift_InitializeParameter = function (context) {
+  if (typeof this.schema.mime == 'string') {
+    const { mime } = this.config.swift
+    const mimeTypeValue = this.schema.mime.replace(/^mime:/, '')
+    if (typeof mime != undefined && mime[mimeTypeValue]) {
+      return `public typealias RequestBody = ${mime[mimeTypeValue]}`
+    }
+    if (mimeTypeValue == 'application/json') { return 'body: Data' }
+    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'body: Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'body: String' }
+    throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
+  }
   if (this.fields.length == 0) { return null }
   return 'body: () -> RequestBody'
 }
 
+RequestBody.prototype.swift_InitializeCode = function () {
+  if (typeof this.schema.mime == 'string') {
+    return 'self.body = body'
+  }
+  if (this.fields.length == 0) { return null }
+  return 'self.body = body()'
+}
+
 RequestBody.prototype.swift_Struct = function (context) {
-  if (typeof this.schema == 'string') {
+  if (typeof this.schema.mime == 'string') {
     const { mime } = this.config.swift
-    const mimeTypeValue = this.schema.replace(/^mime:/, '')
+    const mimeTypeValue = this.schema.mime.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias RequestBody = ${mime[mimeTypeValue]}`
     }
     if (mimeTypeValue == 'application/json') { return 'public typealias RequestBody = Data' }
-    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = Data' }
-    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public typealias RequestBody = String' }
+    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'public var body: Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'public var body: String' }
     throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
   }
 
@@ -544,7 +551,7 @@ RequestBody.prototype.swift_Struct = function (context) {
 }
 
 Response.prototype.swift_Struct = function (context) {
-  if (this.schema == null) { return 'public typealias Response = Never' }
+  if (this.schema == null) { return 'public typealias Response = Void' }
 
   if (typeof this.schema == 'string') {
     const { mime } = this.config.swift

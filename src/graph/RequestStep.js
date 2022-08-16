@@ -9,7 +9,12 @@ export default class RequestStep extends Node {
   /**
    * @type {CommandStep[]}
    */
-  afterSteps
+  setupSteps
+
+  /**
+   * @type {CommandStep[]}
+   */
+  receiveSteps
 
   /**
    * @type {string|undefined}
@@ -51,20 +56,36 @@ export default class RequestStep extends Node {
 
     Object.defineProperty(this, 'overrides', { value: schema.overrides })
 
-    const after = schema.after
-    if (after) {
-      const steps = (after.steps || [])
+    const { setup, receive } = schema
+
+    if (setup) {
+      const steps = (setup.steps || [])
         .map(step => {
           if (step.command) {
             return new CommandStep(step.command, step.args)
           }
           if (step.request) {
-            throw new Error('Invalid request step (can\'t run request step in after block)')
+            throw new Error('Invalid request step (can\'t run request step in receive block)')
           }
         })
-      Object.defineProperty(this, 'afterSteps', { value: steps, enumerable: false })
+      Object.defineProperty(this, 'setupSteps', { value: steps, enumerable: false })
     } else {
-      Object.defineProperty(this, 'afterSteps', { value: [], enumerable: false })
+      Object.defineProperty(this, 'setupSteps', { value: [], enumerable: false })
+    }
+
+    if (receive) {
+      const steps = (receive.steps || [])
+        .map(step => {
+          if (step.command) {
+            return new CommandStep(step.command, step.args)
+          }
+          if (step.request) {
+            throw new Error('Invalid request step (can\'t run request step in receive block)')
+          }
+        })
+      Object.defineProperty(this, 'receiveSteps', { value: steps, enumerable: false })
+    } else {
+      Object.defineProperty(this, 'receiveSteps', { value: [], enumerable: false })
     }
   }
 

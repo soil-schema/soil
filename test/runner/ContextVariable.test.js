@@ -57,11 +57,3 @@ test('list keys', t => {
   const article = { comments: [{ body: 'This is a first comment' }, { body: 'Second one' }] }
   t.deepEqual(new ContextVariable('article', article).keys(), ['article.comments.0.body', 'article.comments.1.body'])
 })
-
-test('add child', t => {
-  const user = new ContextVariable('user', { name: 'User Name', contact: { tel: 'xxx-xxxx-xxxx', email: 'xxx@example.com' } })
-  t.not(user.get('name').canAcceptNewChild)
-  t.throws(() => {
-    user.get('name').addChild('incorrect', 'value')
-  }, { instanceOf: ScenarioRuntimeError })
-})

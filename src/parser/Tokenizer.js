@@ -41,12 +41,13 @@ const INNER_TYPE_PATTERN = /^inner\s+(?<name>[A-Z][a-zA-Z0-9]+)\b/
 const ENDPOINT_PATTERN = /^endpoint\s+(?<method>GET|POST|PUT|PATCH|DELETE|HEAD)\s+(?<path>(?:\/\$?(?:[a-z_]+))+)\b/
 const PROPERTY_PATTERN = /^(?<name>name|default)\s+(?<value>.+)(\n|\-\s|#\s|$)/
 const SCENARIO_PATTERN = /^(?:(?<annotation>shared)\s+)?scenario\s+(?<name>[\w\s]+\w)\s+/
-const DIRECTIVE_PATTERN = /^(entity|field|schema|inner|endpoint|query|parameter|request|success|scenario|before|after|default|name|example|enum)\b/
+const DIRECTIVE_PATTERN = /^(entity|field|schema|inner|endpoint|query|parameter|request|success|scenario|setup|receive|default|name|example|enum)\b/
 const REQUEST_HTTP_SHORTHAND_PATTERN = /^(?<method>GET|POST|PUT|PATCH|DELETE|HEAD)\s+(?<path>(?:\/\$?(?:[a-z_]+))+)\b/
 const REQUEST_REFERENCE_SHORTHAND_PATTERN = /^(?<entity>[A-Z][a-zA-Z0-9]+)\.(?<endpoint_name>\w+)/
-const ASSIGNMENT_PATTERN = /^(?<name>\w+)[\t ]*=[\t ]*(?<body>[^\r\n]+)\b/
+const ASSIGNMENT_PATTERN = /^(?<name>\w+)[\t ]*=[\t ]*(?<body>[^\r\n]+)(\n|$)/
 const COMMAND_BEGIN_PATTERN = /^(?<command>@[a-z][a-z\-]+[a-z])\b(?<parameter_body>[^\n\{\}]*)/
-const VALUE_PATTERN = /^(?<value>"(?:\\"|[^"])*"|\-?\d+|true|false|null)[\n$]?/
+const ARRAY_PATTERN = /^\[(?<items>(?:\\\[|[^\[])*)\]/
+const VALUE_PATTERN = /^(?<value>"(?:\\"|[^"])*"|\-?\d+|true|false|null)[\s$]/
 const VARIABLE_PATTERN = /^(?<name>\$[a-z0-9\_\.]+)\b/
 
 /**
@@ -198,6 +199,35 @@ export const tokenize = function (body) {
           pushToken(')', 'punctuation.parameters.close.command')
         }
       }
+    })
+
+    test(ARRAY_PATTERN, (match) => {
+      pushToken('[', `punctuation.array.open`)
+      var items = match.groups?.items
+      if (items) {
+        while (items.length) {
+          const value = items.match(VALUE_PATTERN)?.groups?.value
+          if (value) {
+            pushToken(value, `${makeValueSemantic(value)}.parameter.command`)
+            items = items.substring(value.length)
+            if (items[0] == ',') {
+              items = items.substring(1)
+            }
+            continue
+          }
+          const parameter = items.match(/^(?<value>[^,\r\n ][^,\r\n]+)/)?.groups?.value
+          if (parameter) {
+            pushToken(parameter, 'string.unquote.parameter.command')
+            items = items.substring(parameter.length)
+            if (items[0] == ',') {
+              items = items.substring(1)
+            }
+            continue
+          }
+          items = items.substring(1)
+        }
+      }
+      pushToken(']', `punctuation.array.close`)
     })
 
     test(VARIABLE_PATTERN, (match) => {

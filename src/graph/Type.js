@@ -44,7 +44,7 @@ export default class Type {
    * @type {Node|undefined}
    */
   get reference () {
-    if (this.isDefinedType) {
+    if (this.isDefinedType || this.isEnum) {
       return void 0
     } else {
       if (typeof this.owner == 'undefined') {
@@ -69,7 +69,7 @@ export default class Type {
    * @type {boolean}
    */
   get isEnum () {
-    return this.definition == 'Enum'
+    return /^Enum\??$/.test(this.definition)
   }
 
   /**
@@ -83,7 +83,7 @@ export default class Type {
    * @type {boolean}
    */
   get isAutoDefiningType () {
-    return ['*', 'List<*>', '*?', 'Enum'].indexOf(this.definition) != -1
+    return ['*', 'List<*>', '*?', 'List<*>?', 'Enum'].indexOf(this.definition) != -1
   }
 
   /**

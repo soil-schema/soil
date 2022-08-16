@@ -194,17 +194,29 @@ export default class Entity extends Node {
    * 
    * @param {any} value 
    * @param {string[]} path
+   * @param {{ write: boolean }} options
    * @returns {boolean}
    */
-   assert (value, path = []) {
+   assert (value, path = [], options = { write: false }) {
     if (typeof value != 'object') {
       throw new AssertionError(`Expect ${this.name}, but actual value is not object (${typeof value}) at ${path.join('.')}`)
+    }
+
+    for (const field of this.fields) {
+      if (field.name in value) continue
+      if (field.optional) continue
+      if (options.write) {
+        if (field.writer == false || field.mutable == false) continue
+      } else {
+        if (field.writer) continue
+      }
+      throw new AssertionError(`Field is required, but not defined: ${field.name} at ${path.join('.')} (${Object.keys(value).join(', ')})`)
     }
 
     for (const key in value) {
       const field = this.findField(key)
       if (field instanceof Field) {
-        field.assert(value[key], path.concat([key]))
+        field.assert(value[key], path.concat([key]), options)
       }
     }
 

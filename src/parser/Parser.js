@@ -189,6 +189,22 @@ export class SchemaBuilder {
     }
   }
 
+  setValue (name, storage, ...keywords) {
+    if (storage.hitAny('array.open')) {
+      storage.skip() // Skip array open
+      while (storage.notHitAll('array.close')) {
+        if (storage.hitAny('constant', 'string', 'variable.reference', 'parameter.assignment')) {
+          this.push(name, storage)
+        } else {
+          this.trash()
+        }
+      }
+      storage.skip() // Skip array close
+    } else {
+      return this.set(name, storage, 'constant', 'string', 'variable.reference', 'parameter.assignment')
+    }
+  }
+
   build () {
     if (process.env.DEBUG_TOKENS) {
       return { ...this.schema, tokens: this.tokens }
@@ -272,6 +288,16 @@ export const parseEntity = function (storage) {
         schema.set('schema', parseSubschema(storage))
         continue
       }
+      if (storage.hitAny('directive.example')) {
+        storage.skip() // Skip example keyword
+        schema.setValue('example', storage)
+        continue
+      }
+      if (storage.hitAny('directive.enum')) {
+        storage.skip() // Skip enum keyword
+        schema.setValue('enum', storage)
+        continue
+      }
       storage.trash()
     }
   })
@@ -300,16 +326,20 @@ export const parseSubschema = function (storage) {
     schema.set('name', storage, 'name.inner')
   }
 
-  storage.captureBlock(storage => {
-    while (storage.current) {
-      storage.putOffIf('annotation', 'description')
-      if (storage.hitAny('directive.field')) {
-        schema.push('fields', parseField(storage))
-        continue
+  if (storage.hitAny('string')) {
+    schema.set('mime', storage)
+  } else {
+    storage.captureBlock(storage => {
+      while (storage.current) {
+        storage.putOffIf('annotation', 'description')
+        if (storage.hitAny('directive.field')) {
+          schema.push('fields', parseField(storage))
+          continue
+        }
+        storage.trash()
       }
-      storage.trash()
-    }
-  })
+    })
+  }
 
   return schema.build()
 }
@@ -379,6 +409,22 @@ export const parseParameter = function (storage) {
 
   schema.set('type', storage, 'type')
 
+  storage.captureBlock(storage => {
+    while (storage.current) {
+      if (storage.hitAny('directive.example')) {
+        storage.skip() // Skip example keyword
+        schema.setValue('example', storage)
+        continue
+      }
+      if (storage.hitAny('directive.enum')) {
+        storage.skip() // Skip enum keyword
+        schema.setValue('enum', storage)
+        continue
+      }
+      storage.trash()
+    }
+  })
+
   return schema.build()
 }
 
@@ -400,6 +446,22 @@ export const parseQuery = function (storage) {
   storage.skip()
 
   schema.set('type', storage, 'type')
+
+  storage.captureBlock(storage => {
+    while (storage.current) {
+      if (storage.hitAny('directive.example')) {
+        storage.skip() // Skip example keyword
+        schema.setValue('example', storage)
+        continue
+      }
+      if (storage.hitAny('directive.enum')) {
+        storage.skip() // Skip enum keyword
+        schema.setValue('enum', storage)
+        continue
+      }
+      storage.trash()
+    }
+  })
 
   return schema.build()
 }
@@ -516,15 +578,15 @@ export const parseShorthandHttpRequest = function (storage) {
           storage.skip()
         }
         overrides.tokens.push(name)
-        overrides.set(name.value, storage, 'constant', 'string', 'variable.reference', 'parameter.assignment')
+        overrides.setValue(name.value, storage)
         continue
       }
-      if (storage.hitAny('before')) {
-        schema.set('before', parseCommandSteps(storage))
+      if (storage.hitAny('setup')) {
+        schema.set('setup', parseCommandSteps(storage))
         continue
       }
-      if (storage.hitAny('after')) {
-        schema.set('after', parseCommandSteps(storage))
+      if (storage.hitAny('receive')) {
+        schema.set('receive', parseCommandSteps(storage))
         continue
       }
       storage.trash()
@@ -558,15 +620,15 @@ export const parseShorthandReferenceRequest = function (storage) {
           storage.skip()
         }
         overrides.tokens.push(name)
-        overrides.set(name.value, storage, 'constant', 'string', 'variable.reference', 'parameter.assignment')
+        overrides.setValue(name.value, storage)
         continue
       }
-      if (storage.hitAny('before')) {
-        schema.set('before', parseCommandSteps(storage))
+      if (storage.hitAny('setup')) {
+        schema.set('setup', parseCommandSteps(storage))
         continue
       }
-      if (storage.hitAny('after')) {
-        schema.set('after', parseCommandSteps(storage))
+      if (storage.hitAny('receive')) {
+        schema.set('receive', parseCommandSteps(storage))
         continue
       }
       storage.trash()

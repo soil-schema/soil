@@ -33,9 +33,7 @@ test('Enum', t => {
   t.assert(type.isEnum)
   t.not(type.isList)
 
-  t.throws(() => {
-    type.mock()
-  }, { instanceOf: UnresolvedReferenceError })
+  t.deepEqual(type.mock(), undefined)
 })
 
 test('Integer?', t => {

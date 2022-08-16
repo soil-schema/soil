@@ -1,5 +1,8 @@
 // @ts-check
 
+import { promises as fs, createWriteStream } from 'node:fs'
+import url, { pathToFileURL } from 'node:url'
+
 import Scenario from '../graph/Scenario.js'
 
 import ScenarioRuntimeError from '../errors/ScenarioRuntimeError.js'
@@ -8,6 +11,7 @@ import RequestStep from '../graph/RequestStep.js'
 import AssertionError from '../errors/AssertionError.js'
 import { httpRequest } from '../utils.js'
 import Root from '../graph/Root.js'
+import { createHash } from 'node:crypto'
 
 export default class Runner {
   /**
@@ -135,6 +139,12 @@ export default class Runner {
       .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
   }
 
+  getVarObject (name) {
+    // [!] Non-destructively reversing
+    return [...this.contextStack].reverse()
+      .find(context => context._space[name])
+  }
+
   /**
    * 
    * @param {Scenario} scenario 
@@ -235,14 +245,18 @@ export default class Runner {
    */
   command_get_var (name) {
     const value = this.getVar(name)
-    this.log('@get-var', name, value)
+    if (value instanceof Buffer) {
+      this.log('@get-var', name, '{binary}')
+    } else {
+      this.log('@get-var', name, JSON.stringify(value))
+    }
     return value
   }
 
   /**
    * `@inspect`
    * 
-   * Show variables in this context.
+   * Show request / response in this context.
    * 
    * @returns {any}
    */
@@ -250,6 +264,116 @@ export default class Runner {
     this.log('@inspect')
     this.log(` > request:\n${JSON.stringify(this.getVar('$request'), null, 2)}`)
     this.log(` > response:\n${JSON.stringify(this.getVar('$response'), null, 2)}`)
+  }
+
+  /**
+   * `@export-json <value> <filepath>`
+   * 
+   * Export the variable to JSON file.
+   * 
+   * @param {string} value Export variable-name.
+   * @param {string} filepath Export distination file path.
+   */
+  async command_export_json (value, filepath) {
+    this.log('@export', value, '=>', filepath)
+    const target = this.getVar(value)
+    if (typeof target == 'undefined') {
+      this.log(' > exporting variable not found:', value)
+      return
+    }
+    const body = typeof target == 'string' ? target : JSON.stringify(target, null, 2)
+    try {
+      await fs.writeFile(filepath, body)
+    } catch (error) {
+      this.log(' > error:', error.message)
+    }
+  }
+
+  /**
+   * `@import-json <variable-name> <filepath>`
+   * 
+   * Import JSON file to the variable.
+   * 
+   * @param {string} name Import variable-name.
+   * @param {string} filepath Import source file path.
+   */
+  async command_import_json (name, filepath) {
+    this.log('@import-json', name, '<=', filepath)
+    const settableName = name.replace(/^\$/, '')
+    try {
+      const body = await fs.readFile(filepath, { encoding: this.config.core.encoding })
+      // @ts-ignore
+      this.context.setVar(settableName, JSON.parse(body))
+      this.log(' > Import as JSON file.')
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        this.log(' > JSON Syntax Error:', error.message)
+      } else {
+        this.log(' > Error:', error.message)
+      }
+      const captureStack = this.contextStack.map(context => context)
+      throw new ScenarioRuntimeError(`Failed to run @import-json(${name}, ${filepath})`, () => {
+        console.log('=== Context ===')
+        captureStack.forEach(context => {
+          console.log('Context:', context.name)
+          console.log(context._space)
+        })
+      })
+    }
+  }
+
+  /**
+   * `@request-body-from <filepath|url>`
+   * 
+   * Use the file as `@request` command body.
+   * 
+   * @param {string} source 
+   */
+  async command_request_body_from (source) {
+    this.log('@request-body-from', source)
+    if (source.startsWith('file://')) {
+      this.log(' > Load file')
+      this.context.setVar('request.body', source)
+      return
+    }
+    if (source.startsWith('unsplash:')) {
+      const accessToken = this.config.api.unsplash
+      if (typeof accessToken == 'undefined') {
+        throw new ScenarioRuntimeError(`Request unsplash schema, but unsplash access token is not setted.`)
+      }
+      const hash = Math.floor(new Date().valueOf() / 100).toString(16)
+      const query = source.replace(/^unsplash:/, '')
+      const cacheFileName = `/tmp/soil.${createHash('sha256').update(query).digest('hex')}.${hash.split("").reverse().join("")}.image.cache`
+      try {
+        await fs.stat(cacheFileName)
+        this.log(' > Use file cache:', cacheFileName)
+        this.context.setVar('request.body', pathToFileURL(cacheFileName).toString())
+      } catch {}
+      this.log(' > Fetch file from https://unsplash.com => ', cacheFileName)
+      const response = await httpRequest({
+        url: `https://api.unsplash.com/photos/random\?query=${encodeURIComponent(query)}`,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
+          'Accept': 'application/json',
+          'Authorization': `Client-ID ${accessToken}`,
+        },
+      })
+      const imageUrl = JSON.parse(response.body).urls.regular
+      const imageResponse = await httpRequest({
+        url: imageUrl,
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Soil-Scenario-Runner/1.0 (+https://github.com/niaeashes/soil)',
+        },
+      })
+      await new Promise(resolve => imageResponse.stream
+        .pipe(createWriteStream(cacheFileName))
+        .on('close', resolve))
+      this.log(' > request.body =', pathToFileURL(cacheFileName).toString())
+      this.context.setVar('request.body', pathToFileURL(cacheFileName).toString())
+    }
+    this.context.setVar('request.body', url.pathToFileURL(source).toString())
   }
 
   /**
@@ -279,11 +403,25 @@ export default class Runner {
         body: this.overrideKeys(this.interpolate(requestStep.mock()), overrides),
       }
 
+      // Set content-type from request mimeType
+      if (endpoint?.requestBody.mimeType) {
+        request.headers['Content-Type'] = endpoint?.requestBody.mimeType
+      }
+
       this.context.setVar('request', request)
 
       this.log('@request', request.method, request.url)
 
-      const response = await httpRequest(request)
+      if (requestStep.setupSteps.length) {
+        this.log(' > setup steps')
+        for (const step of requestStep.setupSteps) {
+          await this.runCommand(step.commandName, ...step.args)
+        }
+      }
+
+      endpoint?.requestBody.assert(this.getVar('$request.body'))
+
+      const response = await httpRequest(this.context.getVar('$request'))
       var body = undefined
       if (/^application\/json;?/.test(response.headers['content-type'] ?? '') && response.body != '') {
         try {
@@ -320,6 +458,8 @@ export default class Runner {
           })
         }
 
+        console.log(body)
+
         /**
          * > A 204 response is terminated by the end of the header section; it cannot contain content or trailers.
          * 
@@ -328,10 +468,11 @@ export default class Runner {
          * @see https://www.rfc-editor.org/rfc/rfc9110.html#name-204-no-content
          */
         if (response.status != 204) {
+          this.log(' > assert response')
           endpoint?.successResponse.assert(body)
         }
 
-        for (const step of requestStep.afterSteps) {
+        for (const step of requestStep.receiveSteps) {
           await this.runCommand(step.commandName, ...step.args)
         }
       } finally {
