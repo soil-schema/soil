@@ -97,13 +97,19 @@ export default class RequestBody extends Node {
    */
   assert (value, path = []) {
     if (typeof value != 'object') {
-      throw new AssertionError(`Expect object, but actual response is not object (${typeof value}) at ${path.join('.')}`)
+      if (this.schema.mime?.startsWith('mime:image/') && value.startsWith('file://')) return true
+      throw new AssertionError(`Expect object, but actual request body is not object (${typeof value}) at ${path.join('.')}`)
+    }
+
+    for (const field of this.fields) {
+      if (field.name in value) continue
+      throw new AssertionError(`Field not found: ${field.name} at ${path.join('.')}`)
     }
 
     for (const key in value) {
       const field = this.findField(key)
       if (field instanceof Field) {
-        field.assert(value[key], path.concat([key]))
+        field.assert(value[key], path.concat([key]), { write: true })
       }
     }
 

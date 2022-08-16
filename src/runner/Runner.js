@@ -11,6 +11,7 @@ import RequestStep from '../graph/RequestStep.js'
 import AssertionError from '../errors/AssertionError.js'
 import { httpRequest } from '../utils.js'
 import Root from '../graph/Root.js'
+import { createHash } from 'node:crypto'
 
 export default class Runner {
   /**
@@ -336,18 +337,18 @@ export default class Runner {
       return
     }
     if (source.startsWith('unsplash:')) {
+      const accessToken = this.config.api.unsplash
+      if (typeof accessToken == 'undefined') {
+        throw new ScenarioRuntimeError(`Request unsplash schema, but unsplash access token is not setted.`)
+      }
       const hash = Math.floor(new Date().valueOf() / 100).toString(16)
-      const cacheFileName = `/tmp/soil.${hash.split("").reverse().join("")}.image.cache`
+      const query = source.replace(/^unsplash:/, '')
+      const cacheFileName = `/tmp/soil.${createHash('sha256').update(query).digest('hex')}.${hash.split("").reverse().join("")}.image.cache`
       try {
         await fs.stat(cacheFileName)
         this.log(' > Use file cache:', cacheFileName)
         this.context.setVar('request.body', pathToFileURL(cacheFileName).toString())
       } catch {}
-      const query = source.replace(/^unsplash:/, '')
-      const accessToken = this.config.api.unsplash
-      if (typeof accessToken == 'undefined') {
-        throw new ScenarioRuntimeError(`Request unsplash schema, but unsplash access token is not setted.`)
-      }
       this.log(' > Fetch file from https://unsplash.com => ', cacheFileName)
       const response = await httpRequest({
         url: `https://api.unsplash.com/photos/random\?query=${encodeURIComponent(query)}`,
@@ -418,6 +419,8 @@ export default class Runner {
         }
       }
 
+      endpoint?.requestBody.assert(this.getVar('$request.body'))
+
       const response = await httpRequest(this.context.getVar('$request'))
       var body = undefined
       if (/^application\/json;?/.test(response.headers['content-type'] ?? '') && response.body != '') {
@@ -455,6 +458,8 @@ export default class Runner {
           })
         }
 
+        console.log(body)
+
         /**
          * > A 204 response is terminated by the end of the header section; it cannot contain content or trailers.
          * 
@@ -463,6 +468,7 @@ export default class Runner {
          * @see https://www.rfc-editor.org/rfc/rfc9110.html#name-204-no-content
          */
         if (response.status != 204) {
+          this.log(' > assert response')
           endpoint?.successResponse.assert(body)
         }
 

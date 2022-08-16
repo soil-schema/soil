@@ -79,6 +79,7 @@ const commands = {
         } catch (error) {
           console.log(chalk.red('  ✖'), scenario.name)
           console.log(chalk.red(error))
+          console.log(chalk.red(error.stack))
           if (error instanceof ScenarioRuntimeError) {
             error.report()
           }

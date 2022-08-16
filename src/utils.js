@@ -137,7 +137,7 @@ export const httpRequest = function (request) {
 
       const req = client.request(url, { method, headers, use_ssl }, res => {
         const contentType = res.headers['content-type']
-        if (contentType.startsWith('text/') || contentType.startsWith('application/json')) {
+        if (contentType?.startsWith('text/') || contentType?.startsWith('application/json')) {
           res.setEncoding('utf8')
           var body = ''
           res.on('data', (/** @type {string} */ chunk) => body += chunk)
@@ -152,12 +152,14 @@ export const httpRequest = function (request) {
 
       if (typeof body == 'string' && body.startsWith('file://')) {
         const filepath = fileURLToPath(body)
+        const stat = await fs.stat(filepath)
         const stream = createReadStream(filepath)
         stream.on('open', () => stream.pipe(req))
         stream.on('error', error => {
           req.destroy(error)
           reject(error)
         })
+        req.setHeader('Content-Length', stat.size)
       } else if (typeof body == 'object') {
         const json = JSON.stringify(body)
         req.setHeader('Content-Type', 'application/json; charset=utf-8')

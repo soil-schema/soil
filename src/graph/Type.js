@@ -69,7 +69,7 @@ export default class Type {
    * @type {boolean}
    */
   get isEnum () {
-    return this.definition == 'Enum'
+    return /^Enum\??$/.test(this.definition)
   }
 
   /**
@@ -83,7 +83,7 @@ export default class Type {
    * @type {boolean}
    */
   get isAutoDefiningType () {
-    return ['*', 'List<*>', '*?', 'Enum'].indexOf(this.definition) != -1
+    return ['*', 'List<*>', '*?', 'List<*>?', 'Enum'].indexOf(this.definition) != -1
   }
 
   /**

@@ -10,9 +10,9 @@ export default class Response extends Node {
    * @param {object} schema 
    */
   constructor(schema) {
-    super('Response', schema || {})
+    super('Response', schema)
 
-    this.schema.fields?.forEach(field => {
+    this.schema?.fields?.forEach(field => {
       this.addChild(new Field(field.name, field))
     })
   }
@@ -64,6 +64,11 @@ export default class Response extends Node {
   assert (value, path = []) {
     if (typeof value != 'object') {
       throw new AssertionError(`Expect object, but actual response is not object (${typeof value}) at ${path.join('.')}`)
+    }
+
+    for (const field of this.fields) {
+      if (field.name in value) continue
+      throw new AssertionError(`Field not found: ${field.name} at ${path.join('.')}`)
     }
 
     for (const key in value) {

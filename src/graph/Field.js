@@ -38,7 +38,7 @@ export default class Field extends Node {
   /**
    * @type {boolean}
    */
-   get writer () {
+  get writer () {
     return this.schema.annotation == 'writer'
   }
 
@@ -60,7 +60,7 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get isSelfDefined () {
-    return ['*', 'List<*>', '*?', 'Enum'].indexOf(this.schema.type) != -1
+    return ['*', 'List<*>', '*?', 'List<*>?', 'Enum'].indexOf(this.schema.type) != -1
   }
 
   /**
@@ -132,9 +132,10 @@ export default class Field extends Node {
    * 
    * @param {any} value 
    * @param {string[]} path
+   * @param {{ write: boolean }} options
    * @returns {boolean}
    */
-  assert (value, path = []) {
+   assert (value, path = [], options = { write: false }) {
 
     if (typeof value == 'object' && value === null && this.type.isOptional == false) {
       throw new AssertionError(`Get null, but non-null field at ${path.join('.')}`)
@@ -185,7 +186,7 @@ export default class Field extends Node {
       const reference = this.type.reference
 
       if (reference instanceof Entity) {
-        return reference.assert(value, path)
+        return reference.assert(value, path, options)
       }
     }
 
