@@ -458,8 +458,6 @@ export default class Runner {
           })
         }
 
-        console.log(body)
-
         /**
          * > A 204 response is terminated by the end of the header section; it cannot contain content or trailers.
          * 

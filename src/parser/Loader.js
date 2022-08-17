@@ -1,11 +1,11 @@
 import { promises as fs } from 'node:fs'
 import path from  'node:path'
-
-import chalk from 'chalk'
+import { tmpdir } from 'node:os'
 
 import Tokenizer from './Tokenizer.js'
 import Parser from './Parser.js'
 import { pathToFileURL } from 'node:url'
+import { createHash } from 'node:crypto'
 
 export default class Loader {
 
@@ -19,18 +19,20 @@ export default class Loader {
   }
 
   async load () {
-    console.time('total')
+    console.time('build time')
     await this.loadDirectory(path.join(process.cwd(), this.config.core.workingDir))
-    console.timeEnd('total')
+    console.timeEnd('build time')
     return this.result
   }
 
   async loadDirectory (dirpath) {
 
+    const { encoding } = this.config.core
+
     await Promise.all((await fs.readdir(dirpath))
-      .map(async file => {
-        if (file == 'node_modules') return
-        const filepath = path.join(dirpath, file)
+      .filter(file => file != 'node_modules')
+      .map(file => path.join(dirpath, file))
+      .map(async filepath => {
         const stat = await fs.stat(filepath)
 
         if (stat.isDirectory()) {
@@ -38,35 +40,77 @@ export default class Loader {
           return
         }
 
-        const body = await fs.readFile(filepath, this.config.core.encoding)
-        const ext = path.extname(file)
+        // Skip a not soil file.
+        if (path.extname(filepath) != '.soil') {
+          return
+        }
 
-        if (ext == '.soil') {
-          console.time(filepath)
+        const schema = await this.fetch(filepath, (body) => {
           const tokens = new Tokenizer(filepath, body).tokenize()
-          const parser = new Parser()
-          const schema = parser.parse(tokens)
-          console.timeEnd(filepath)
-          if (soil.options.dump) {
-            const exportDir = this.config.core.exportDir.default
-            await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })
-            await fs.writeFile(path.join(process.cwd(), exportDir, `dump-${file}.json`), JSON.stringify(schema, null, 2), this.config.encode)
-          }
+          const result = new Parser().parse(tokens)
           tokens.forEach(token => {
             if (token.errors.length > 0) {
               console.log(token.buildDebugMessage(body))
             }
-          })
-          const makeSchema = (schema) => {
-            return { ...schema, uri: pathToFileURL(filepath).toString() }
-          }
-          schema.entities
-            .map(makeSchema)
-            .forEach(entity => this.result.entities.push(entity))
-          schema.scenarios
-            .map(makeSchema)
-            .forEach(scenario => this.result.scenarios.push(scenario))
+          })  
+          return result
+        })
+
+        const makeSchema = (schema) => {
+          return { ...schema, uri: pathToFileURL(filepath).toString() }
         }
+
+        ['entities', 'scenarios'].forEach(key => {
+          schema[key]
+            .map(makeSchema)
+            .forEach(entity => {
+              this.result[key].push(entity)
+              if (soil.options.dump) {
+                this.dumpSchema(entity)
+              }
+            })
+        })
       }))
+  }
+
+  async dumpSchema (schema) {
+    const { encoding } = this.config.core
+    const exportDir = this.config.core.exportDir.default
+
+    const dumpFilename = `${schema.name}.dump.json`
+    const body = JSON.stringify(schema, null, 2)
+    await fs.mkdir(path.join(process.cwd(), exportDir), { recursive: true })
+    await fs.writeFile(path.join(process.cwd(), exportDir, dumpFilename), body, encoding)
+  }
+
+  async fetch (filepath, block) {
+
+    const { encoding } = this.config.core
+
+    const stat = await fs.stat(filepath)
+    const hash = createHash('sha256')
+      .update(stat.mtimeMs.toString())
+      .digest('hex')
+    const cacheFilepath = path.join(tmpdir(), 'soil', `${hash}.soil.cache`)
+
+    try {
+
+      // cache file is json
+      return JSON.parse(await fs.readFile(cacheFilepath, { encoding }))
+
+    } catch { // cache file is not found
+
+      console.log('Miss cache', filepath)
+
+      const body = await fs.readFile(filepath, { encoding })
+      const result = await block(body)
+      const cache = JSON.stringify(result) // essentially deep clone.
+
+      /* async cache */
+      fs.mkdir(path.dirname(cacheFilepath), { recursive: true })
+        .then(() => fs.writeFile(cacheFilepath, cache, { encoding }))
+
+      return result
+    }
   }
 }
