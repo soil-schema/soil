@@ -100,8 +100,6 @@ export default class Loader {
 
     } catch { // cache file is not found
 
-      console.log('Miss cache', filepath)
-
       const body = await fs.readFile(filepath, { encoding })
       const result = await block(body)
       const cache = JSON.stringify(result) // essentially deep clone.
