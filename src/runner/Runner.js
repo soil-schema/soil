@@ -84,9 +84,14 @@ export default class Runner {
       return [...this.contextStack].reverse()
         .reduce((target, context) => context.interpolate(target), target)
     } else if (typeof target == 'object' && target != null) {
-      // Recursively apply to each properties.
-      return Object.keys(target)
-        .reduce((result, key) => { return { ...result, [key]: this.interpolate(target[key]) } }, {})
+      if (Array.isArray(target)) {
+        return target
+          .reduce((result, value) => { return [ ...result, this.interpolate(value) ]}, [])
+      } else {
+        // Recursively apply to each properties.
+        return Object.keys(target)
+          .reduce((result, key) => { return { ...result, [key]: this.interpolate(target[key]) } }, {})
+      }
     }
     return target
   }
@@ -108,10 +113,17 @@ export default class Runner {
       return distination
     }
     if (typeof target == 'object' && target != null) {
-      return Object.keys(target)
-        .reduce((result, key) => {
-          return { ...result, [key]: key in overrides ? override(target[key], overrides[key]) : this.overrideKeys(target[key], overrides) }
-        }, {})
+      if (Array.isArray(target)) {
+        return target
+          .reduce((result, value) => {
+            return [ ...result, this.overrideKeys(value, overrides) ]
+          }, [])
+      } else {
+        return Object.keys(target)
+          .reduce((result, key) => {
+            return { ...result, [key]: key in overrides ? override(target[key], overrides[key]) : this.overrideKeys(target[key], overrides) }
+          }, {})
+      }
     }
     return target
   }
@@ -137,12 +149,6 @@ export default class Runner {
     // [!] Non-destructively reversing
     return [...this.contextStack].reverse()
       .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
-  }
-
-  getVarObject (name) {
-    // [!] Non-destructively reversing
-    return [...this.contextStack].reverse()
-      .find(context => context._space[name])
   }
 
   /**
@@ -419,7 +425,11 @@ export default class Runner {
         }
       }
 
-      endpoint?.requestBody.assert(this.getVar('$request.body'))
+      try {
+        endpoint?.requestBody.assert(this.getVar('$request.body'))
+      } catch (error) {
+        throw new ScenarioRuntimeError(`Response assertion failure: ${error.message}`, this.spawnInspector())
+      }
 
       const response = await httpRequest(this.context.getVar('$request'))
       var body = undefined
@@ -445,17 +455,7 @@ export default class Runner {
 
         if (response.status > 299) {
           const captureStack = this.contextStack.map(context => context)
-          throw new ScenarioRuntimeError(`Unsuccessful response: ${response.status}`, () => {
-            console.log('=== Request ===')
-            console.log(JSON.stringify(request, null, 2))
-            console.log('=== Response ===')
-            console.log(JSON.stringify({ headers: response.headers, body }, null, 2))
-            console.log('=== Context ===')
-            captureStack.forEach(context => {
-              console.log('Context:', context.name)
-              console.log(context._space)
-            })
-          })
+          throw new ScenarioRuntimeError(`Unsuccessful response: ${response.status}`, this.spawnInspector())
         }
 
         /**
@@ -467,7 +467,11 @@ export default class Runner {
          */
         if (response.status != 204) {
           this.log(' > assert response')
-          endpoint?.successResponse.assert(body)
+          try {
+            endpoint?.successResponse.assert(body)
+          } catch (error) {
+            throw new ScenarioRuntimeError(`Response assertion failure: ${error.message}`, this.spawnInspector())
+          }
         }
 
         for (const step of requestStep.receiveSteps) {
@@ -518,6 +522,30 @@ export default class Runner {
       console.log(...messages)
     } else {
       this.logs.push(messages.map(message => message).join(' '))
+    }
+  }
+
+  /**
+   * Make ScenaripRuntimeError #2 argument (inspect callback).
+   */
+  spawnInspector () {
+    const captureStack = this.contextStack.map(context => context)
+    const getVar = (/** @type {string} */ name) => [...captureStack].reverse() // [!] Non-destructively reversing
+      .reduce((result, context) => typeof result == 'undefined' ? context.getVar(name) : result, undefined)
+    return () => {
+      console.group('Request')
+      console.dir(getVar('$request'), { depth: 6 })
+      console.groupEnd()
+
+      console.group('Response')
+      console.dir(getVar('$response'), { depth: 6 })
+      console.groupEnd()
+
+      captureStack.forEach(context => {
+        console.group('Context:', context.name)
+        console.log(context._space)
+        console.groupEnd()
+      })
     }
   }
 
