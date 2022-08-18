@@ -1,6 +1,6 @@
 export default class ScenarioRuntimeError extends Error {
   /**
-   * @type {() => void}
+   * @type {undefined|() => void}
    * @private
    */
   reporter
@@ -8,14 +8,18 @@ export default class ScenarioRuntimeError extends Error {
   /**
    * 
    * @param {string} message 
-   * @param {() => void} reporter 
+   * @param {undefined|() => void} reporter 
    */
-  constructor (message, reporter = () => {}) {
+  constructor (message, reporter = undefined) {
     super(message)
     this.reporter = reporter
   }
 
   report () {
-    this.reporter()
+    if (typeof this.reporter == 'function') {
+      this.reporter()
+    } else {
+      /* Nothing to do */
+    }
   }
 }

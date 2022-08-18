@@ -6,7 +6,7 @@ import ScenarioRuntimeError from '../../src/errors/ScenarioRuntimeError.js'
 test('set and resolve var', t => {
   const runner = new Runner()
   runner.enterContext(new Context('test'))
-  runner.command_set_var('name', 'value')
+  runner.command_set('name', 'value')
   t.is(runner.command_get_var('$name'), 'value')
   t.throws(() => runner.context.resolveVar('$not_found'), { instanceOf: ScenarioRuntimeError })
 })
@@ -26,7 +26,7 @@ test('resolve $env var', t => {
 test('set and resolve nested var', t => {
   const runner = new Runner()
   runner.enterContext(new Context('test'))
-  runner.command_set_var('person', { name: 'value' })
+  runner.command_set('person', { name: 'value' })
   t.is(runner.command_get_var('$person.name'), 'value')
   t.is(runner.command_get_var('$not_found'), undefined)
 
@@ -98,4 +98,130 @@ test('overrideKeys with nested array', t => {
   const runner = new Runner()
   const result = runner.overrideKeys({ event: { name: 'Event', items: [{ body: 'String' }] } }, {})
   t.assert(Array.isArray(result.event.items))
+})
+
+/**
+ * @set-header command
+ */
+
+ test('@set-header', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  runner.command_set_header('X-Test', 'Testing header value')
+  const headers = runner.context.applyHeaders({})
+  t.is(headers['X-Test'], 'Testing header value')
+})
+
+/**
+ * @set-secure-header command
+ */
+
+ test('@set-secure-header', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  runner.command_set_secure_header('X-Secure-Test', 'Testing header value')
+  const headers = runner.context.applyHeaders({})
+  t.is(headers['X-Secure-Test'], 'Testing header value')
+})
+
+/**
+ * @set-local command
+ */
+
+ test('@set-local', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  runner.command_set_local('test', 'Testing value')
+  t.is(runner.context.getVar('$test'), 'Testing value')
+})
+
+/**
+ * @set command
+ */
+
+ test('@set', t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  runner.command_set('test', 'Testing value')
+  t.is(runner.context.getVar('$test'), 'Testing value')
+})
+
+/**
+ * @export-json command
+ */
+
+ test('@export-json', async t => {
+  const runner = new Runner()
+
+  // Planned 2 assertion on writeFile mock method
+  t.plan(2)
+
+  // Mock file system module via Framework
+  runner.framework.mock('fs', {
+    writeFile: (filepath, content, options) => {
+      t.is(filepath, './tmp/export.json')
+      t.deepEqual(JSON.parse(content), { name: 'Test' })
+    },
+  })
+
+  runner.enterContext(new Context('test'))
+  runner.runCommand('set', 'test', { name: 'Test' })
+  await runner.runCommand('export_json', '$test', './tmp/export.json')
+})
+
+test('@export-json with undefined', async t => {
+  const runner = new Runner()
+
+  // Mock file system module via Framework
+  runner.framework.mock('fs', {
+    writeFile: (filepath, content, options) => {
+      t.fail('expect never calling writeFile method on Framework')
+    },
+  })
+
+  runner.enterContext(new Context('test'))
+  // Note: $test context variable is not defined.
+  await runner.runCommand('export_json', '$test', './tmp/export.json')
+
+  t.pass() // No assertion
+})
+
+/**
+ * @import-json command
+ */
+
+test('@import-json', async t => {
+  // @import-json command uses core.encoding config.
+  const runner = new Runner({ core: { encoding: 'utf-8' } })
+
+  t.plan(2)
+
+  // Mock file system module via Framework
+  runner.framework.mock('fs', {
+    readFile: (filepath, options) => {
+      t.is(filepath, './fixtures/import.json')
+      return JSON.stringify({ name: 'Test' })
+    },
+  })
+
+  runner.enterContext(new Context('test'))
+  await runner.runCommand('import_json', '$test', './fixtures/import.json')
+
+  t.deepEqual(runner.getVar('$test'), { name: 'Test' })
+
+})
+
+/**
+ * @inspect command
+ */
+
+/**
+ * Test only that some logs are recorded.
+ * It does not test whether the contents of logs are useful.
+ */
+test('@inspect records logs', t => {
+  const runner = new Runner()
+  t.is(runner.logs.length, 0)
+  runner.runCommand('inspect')
+  t.assert(runner.logs.length > 0)
 })
