@@ -137,12 +137,15 @@ export default class Field extends Node {
    */
    assert (value, path = [], options = { write: false }) {
 
-    if (typeof value == 'object' && value === null && this.type.isOptional == false) {
-      throw new AssertionError(`Get null, but non-null field at ${path.join('.')}.${this.name}`)
+    if (typeof value == 'object' && value === null) {
+      if (this.type.isOptional == false) {
+        throw new AssertionError(`Get null, but non-null field at ${path.join('.')}`)
+      }
+      return true
     }
 
     if (this.type.isList && Array.isArray(value) == false) {
-      throw new AssertionError(`Get not array, but list field at ${path.join('.')}.${this.name}`)
+      throw new AssertionError(`Get not array, but list field at ${path.join('.')}`)
     }
 
     if (typeof value == 'string') {

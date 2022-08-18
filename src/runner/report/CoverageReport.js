@@ -40,6 +40,7 @@ export default class CoverageReport {
 
     var passed = 0
     var endpoints = Object.values(this.endpoints)
+      .sort((a, b) => a.endpoint.path.localeCompare(b.endpoint.path))
 
     writer.group('Called')
     endpoints

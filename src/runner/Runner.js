@@ -415,6 +415,8 @@ export default class Runner {
       const request = {
         method: requestStep.method,
         url,
+        queryString,
+        endpointName: endpoint?.name,
         headers: this.getHeaders(),
         body: this.overrideKeys(this.interpolate(requestStep.mock()), overrides),
       }
