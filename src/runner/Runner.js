@@ -163,7 +163,7 @@ export default class Runner {
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
-    // Assert: skip shared scenario
+    // skip shared scenario
     if (scenario.isShared) return
 
     this.enterContext(new Context('scenario'))
@@ -258,11 +258,7 @@ export default class Runner {
    */
   command_get_var (name) {
     const value = this.getVar(name)
-    if (value instanceof Buffer) {
-      this.log('@get-var', name, '{binary}')
-    } else {
-      this.log('@get-var', name, JSON.stringify(value))
-    }
+    this.log('@get-var', name, JSON.stringify(value))
     return value
   }
 
@@ -510,10 +506,8 @@ export default class Runner {
   }
 
   /**
-   * `@log ...<messages>`
    * 
-   * Log messages command.
-   * If <messages> contains variable name likes `$variable-name`, it's resolved.
+   * @private
    * @param  {...string} messages 
    */
   log (...messages) {

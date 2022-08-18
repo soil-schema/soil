@@ -2,6 +2,8 @@ import test from 'ava'
 import Runner from '../../src/runner/Runner.js'
 import Context from '../../src/runner/Context.js'
 import ScenarioRuntimeError from '../../src/errors/ScenarioRuntimeError.js'
+import Root from '../../src/graph/Root.js'
+import Scenario from '../../src/graph/Scenario.js'
 
 test('set and resolve var', t => {
   const runner = new Runner()
@@ -224,4 +226,30 @@ test('@inspect records logs', t => {
   t.is(runner.logs.length, 0)
   runner.runCommand('inspect')
   t.assert(runner.logs.length > 0)
+})
+
+/**
+ * @use command
+ */
+
+ test('@use', async t => {
+  const root = new Root()
+  root.addChild(new Scenario({
+    name: 'Shared Scenario',
+    steps: [
+      { command: 'set', args: ['test', 'value'] },
+    ],
+  }))
+  const runner = new Runner({}, root)
+  runner.enterContext(new Context('test'))
+  await runner.runCommand('use', 'Shared Scenario')
+  t.is(runner.context.getVar('$test'), 'value')
+})
+
+ test('@use when scenario is not found (undefined root)', async t => {
+  const runner = new Runner()
+  runner.enterContext(new Context('test'))
+  await t.throwsAsync(async () => {
+    await runner.runCommand('use', 'Unknown Scenario')
+  }, { instanceOf: ScenarioRuntimeError })
 })
