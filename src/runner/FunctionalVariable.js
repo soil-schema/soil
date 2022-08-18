@@ -40,7 +40,7 @@ export default class FunctionalVariable {
       this._cache = this.calc()
       return this._cache
     } catch (error) {
-      throw new ScenarioRuntimeError(`functiona variable throws an error (${error.constructor.name}) at ${this.name}\n${error.message}`)
+      throw new ScenarioRuntimeError(`functional variable throws an error (${error.constructor.name}) at ${this.name}\n${error.message}`)
     }
   }
 

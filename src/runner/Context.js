@@ -34,7 +34,7 @@ export default class Context {
     this.defineFunctionalVar('env', () => process.env)
     this.defineFunctionalVar('rand', () => Math.floor(Math.random() * 10000))
     this.defineFunctionalVar('timestamp', () => new Date().valueOf())
-    this.defineFunctionalVar('password', () => createHash('sha256').update(this.name).update(Math.floor(Math.random()).toString()).digest('hex'))
+    this.defineFunctionalVar('password', () => createHash('sha256').update(this.name || '').update(Math.floor(Math.random()).toString()).digest('hex'))
 
     // [!] Hide memos
     Object.defineProperty(this, '_keys', { value: undefined, enumerable: false, writable: true })
