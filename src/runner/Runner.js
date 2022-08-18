@@ -12,6 +12,7 @@ import AssertionError from '../errors/AssertionError.js'
 import { httpRequest } from '../utils.js'
 import Root from '../graph/Root.js'
 import { createHash } from 'node:crypto'
+import Framework from './Framework.js'
 
 export default class Runner {
   /**
@@ -22,7 +23,12 @@ export default class Runner {
   /**
    * @type {Root|undefined}
    */
-  root
+   root
+
+  /**
+   * @type {string[]}
+   */
+  logs
 
   /**
    * 
@@ -31,6 +37,7 @@ export default class Runner {
    */
   constructor (config, root) {
     this.config = config
+    this.framework = new Framework(config)
     this.root = root
     this.logs = []
   }
@@ -156,7 +163,7 @@ export default class Runner {
    * @param {Scenario} scenario 
    */
   async runScenario (scenario) {
-    // Assert: skip shared scenario
+    // skip shared scenario
     if (scenario.isShared) return
 
     this.enterContext(new Context('scenario'))
@@ -213,7 +220,7 @@ export default class Runner {
   }
 
   /**
-   * `@set-var <name> <value>`
+   * `@set <name> <value>`
    * 
    * Set varible in root context.
    * variable literal is expanding in current context.
@@ -221,13 +228,13 @@ export default class Runner {
    * @param {string} name Variable Name
    * @param {string} value Variable Value
    */
-  command_set_var (name, value) {
-    this.log('@set-var', name, '=', this.interpolate(value))
+  command_set (name, value) {
+    this.log('@set', name, '=', this.interpolate(value))
     this.contextStack[0].setVar(name, this.interpolate(value))
   }
 
   /**
-   * `@set-local-var <name> <value>`
+   * `@set-local <name> <value>`
    * 
    * Set varible in current context.
    * variable literal is expanding in current context.
@@ -235,8 +242,8 @@ export default class Runner {
    * @param {string} name Variable Name
    * @param {string} value Variable Value
    */
-  command_set_local_var (name, value) {
-    this.log('@set-local-var', name, '=', value, 'in', this.contextPath)
+  command_set_local (name, value) {
+    this.log('@set-local', name, '=', value, 'in', this.contextPath)
     this.context.setVar(name, this.interpolate(value))
   }
 
@@ -251,11 +258,7 @@ export default class Runner {
    */
   command_get_var (name) {
     const value = this.getVar(name)
-    if (value instanceof Buffer) {
-      this.log('@get-var', name, '{binary}')
-    } else {
-      this.log('@get-var', name, JSON.stringify(value))
-    }
+    this.log('@get-var', name, JSON.stringify(value))
     return value
   }
 
@@ -289,7 +292,7 @@ export default class Runner {
     }
     const body = typeof target == 'string' ? target : JSON.stringify(target, null, 2)
     try {
-      await fs.writeFile(filepath, body)
+      await this.framework.writeFile(filepath, body)
     } catch (error) {
       this.log(' > error:', error.message)
     }
@@ -307,7 +310,7 @@ export default class Runner {
     this.log('@import-json', name, '<=', filepath)
     const settableName = name.replace(/^\$/, '')
     try {
-      const body = await fs.readFile(filepath, { encoding: this.config.core.encoding })
+      const body = await this.framework.readFile(filepath, { encoding: this.config.core.encoding })
       // @ts-ignore
       this.context.setVar(settableName, JSON.parse(body))
       this.log(' > Import as JSON file.')
@@ -317,14 +320,7 @@ export default class Runner {
       } else {
         this.log(' > Error:', error.message)
       }
-      const captureStack = this.contextStack.map(context => context)
-      throw new ScenarioRuntimeError(`Failed to run @import-json(${name}, ${filepath})`, () => {
-        console.log('=== Context ===')
-        captureStack.forEach(context => {
-          console.log('Context:', context.name)
-          console.log(context._space)
-        })
-      })
+      throw new ScenarioRuntimeError(`Failed to run @import-json(${name}, ${filepath})\nReason = ${error.message}`, this.spawnInspector())
     }
   }
 
@@ -510,10 +506,8 @@ export default class Runner {
   }
 
   /**
-   * `@log ...<messages>`
    * 
-   * Log messages command.
-   * If <messages> contains variable name likes `$variable-name`, it's resolved.
+   * @private
    * @param  {...string} messages 
    */
   log (...messages) {
