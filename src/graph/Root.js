@@ -33,7 +33,16 @@ export default class Root extends Node {
    * @returns {Endpoint|undefined}
    */
   findEndpoint (method, path) {
-    return this.endpoints.find(endpoint => endpoint.match(method, path))
+    var hit = undefined
+    var hitScore = 0
+    this.endpoints.forEach(endpoint => {
+      const score = endpoint.score(method, path)
+      if (score > hitScore) {
+        hit = endpoint
+        hitScore = score
+      }
+    })
+    return hit
   }
 
   /**

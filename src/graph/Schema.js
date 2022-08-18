@@ -105,7 +105,7 @@ export default class Schema {
   resolveEndpoint (reference, path = undefined) {
     if (typeof path == 'string') {
       const method = reference
-      return this.root.endpoints.find(endpoint => endpoint.match(method, path))
+      return this.root.endpoints.find(endpoint => endpoint.score(method, path))
     } else {
       const node = this.root.resolve(reference)
       if (node instanceof Endpoint) {

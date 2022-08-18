@@ -170,28 +170,41 @@ export default class Endpoint extends Model {
    * @param {string} method 
    * @param {string} path 
    */
-  match (method, path) {
-    if (this.method != method.toUpperCase()) { return false }
+  score (method, path) {
+    if (this.method != method.toUpperCase()) { return 0 }
     const actualPath = path.split('/').filter(part => part.length)
     const exceptPath = this.path.split('/').filter(part => part.length)
     const parameters = this.pathParameters
-    if (actualPath.length != exceptPath.length) { return false }
+    if (actualPath.length != exceptPath.length) { return 0 }
+
+    var score = 0
+
     for (const index in actualPath) {
       const actualElement = actualPath[index]
       const exceptElement = exceptPath[index]
       if (exceptElement[0] == '$' && actualElement[0] == '$') {
-        // Skip false check.
-      } else if (exceptElement[0] == '$') {
+        score += 2
+        continue
+      }
+      if (exceptElement[0] == '$') {
         const parameterName = exceptElement.replace(/^\$/, '')
         const parameter = parameters.find(parameter => parameter.name == parameterName)
         if (parameter instanceof Parameter && parameter.match(actualElement) == false) {
-          return false
+          return 0
         }
-      } else if (actualElement != exceptElement) {
-        return false
+        score += 1
+        continue
       }
+      if (actualElement[0] == '$') {
+        score += 1
+        continue
+      }
+      if (actualElement != exceptElement) {
+        return 0
+      }
+      score += 3
     }
-    return true
+    return score
   }
 
   /**

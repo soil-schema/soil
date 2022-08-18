@@ -47,17 +47,27 @@ test('get endpoint with path parameter and parameters schema', t => {
 })
 
 test('match static path', t => {
-  t.assert(new Endpoint({ path: '/users', method: 'get' }).match('get', '/users'))
+  t.assert(new Endpoint({ path: '/users', method: 'get' }).score('get', '/users'))
 })
 
 test('not match static path', t => {
-  t.not(new Endpoint({ path: '/users', method: 'get' }).match('get', '/authors'))
+  t.not(new Endpoint({ path: '/users', method: 'get' }).score('get', '/authors'))
 })
 
 test('match with integer path parameter', t => {
-  t.assert(new Endpoint({ path: '/users/$id', method: 'get', parameters: { id: 'Integer' } }).match('get', '/users/10'))
+  t.assert(new Endpoint({ path: '/users/$id', method: 'get', parameters: { id: 'Integer' } }).score('get', '/users/10'))
 })
 
 test('not match with integer path parameter', t => {
-  t.not(new Endpoint({ path: '/users/$id', method: 'get', parameters: { id: 'Integer' } }).match('get', '/users/code'))
+  t.not(new Endpoint({ path: '/users/$id', method: 'get', parameters: { id: 'Integer' } }).score('get', '/users/code'))
+})
+
+test('match static path is more than dynamic path', t => {
+  const staticEndpoint = new Endpoint({ path: '/users/search', method: 'get' })
+  const dynamicEndpoint = new Endpoint({ path: '/users/$id', method: 'get', parameters: { id: 'Integer' } })
+
+  const staticScore = staticEndpoint.score('get', '/users/search')
+  const dynamicScore = dynamicEndpoint.score('get', '/users/10')
+
+  t.assert(staticScore > dynamicScore)
 })
