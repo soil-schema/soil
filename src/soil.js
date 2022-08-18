@@ -16,6 +16,7 @@ import Loader from './parser/Loader.js'
 import Runner from './runner/Runner.js'
 import ScenarioRuntimeError from './errors/ScenarioRuntimeError.js'
 import { pathToFileURL } from 'node:url'
+import Report from './runner/report/Report.js'
 
 const commands = {
   build: async () => {
@@ -61,14 +62,19 @@ const commands = {
 
     const schema = new Schema(config)
     const loader = new Loader(config)
-  
+    const report = new Report()
+
     try {
       await loader.prepare()
       schema.parse(await loader.load())
       schema.debug()
+
+      report.capture(schema)
+
       for (const scenario of schema.scenarios) {
         if (scenario.isShared) continue
         const runner = new Runner(config, schema.root)
+        runner.registerReport(report)
         if (filters?.length > 0 && filters.includes(scenario.uri) == false) {
           continue // Skip
         }
@@ -89,6 +95,8 @@ const commands = {
       }
     } catch (error) {
       console.log(chalk.red('☄️ Crash!'), error)
+    } finally {
+      report.export(console)
     }
   },
 }

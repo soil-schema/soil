@@ -255,4 +255,17 @@ export default class Endpoint extends Model {
 
     return query.length > 0 ? `?${query.join('&')}` : ''
   }
+
+  // For Reporting
+
+  /**
+   * @returns {string}
+   */
+  get reportSignature () {
+    var signature = `${this.method} ${this.path}`
+    if (this.schema.name) {
+      signature += ` - ${this.entityPath}`
+    }
+    return signature
+  }
 }

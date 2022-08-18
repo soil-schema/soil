@@ -13,6 +13,7 @@ import { httpRequest } from '../utils.js'
 import Root from '../graph/Root.js'
 import { createHash } from 'node:crypto'
 import Framework from './Framework.js'
+import Report from './report/Report.js'
 
 export default class Runner {
   /**
@@ -23,7 +24,12 @@ export default class Runner {
   /**
    * @type {Root|undefined}
    */
-   root
+  root
+
+  /**
+   * @type {Report|undefined}
+   */
+  report
 
   /**
    * @type {string[]}
@@ -66,6 +72,14 @@ export default class Runner {
   get context () {
     if (this.contextStack.length == 0) throw new ScenarioRuntimeError(`Scenario runner use context, but stacked context is not found.`)
     return this.contextStack[this.contextStack.length - 1]
+  }
+
+  /**
+   * 
+   * @param {Report} report 
+   */
+  registerReport (report) {
+    this.report = report
   }
 
   /**
@@ -469,6 +483,8 @@ export default class Runner {
             throw new ScenarioRuntimeError(`Response assertion failure: ${error.message}`, this.spawnInspector())
           }
         }
+
+        this.report?.coverage.check(endpoint)
 
         for (const step of requestStep.receiveSteps) {
           await this.runCommand(step.commandName, ...step.args)

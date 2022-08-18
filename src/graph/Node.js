@@ -1,7 +1,11 @@
 // @ts-check
 
+import { createHash } from 'node:crypto'
+
 import chalk from 'chalk'
 import DuplicatedNameError from '../errors/DuplicatedNameError.js'
+
+export const generateUid = () => createHash('sha256').update(new Date().toString()).update(Math.random().toString()).digest('hex')
 
 export default class Node {
 
@@ -10,6 +14,12 @@ export default class Node {
    * @readonly
    */
   id
+
+  /**
+   * @type {string}
+   * @readonly
+   */
+  uid
 
   /**
    * @type {string}
@@ -46,6 +56,7 @@ export default class Node {
    * @param {object} schema 
    */
   constructor(name, schema) {
+    Object.defineProperty(this, 'uid', { value: generateUid(), enumerable: true })
     Object.defineProperty(this, 'name', { value: name, enumerable: true })
     Object.defineProperty(this, 'schema', { value: Object.freeze(schema) })
   }
@@ -68,6 +79,15 @@ export default class Node {
 
   get uri () {
     return this.schema.uri || this._parent?.uri
+  }
+
+  get entityPath () {
+    const parentPath = this._parent?.entityPath
+    if (parentPath) {
+      return `${parentPath}.${this.name}`
+    } else {
+      return this.name
+    }
   }
 
   /**
