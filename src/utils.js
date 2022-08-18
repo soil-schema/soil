@@ -160,6 +160,9 @@ export const httpRequest = function (request) {
           reject(error)
         })
         req.setHeader('Content-Length', stat.size)
+      } else if (typeof body == 'string') {
+        req.setHeader('Content-Type', 'application/json; charset=utf-8')
+        req.end(body)
       } else if (typeof body == 'object') {
         const json = JSON.stringify(body)
         req.setHeader('Content-Type', 'application/json; charset=utf-8')

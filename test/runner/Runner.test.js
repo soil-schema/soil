@@ -71,3 +71,31 @@ test('get headers from context stack', t => {
   t.is(runner.getHeaders()['X-Api-Version'], '3.0')
   t.is(runner.getHeaders()['X-Api-Key'], 'root-api-key')
 })
+
+test('overrideKeys with object', t => {
+  const runner = new Runner()
+  const result = runner.overrideKeys({ user: { name: 'Old', age: 20, developer: false }}, { name: 'New', age: 30, developer: true })
+  t.is(result.user.name, 'New')
+  t.is(result.user.age, 30)
+  t.is(result.user.developer, true)
+})
+
+test('overrideKeys with boolean source', t => {
+  const runner = new Runner()
+  const result = runner.overrideKeys({ flags: { left: true, center: true, right: true } }, { left: 'false', center: 0, right: '0' })
+  t.is(result.flags.left, false)
+  t.is(result.flags.center, false)
+  t.is(result.flags.right, false)
+})
+
+test('overrideKeys with array', t => {
+  const runner = new Runner()
+  const result = runner.overrideKeys({ items: [{ body: 'String' }] }, {})
+  t.assert(Array.isArray(result.items))
+})
+
+test('overrideKeys with nested array', t => {
+  const runner = new Runner()
+  const result = runner.overrideKeys({ event: { name: 'Event', items: [{ body: 'String' }] } }, {})
+  t.assert(Array.isArray(result.event.items))
+})

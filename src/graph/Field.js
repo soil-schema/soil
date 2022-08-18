@@ -141,6 +141,10 @@ export default class Field extends Node {
       throw new AssertionError(`Get null, but non-null field at ${path.join('.')}`)
     }
 
+    if (this.type.isList && Array.isArray(value) == false) {
+      throw new AssertionError(`Get not array, but list field at ${path.join('.')}`)
+    }
+
     if (typeof value == 'string') {
       if (this.type.referenceName == 'String') {
         return true
@@ -186,7 +190,11 @@ export default class Field extends Node {
       const reference = this.type.reference
 
       if (reference instanceof Entity) {
-        return reference.assert(value, path, options)
+        if (this.type.isList) {
+          value.forEach(item => reference.assert(item, path, options))
+        } else {
+          return reference.assert(value, path, options)
+        }
       }
     }
 
