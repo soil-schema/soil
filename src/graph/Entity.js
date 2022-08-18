@@ -197,7 +197,7 @@ export default class Entity extends Node {
    * @param {{ write: boolean }} options
    * @returns {boolean}
    */
-   assert (value, path = [], options = { write: false }) {
+  assert (value, path = [], options = { write: false }) {
     if (typeof value != 'object') {
       throw new AssertionError(`Expect ${this.name}, but actual value is not object (${typeof value}) at ${path.join('.')}`)
     }
