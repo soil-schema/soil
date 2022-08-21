@@ -111,11 +111,11 @@ export const configTemplate = new Config()
   .anyStringTable('mime')
 )
 
-export const loadConfig = async function () {
+export const loadConfig = async function (configFile) {
   try {
-    return configTemplate.build((await import(path.join(process.cwd(), path.basename(soil.options.config)))).default)
+    return configTemplate.build((await import(path.join(process.cwd(), path.basename(configFile)))).default)
   } catch (error) {
-    if (soil.options.verbose) console.log(error)
+    console.log(error)
     return configTemplate.build({})
   }
 }

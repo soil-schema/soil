@@ -130,7 +130,7 @@ const convertType = (type) => {
 
 const pretty = (code, config) => {
   const lines = code.split('\n')
-  const { indent } = config.swift
+  const { indent = '    ' } = config.swift
   var result = []
   var indentLevel = 0
   var commentBuffer = []

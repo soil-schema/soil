@@ -1,0 +1,119 @@
+{
+  "definitions": {
+    "Entiry": {
+      "description": "soil is loading entity and scenario file from entry point(s).",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
+    },
+    "Generate": {
+      "description": "Generating codes types.",
+      "type": "string",
+      "enum": ["swift", "kotlin"]
+    },
+    "Output": {
+      "description": "Output base directory path.",
+      "type": "string",
+      "minLength": 1
+    },
+    "Swift": {
+      "description": "Configuration for swift code generation.",
+      "type": "object",
+      "properties": {
+        "output": {
+          "$ref": "#/definitions/Output"
+        },
+        "use": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SwiftUse"
+          }
+        },
+        "protocols": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "nullable": true
+            },
+            "writer": {
+              "type": "string",
+              "nullable": true
+            },
+            "endpoint": {
+              "type": "string",
+              "nullable": true
+            },
+            "request": {
+              "type": "string",
+              "nullable": true
+            },
+            "response": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "SwiftUse": {
+      "description": "Using packages for generated swift code.",
+      "examples": ["soil-swift"],
+      "type": "string",
+      "minLength": 1
+    },
+    "Kotlin": {
+      "description": "Configuration for kotlin code generation.",
+      "type": "object",
+      "properties": {
+        "output": {
+          "$ref": "#/definitions/Output"
+        },
+        "serialization": {
+          "$ref": "#/definitions/KotlinSerialization"
+        }
+      }
+    },
+    "KotlinSerialization": {
+      "description": "Kotlin generation code uses kotlin-serialization",
+      "type": "object",
+      "properties": {
+        "format": {
+          "description": "kotlin-serialization string format (default: StringFormat)",
+          "type": "string",
+          "enum": ["JsonFormat", "StringFormat"]
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "entry": {
+      "$ref": "#/definitions/Entiry"
+    },
+    "generate": {
+      "$ref": "#/definitions/Generate"
+    },
+    "output": {
+      "$ref": "#/definitions/Output"
+    },
+    "swift": {
+      "$ref": "#/definitions/Swift"
+    },
+    "kotlin": {
+      "$ref": "#/definitions/Kotlin"
+    }
+  },
+  "required": ["entry", "swift", "kotlin"]
+}
