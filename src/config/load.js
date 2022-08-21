@@ -37,6 +37,7 @@ export const applyDefaultApi = (config) => {
     ...config,
     headers: config.headers || {},
     booleanQuery: config.booleanQuery || 'set-only-true',
+    mime: config.mime || {},
   }
 }
 
@@ -77,15 +78,23 @@ export const applyDefaultKotlin = (config) => {
   }
 }
 
+export const importConfig = async (filepath) => {
+  try {
+    return (await import(path.join(process.cwd(), filepath))).default
+  } catch (error) {
+    return {}
+  }
+}
+
 /**
  * 
  * @param {{ config: string|undefined, encoding: string|undefined }} options
  */
 export const loadConfig = async (options) => {
-  const configFile = options.config
+  const configFile = options.config || 'soil.config.js'
   const schemaFile = path.join(path.dirname(fileURLToPath(import.meta.url)), 'schema.json')
 
-  const userConfig = (await import(path.join(process.cwd(), configFile))).default
+  const userConfig = importConfig(configFile)
 
   const schema = JSON.parse(await fs.readFile(schemaFile, { encoding: 'utf-8' }))
   const config = applyDefaults(userConfig)

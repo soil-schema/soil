@@ -113,13 +113,4 @@ export default class Schema {
       }
     }
   }
-
-  debug () {
-    return
-    if (!soil.options.verbose) { return }
-    console.log(chalk.yellow('[DEBUG] print loaded schema'))
-    this.entities.forEach(entity => {
-      entity.inspect()
-    })
-  }
 }

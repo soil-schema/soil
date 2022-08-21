@@ -74,7 +74,6 @@ program
     try {
       await loader.prepare()
       schema.parse(await loader.load())
-      schema.debug()
 
       report.capture(schema)
 
