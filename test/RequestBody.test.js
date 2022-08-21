@@ -2,11 +2,11 @@ import test from 'ava'
 import RequestBody from '../src/graph/RequestBody.js'
 import UnsupportedKeywordError from '../src/errors/UnsupportedKeywordError.js'
 
-import { configTemplate } from '../src/utils.js'
+import { applyDefaults } from '../src/config/load.js'
 import contextUtilities from '../src/context.js'
 
 const context = {
-  config: configTemplate.build({}),
+  config: applyDefaults({}),
   ...contextUtilities,
 }
 
@@ -22,7 +22,7 @@ test('[Swift] with configured mime-type', t => {
   const request = new RequestBody({ mime: 'mime:video/mp2t' })
   const config = {
     ...context.config,
-    swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } },
+    api: { ...context.config.api, mime: { 'video/mp2t': 'Video' } },
   }
   Object.defineProperty(request, 'config', { value: config })
   t.is(request.swift_Struct(context), 'public typealias RequestBody = Video')

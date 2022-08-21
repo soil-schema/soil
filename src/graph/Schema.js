@@ -56,7 +56,7 @@ export default class Schema {
   }
 
   async exportSwiftCode() {
-    const swiftExportDir = this.config.core.exportDir.swift || this.config.core.exportDir.default
+    const swiftExportDir = this.config.swift.output || this.config.output
 
     if (this.config.swift == 'soil-swift') {
       this.config.swift = { use: 'soil-swift' }
@@ -80,7 +80,7 @@ export default class Schema {
   }
 
   async exportKotlinCode() {
-    const kotlinExportDir = this.config.core.exportDir.kotlin || this.config.core.exportDir.default
+    const kotlinExportDir = this.config.kotlin.output || this.config.output
 
     await fs.mkdir(kotlinExportDir, { recursive: true })
     this.entities.forEach(async (entity) => {
@@ -112,13 +112,5 @@ export default class Schema {
         return node
       }
     }
-  }
-
-  debug () {
-    if (!soil.options.verbose) { return }
-    console.log(chalk.yellow('[DEBUG] print loaded schema'))
-    this.entities.forEach(entity => {
-      entity.inspect()
-    })
   }
 }

@@ -1,62 +1,69 @@
 #!/usr/bin/env node
 
-import path from 'node:path'
 import util from 'node:util'
-import watch from 'node-watch'
 import chalk from 'chalk'
 
 import { program } from 'commander'
 
 import './swift.js'
 
-import { loadConfig } from './utils.js'
+import { loadConfig } from './config/load.js'
 
 import Schema from './graph/Schema.js'
 import Loader from './parser/Loader.js'
 import Runner from './runner/Runner.js'
 import ScenarioRuntimeError from './errors/ScenarioRuntimeError.js'
-import { pathToFileURL } from 'node:url'
 import Report from './runner/report/Report.js'
 
-const commands = {
-  build: async () => {
-    const config = await loadConfig()
+program
+  .name('soil')
+  .description('CLI to soil-schema')
+  .version(process.env.npm_package_version)
 
-    if (soil.options.debug) {
+program
+  .command('generate')
+  .summary('Generate codes')
+  .description('Generate codes from soil schema under entry directories.')
+  .requiredOption('-g --generators <type...>', 'must have generating code types')
+  .option('-c, --config <file>', 'config file path', 'soil.config.js')
+  .option('--verbose')
+  .option('--dump')
+  .option('--debug')
+  .action(async (options, args) => {
+    const config = await loadConfig(options)
+
+    if (options.debug) {
       console.log(util.inspect(config, { depth: null, colors: true }))
     }
 
     const schema = new Schema(config)
     const loader = new Loader(config)
-  
+
     try {
       await loader.prepare()
       schema.parse(await loader.load())
-      await schema.exportSwiftCode()
-      await schema.exportKotlinCode()
+      if (options.generators.includes('swift')) {
+        await schema.exportSwiftCode()
+      }
+      if (options.generators.includes('kotlin')) {
+        await schema.exportKotlinCode()
+      }
       console.log(chalk.green('🍻 Done!'))
     } catch (error) {
       console.log(chalk.red('☄️ Crash!'), error)
     }
-  },
-  watch: async () => {
-    console.log(chalk.gray('watch', process.cwd()))
-    watch(process.cwd(), { recursive: true }, async (evt, name) => {
-      if (path.extname(name) == '.soil') {
-        console.log(chalk.gray(`\ndetect change: ${name}\n`))
-        try {
-          await commands.build()
-        } catch (error) {
-          console.error(error)
-        }
-      }
-    })
-  },
-  replay: async ({ scenarios = undefined }) => {
-    const config = await loadConfig()
-    const filters = scenarios?.map(uri => pathToFileURL(uri).toString())
+  })
 
-    if (soil.options.verbose) {
+program
+  .command('replay')
+  .option('-c, --config <file>', 'config file path', 'soil.config.js')
+  .option('--verbose')
+  .option('--debug')
+  .action(async (options, args) => {
+    const config = await loadConfig(options)
+    const filters = [] // options.scenarios?.map(uri => pathToFileURL(uri).toString())
+
+    if (options.verbose) {
       console.log(util.inspect(config, { depth: null, colors: true }))
     }
 
@@ -67,7 +74,6 @@ const commands = {
     try {
       await loader.prepare()
       schema.parse(await loader.load())
-      schema.debug()
 
       report.capture(schema)
 
@@ -98,37 +104,12 @@ const commands = {
     } finally {
       report.export(console)
     }
-  },
-}
+  })
 
-async function main() {
-  program
-    .argument('[command]', 'subcommand', 'build')
-    .option('--working-dir <dir>')
-    .option('-c, --config <file>', 'config file path', 'soil.config.js')
-    .option('--with-validate')
-    .option('--verbose')
-    .option('--dump')
-    .option('--scenarios <scenarios...>')
-    .action(async (command, options, args) => {
+program
+  .command('config')
+  .action(async (options, args) => {
+    console.log(JSON.stringify(await loadConfig(options.config), null, 2))
+  })
 
-      if (options.workingDir) {
-        process.chdir(options.workingDir)
-      } else {
-        process.chdir(path.dirname(options.config))
-      }
-
-      global.soil = { options }
-
-      if (typeof commands[command] == 'function') {
-        await commands[command](options)
-      } else {
-        console.error('soil:', command, 'is not a soil command.')
-        process.exit(1)
-      }
-    })
-
-  await program.parseAsync(process.argv)
-}
-
-main()
+program.parse()

@@ -20,14 +20,14 @@ export default class Loader {
 
   async load () {
     console.time('build time')
-    await this.loadDirectory(path.join(process.cwd(), this.config.core.workingDir))
+    await this.loadDirectory(path.join(process.cwd(), this.config.entry))
     console.timeEnd('build time')
     return this.result
   }
 
   async loadDirectory (dirpath) {
 
-    const { encoding } = this.config.core
+    const { encoding } = this.config
 
     await Promise.all((await fs.readdir(dirpath))
       .filter(file => file != 'node_modules')
@@ -65,9 +65,9 @@ export default class Loader {
             .map(makeSchema)
             .forEach(entity => {
               this.result[key].push(entity)
-              if (soil.options.dump) {
-                this.dumpSchema(entity)
-              }
+              // if (soil.options.dump) {
+              //   this.dumpSchema(entity)
+              // }
             })
         })
       }))
@@ -85,7 +85,7 @@ export default class Loader {
 
   async fetch (filepath, block) {
 
-    const { encoding } = this.config.core
+    const { encoding } = this.config
 
     const stat = await fs.stat(filepath)
     const hash = createHash('sha256')

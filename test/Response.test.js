@@ -3,11 +3,11 @@ import Response from '../src/graph/Response.js'
 import Entity from '../src/graph/Entity.js'
 import UnsupportedKeywordError from '../src/errors/UnsupportedKeywordError.js'
 
-import { configTemplate } from '../src/utils.js'
+import { applyDefaults } from '../src/config/load.js'
 import contextUtilities from '../src/context.js'
 
 const context = {
-  config: configTemplate.build({}),
+  config: applyDefaults({}),
   ...contextUtilities,
 }
 
@@ -55,7 +55,7 @@ test('[Swift] with configured mime-type', t => {
   const response = new Response('mime:video/mp2t')
   const config = {
     ...context.config,
-    swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } },
+    api: { ...context.config.api, mime: { 'video/mp2t': 'Video' } },
   }
   Object.defineProperty(response, 'config', { value: config })
   t.is(response.swift_Struct({ ...context, config: { ...context.config, swift: { ...context.config.swift, mime: { 'video/mp2t': 'Video' } } } }), 'public typealias Response = Video')

@@ -2,12 +2,12 @@ import test from 'ava'
 import swift from '../src/swift.js'
 import Entity from '../src/graph/Entity.js'
 
-import { configTemplate } from '../src/utils.js'
+import { applyDefaults } from '../src/config/load.js'
 import contextUtilities from '../src/context.js'
 import Node from '../src/graph/Node.js'
 
 const context = {
-  config: configTemplate.build({}),
+  config: applyDefaults({}),
   ...contextUtilities,
 }
 

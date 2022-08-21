@@ -9,7 +9,8 @@
     "soil": "src/soil.js"
   },
   "dependencies": {
-    "chalk": "^5.0.1",
+    "ajv": "^8.0.0",
+    "chalk": "^5.0.0",
     "commander": "^9.4.0",
     "node-watch": "^0.7.3",
     "pluralize": "^8.0.0"

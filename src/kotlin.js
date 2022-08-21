@@ -106,10 +106,10 @@ Node.prototype.kt_DocComment = function (config) {
 }
 
 Node.prototype.kt_Formatter = function (config) {
-  const { use, serializable } = config
+  const { use, serialization } = config
 
-  if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1 && serializable.format) {
-    return serializable.format
+  if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1 && serialization.format) {
+    return serialization.format
   }
 
   return 'SoilFormatter /* Unknown formatter, check soil.config.js */'
@@ -164,7 +164,7 @@ Entity.prototype.kt_DataClass = function (config) {
 }
 
 Entity.prototype.kt_Annotation = function (config) {
-  const { use, serializable } = config
+  const { use, serialization } = config
 
   let annotations = []
 
@@ -200,7 +200,7 @@ Field.prototype.kt_DataClassParameter = function (config) {
 }
 
 Field.prototype.kt_Annotation = function (config) {
-  const { use, serializable } = config
+  const { use } = config
 
   let annotations = []
 
@@ -333,14 +333,14 @@ Endpoint.prototype.kt_QueryMembers = function () {
 }
 
 Endpoint.prototype.kt_FunGetBody = function (config) {
-  const { use, serializable } = config
+  const { use, serialization } = config
 
   let annotations = []
 
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
     // [!] StringFormat is not stable, should set @ExperimentalSerializationApi annotation.
     // @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
-    if (serializable.format == 'StringFormat') {
+    if (serialization.format == 'StringFormat') {
       annotations.push('@ExperimentalSerializationApi')
     }
 
@@ -359,14 +359,14 @@ Endpoint.prototype.kt_FunGetBody = function (config) {
 }
 
 Endpoint.prototype.kt_FunDecode = function (config) {
-  const { use, serializable } = config
+  const { use, serialization } = config
 
   let annotations = []
 
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
     // [!] StringFormat is not stable, thereforeinsert @ExperimentalSerializationApi annotation.
     // @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
-    if (serializable.format == 'StringFormat') {
+    if (serialization.format == 'StringFormat') {
       annotations.push('@ExperimentalSerializationApi')
     }
   

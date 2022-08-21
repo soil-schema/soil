@@ -130,7 +130,7 @@ const convertType = (type) => {
 
 const pretty = (code, config) => {
   const lines = code.split('\n')
-  const { indent } = config.swift
+  const { indent = '    ' } = config.swift
   var result = []
   var indentLevel = 0
   var commentBuffer = []
@@ -497,7 +497,7 @@ Parameter.prototype.swift_StringifyToken = function () {
 
 RequestBody.prototype.swift_InitializeParameter = function (context) {
   if (typeof this.schema.mime == 'string') {
-    const { mime } = this.config.swift
+    const { mime } = this.config.api
     const mimeTypeValue = this.schema.mime.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias RequestBody = ${mime[mimeTypeValue]}`
@@ -521,7 +521,7 @@ RequestBody.prototype.swift_InitializeCode = function () {
 
 RequestBody.prototype.swift_Struct = function (context) {
   if (typeof this.schema.mime == 'string') {
-    const { mime } = this.config.swift
+    const { mime } = this.config.api
     const mimeTypeValue = this.schema.mime.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias RequestBody = ${mime[mimeTypeValue]}`
@@ -554,7 +554,7 @@ Response.prototype.swift_Struct = function (context) {
   if (this.schema == null) { return 'public typealias Response = Void' }
 
   if (typeof this.schema == 'string') {
-    const { mime } = this.config.swift
+    const { mime } = this.config.api
     const mimeTypeValue = this.schema.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias Response = ${mime[mimeTypeValue]}`
