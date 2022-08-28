@@ -71,6 +71,7 @@ export const tokenize = function (body) {
     if (skippedBuffer.length > 0 && /^\s+$/.test(skippedBuffer) == false) {
       const token = new Token({
         uri: this.uri,
+        offset,
         ...offsetToPosition(offset - skippedBuffer.trimStart().length, lineMap),
         value: skippedBuffer.trim(),
         semantic: 'string.unquoted'
@@ -88,7 +89,7 @@ export const tokenize = function (body) {
     while (body.substring(offset).startsWith(value) == false) offset += 1
 
     // Build and push the token
-    const token = new Token({ uri: this.uri, ...offsetToPosition(offset, lineMap), value: value.trimEnd(), semantic })
+    const token = new Token({ uri: this.uri, offset, ...offsetToPosition(offset, lineMap), value: value.trimEnd(), semantic })
     tokens.push(token)
 
     // Add offset

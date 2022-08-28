@@ -15,6 +15,11 @@ export default class Token {
   column
 
   /**
+   * @type {number}
+   */
+  offset
+
+  /**
    * @type {string}
    */
   semantic
@@ -36,11 +41,12 @@ export default class Token {
 
   /**
    * 
-   * @param {{ uri: string, line: number, column: number, value: string, semantic: string|undefined }} 
+   * @param {{ uri: string, line: number, column: number, offset: number, value: string, semantic: string|undefined }} 
    */
-  constructor ({ uri, line, column, value, semantic = undefined }) {
+  constructor ({ uri, line, column, offset, value, semantic = undefined }) {
     Object.defineProperty(this, 'uri', { value: uri })
     Object.defineProperty(this, 'line', { value: line })
+    Object.defineProperty(this, 'offset', { value: offset })
     Object.defineProperty(this, 'column', { value: column })
     Object.defineProperty(this, 'value', { value: value })
     Object.defineProperty(this, 'semantic', { value: semantic, writable: true })
