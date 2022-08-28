@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import Ajv from 'ajv'
+import addFormats from "ajv-formats"
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import chalk from 'chalk'
@@ -26,6 +27,8 @@ export const applyDefaults = (config) => {
   return {
     ...config,
     entry: config.entry || '.',
+    output: config.output || './dist',
+    encoding: config.encoding || 'utf-8',
     api: applyDefaultApi(config.api || {}),
     swift: applyDefaultSwift(config.swift || {}),
     kotlin: applyDefaultKotlin(config.kotlin || {}),
@@ -94,13 +97,17 @@ export const loadConfig = async (options) => {
   const configFile = options.config || 'soil.config.js'
   const schemaFile = path.join(path.dirname(fileURLToPath(import.meta.url)), 'schema.json')
 
-  const userConfig = importConfig(configFile)
+  const userConfig = await importConfig(configFile)
 
   const schema = JSON.parse(await fs.readFile(schemaFile, { encoding: 'utf-8' }))
   const config = applyDefaults(userConfig)
 
   try {
     const ajv = new Ajv()
+
+    // [!] https://ajv.js.org/guide/formats.html#string-formats
+    addFormats(ajv)
+
     if (!ajv.validate(schema, config)) {
       throw new ConfigValidationError(configFile, ajv.errors)
     }
