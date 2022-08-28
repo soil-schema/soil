@@ -51,9 +51,18 @@ export default class CoverageReport {
       })
     writer.groupEnd()
 
+    writer.group('Ignored')
+    endpoints
+      .filter(report => report.endpoint.ignoreCoverage)
+      .forEach(report => {
+        writer.log(chalk.yellow('*'), chalk.gray(report.endpoint.reportSignature))
+        passed += 1
+      })
+    writer.groupEnd()
+
     writer.group('Not called or failed')
     endpoints
-      .filter(report => !report.count)
+      .filter(report => !(report.count || report.endpoint.ignoreCoverage))
       .forEach(report => {
         writer.log(chalk.red('✖'), report.endpoint.reportSignature)
         writer.log(' ', chalk.gray(report.endpoint.uri))

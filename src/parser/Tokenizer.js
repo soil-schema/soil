@@ -40,6 +40,7 @@ const QUERY_PATTERN = /^(?:(?<annotation>required)\s+)?query\s+(?<name>[a-z][\w]
 const INNER_TYPE_PATTERN = /^inner\s+(?<name>[A-Z][a-zA-Z0-9]+)\b/
 const ENDPOINT_PATTERN = /^endpoint\s+(?<method>GET|POST|PUT|PATCH|DELETE|HEAD)\s+(?<path>(?:\/\$?(?:[^\s]+))+)/
 const PROPERTY_PATTERN = /^(?<name>name|default|depend-on)\s+(?<value>.+)(\n|\-\s|#\s|$)/
+const FLAG_PATTERN = /^(?<name>ignore-coverage)(\n|\-\s|$)/
 const SCENARIO_PATTERN = /^(?:(?<annotation>shared)\s+)?scenario\s+(?<name>[\w\s]+\w)\s+/
 const DIRECTIVE_PATTERN = /^(entity|field|schema|inner|endpoint|query|parameter|request|success|scenario|setup|receive|default|name|example|enum)\b/
 const REQUEST_HTTP_SHORTHAND_PATTERN = /^(?<method>GET|POST|PUT|PATCH|DELETE|HEAD)\s+(?<path>(?:\/\$?(?:[^\s]+))+)/
@@ -253,6 +254,10 @@ export const tokenize = function (body) {
     test(PROPERTY_PATTERN, (match) => {
       pushToken(match.groups?.name, `keyword.property.${match.groups?.name}`)
       pushToken(match.groups?.value, `string.property.${match.groups?.name}`)
+    })
+
+    test(FLAG_PATTERN, (match) => {
+      pushToken(match.groups?.name, `keyword.flag.${match.groups?.name}`)
     })
 
     test(DIRECTIVE_PATTERN, (match) => {
