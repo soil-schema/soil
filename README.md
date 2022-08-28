@@ -201,22 +201,32 @@ soil can be configured for your REST Api in the `api` section of `soil.config.js
 
 |key|description|default
 |:---|:---|:---
-|api.base|Base URL for scenario runner. e.g. `https://api.example.com/v1`. Overridable by `SOIL_BASE_URL` environment variable.|`undefined`
+|api.base|Base URL for scenario runner. e.g. `https://api.example.com/v1`. Required for `replay` sub-command.|`undefined`
 |api.booleanQuery|`Boolean` type parsing and stringify strategy.|`'set-only-true'`
 |api.headers|Custom headers collection used by scenario runner.|`{}`
 
 # Code Generation
 
-You run soil command in your cli, export swift/kotlin code.
+You run soil generate command in your cli with target name, export code.
 
 ```
-$ npx soil build
+$ npx soil generate -g [target]
 ```
+
+Supported targets are:
+
+- Swift (`swift`)
+- Kotlin (`kotlin`)
+- ~~OpenAPISchema~~ WIP (`openapi`) 
 
 ## Swift
 
 soil supports Swift code generation.
 Generated code has no dependencies, use your api request / response client class.
+
+```
+$ npx soil generate -g swift
+```
 
 ### with SoilSwift package
 
@@ -225,7 +235,7 @@ Instead of writing your own code, you can use [soil-swift](https://github.com/ni
 ```js soil.config.js
 module.exports = {
   swift: {
-    use: 'soil-swift',
+    use: ['soil-swift'],
   },
 }
 ```
@@ -233,3 +243,7 @@ module.exports = {
 ## Kotlin
 
 soil supports Kotlin code generation.
+
+```
+$ npx soil generate -g kotlin
+```

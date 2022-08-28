@@ -26,6 +26,22 @@
       "type": "string",
       "minLength": 1
     },
+    "Api": {
+      "description": "Target REST api configuration.",
+      "type": "object",
+      "properties": {
+        "base": {
+          "description": "URL Base (used by scenario runner).",
+          "type": "string",
+          "format": "uri"
+        },
+        "booleanQuery": {
+          "description": "Handling strategy of boolean url query parameter.",
+          "type": "string",
+          "enum": ["not-accepted", "numeric", "stringify", "set-only-true", "only-key"]
+        }
+      }
+    },
     "Swift": {
       "description": "Configuration for swift code generation.",
       "type": "object",
@@ -108,6 +124,9 @@
     "output": {
       "$ref": "#/definitions/Output"
     },
+    "api": {
+      "$ref": "#/definitions/Api"
+    },
     "swift": {
       "$ref": "#/definitions/Swift"
     },
@@ -115,5 +134,5 @@
       "$ref": "#/definitions/Kotlin"
     }
   },
-  "required": ["entry", "swift", "kotlin"]
+  "required": ["entry"]
 }
