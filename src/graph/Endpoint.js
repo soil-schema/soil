@@ -117,6 +117,13 @@ export default class Endpoint extends Model {
   }
 
   /**
+   * @type {boolean}
+   */
+  get ignoreCoverage () {
+    return !!this.schema['ignore-coverage']
+  }
+
+  /**
    * @returns {object[]}
    */
   captureSubschemas () {
