@@ -1,4 +1,3 @@
-import test from "ava";
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -32,7 +31,10 @@ const promises = files.map(async file => {
     while (true) {
       i += 1
       current = result.children[i]
-      if (current == undefined || current.name == 'h2') break
+      if (current == undefined || current.name == 'h2') {
+        i -= 1 // Cancel `i++` on for loop.
+        break
+      }
       if (current.name == 'pre') {
         current.children.forEach(element => {
           if (element.name != 'code') return
@@ -48,39 +50,7 @@ const promises = files.map(async file => {
   return blocks
 })
 
-const blocks = (await Promise.all(promises))
+export const blocks = (await Promise.all(promises))
   .reduce((result, blocks) => Object.assign(result, blocks), {})
 
-const config = await loadConfig({ encoding: 'utf-8' })
-
-Object.values(blocks).forEach(block => {
-  test(`${block.name} in ${block.uri}`, async t => {
-
-    const schema = new Schema(config)
-    const result = new Parser().parse(new Tokenizer(block.uri, block.soil).tokenize())
-
-    schema.parse(result)
-
-    t.assert(schema.entities.length == 1, 'Single recipe only supports single entity directive.')
-
-    const entity = schema.entities[0]
-
-    const swift = await entity.renderSwiftFile({ config, entities: schema.entities })
-
-    if ('swift' in block) {
-      t.is(block.swift.trim(), swift.trim())
-    } else {
-      t.fail(`Swift expectation not found:\r\n${swift}`)
-    }
-
-    const mock = JSON.stringify(entity.mock(), null, 2)
-
-    if ('mock' in block) {
-      t.is(block.mock.trim(), mock.trim())
-    } else {
-      t.fail(`JSON mock expectation not found:\r\n${mock}`)
-    }
-
-    t.pass()
-  })
-})
+export const config = await loadConfig({ encoding: 'utf-8' })

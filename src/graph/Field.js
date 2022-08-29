@@ -49,9 +49,17 @@ export default class Field extends Node {
     return this.schema.annotation == 'reference'
   }
 
+  /**
+   * @type {string|undefined}
+   */
   get referencePath () {
+    if (this.type.isSelfDefinedType) {
+      // @ts-ignore
+      return this.name.classify()
+    }
     if (this.type.isReference) {
-      return this.entityPath
+      // @ts-ignore
+      return this.entityPath.replace(this.name, this.name.classify())
     }
   }
 
@@ -104,7 +112,16 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get isEnum () {
-    return this.type.isEnum
+    if (this.type.isSelfDefinedEnum) {
+      return true
+    }
+    if (this.referencePath) {
+      const reference = this.resolve(this.referencePath)
+      if (reference instanceof Field && reference !== this) {
+        return reference.isEnum
+      }
+    }
+    return false
   }
 
   /**
@@ -169,7 +186,7 @@ export default class Field extends Node {
         if (/^(true|false)$/.test(value) == false) {
           throw new AssertionError(`Invalid Boolean value ${value} at ${path.join('.')}`)
         }
-      } else if (this.type.isEnum) {
+      } else if (this.isEnum) {
         if (this.enumValues.includes(value) == false) {
           throw new AssertionError(`Incorrect enum value "${value}", ${this.type.definitionBody} allows only ${this.enumValues.join(', ')} at ${path.join('.')}`)
         }
