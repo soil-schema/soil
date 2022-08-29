@@ -8,16 +8,20 @@ This is test case for YouTube Playlists on YouTube API V3 by Google.
 
 ### soil
 
-Define playlist resource as soil entity.
+- Define playlist resource as soil entity.
+- Define list endpoint `GET /playlists`.
 
-https://developers.google.com/youtube/v3/docs/playlists#resource-representation
+References:
+
+- https://developers.google.com/youtube/v3/docs/playlists#resource-representation
+- https://developers.google.com/youtube/v3/docs/playlists/list
 
 ```soil
 entity Playlist {
   field kind: String {
     - constant "youtube#playlist"
   }
-  etag: etag
+  - etag: etag
   field id: String
 
   field snippet: * {
@@ -46,7 +50,9 @@ entity Playlist {
 
   field status: * {
     schema {
-      privacy_status: String
+      field privacy_status: Enum {
+        enum [private, public, unlisted]
+      }
     }
   }
 
@@ -67,6 +73,23 @@ entity Playlist {
       field title: String
       field description: String
     }
+  }
+
+  endpoint GET /playlists {
+    success {
+    field kind: String {
+      - constant "youtube#playlistListResponse"
+    }
+    - etag: etag
+    field next_page_token: String
+    field prev_page_token: String
+    field page_info: * {
+      schema {
+        field total_results: Integer
+        field results_per_page: Integer
+      }
+    }
+    field items: List<Playlist>
   }
 }
 ```
@@ -127,9 +150,14 @@ public final class Playlist: Decodable {
         }
     }
 
-    public final class Status: Codable {
+    public final class Status: Decodable {
 
-        public init() {
+        public let privacyStatus: PrivacyStatusValue
+
+        public enum PrivacyStatusValue: String, Codable {
+            case private = "private"
+            case public = "public"
+            case unlisted = "unlisted"
         }
     }
 
@@ -148,6 +176,41 @@ public final class Playlist: Decodable {
         public let title: String
 
         public let description: String
+    }
+
+    public final class PageInfo: Decodable {
+
+        public let totalResults: Int
+
+        public let resultsPerPage: Int
+    }
+
+    public struct PlaylistsEndpoint {
+
+        /// PlaylistsEndpoint.path: `/playlists`
+        public let path: String
+
+        /// PlaylistsEndpoint.method: `GET`
+        public let method: String = "GET"
+
+        public init() {
+            self.path = "/playlists"
+        }
+
+        public var body: Void
+
+        public struct Response: Decodable {
+
+            public let kind: String
+
+            public let nextPageToken: String
+
+            public let prevPageToken: String
+
+            public let pageInfo: PageInfo
+
+            public let items: Array<Playlist>
+        }
     }
 }
 ```
@@ -176,7 +239,9 @@ public final class Playlist: Decodable {
       "description": "string"
     }
   },
-  "status": {},
+  "status": {
+    "privacy_status": "private"
+  },
   "content_details": {
     "item_count": 1
   },
