@@ -50,6 +50,7 @@ export const httpRequest = function (request) {
       } else if (typeof body == 'object') {
         const json = JSON.stringify(body)
         req.setHeader('Content-Type', 'application/json; charset=utf-8')
+        req.setHeader('Content-Length', Buffer.byteLength(json))
         req.end(json)
       } else {
         req.end()

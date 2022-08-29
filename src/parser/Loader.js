@@ -45,14 +45,14 @@ export default class Loader {
           return
         }
 
-        const schema = await this.fetch(filepath, (body) => {
+        const schema = await this.fetch(filepath, body => {
           const tokens = new Tokenizer(filepath, body).tokenize()
           const result = new Parser().parse(tokens)
           tokens.forEach(token => {
             if (token.errors.length > 0) {
               console.log(token.buildDebugMessage(body))
             }
-          })  
+          })
           return result
         })
 
