@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import util from 'node:util'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import chalk from 'chalk'
 
 import { program } from 'commander'
@@ -97,6 +99,11 @@ program
           }
         } finally {
           runner.logs.forEach(log => console.log('    ', chalk.gray(log)))
+          const scenarioReport = runner.scenarioReport
+          if (scenarioReport) {
+            const body = JSON.stringify(scenarioReport, null, 2)
+            fs.writeFile(path.join(config.output, `report.${scenario.name}.json`), body)
+          }
         }
       }
     } catch (error) {
