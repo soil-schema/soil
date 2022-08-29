@@ -14,6 +14,7 @@ import Root from '../graph/Root.js'
 import { createHash } from 'node:crypto'
 import Framework from './Framework.js'
 import Report from './report/Report.js'
+import ScenarioReport from './report/ScenarioReport.js'
 
 export default class Runner {
   /**
@@ -30,6 +31,11 @@ export default class Runner {
    * @type {Report|undefined}
    */
   report
+
+  /**
+   * @type {ScenarioReport|undefined}
+   */
+  scenarioReport
 
   /**
    * @type {string[]}
@@ -78,7 +84,7 @@ export default class Runner {
    * 
    * @param {Report} report 
    */
-  registerReport (report) {
+   registerReport (report) {
     this.report = report
   }
 
@@ -180,6 +186,7 @@ export default class Runner {
     // skip shared scenario
     if (scenario.isShared) return
 
+    this.scenarioReport = new ScenarioReport(scenario.name, scenario.uri)
     this.enterContext(new Context('scenario'))
     try {
       Object.entries(this.config.api.headers).forEach(([key, value]) => {
@@ -189,6 +196,7 @@ export default class Runner {
         await this.runCommand(step.commandName, ...step.args)
       }
     } finally {
+      this.scenarioReport.logs = this.logs
       this.leaveContext()
     }
   }
@@ -199,8 +207,14 @@ export default class Runner {
    * @param  {...any} args 
    */
   async runCommand (name, ...args) {
-    if (typeof this[`command_${name}`] == 'function') await this[`command_${name}`](...args)
-    else throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
+    try {
+      if (typeof this[`command_${name}`] == 'function') await this[`command_${name}`](...args)
+      else throw new ScenarioRuntimeError(`Unknown Command: ${name}`)
+    } finally {
+      if (this.scenarioReport) {
+        this.scenarioReport.logCommand(`@${name.replace('_', '-')}`, args)
+      }
+    }
   }
 
   // Commands
@@ -457,7 +471,7 @@ export default class Runner {
         this.log(` > Invalid response header: Content-Type is set but not \`application/json\`, actual ${response.headers['content-type']}`)
       }
 
-      this.log(' > receive response:', response.status)
+      this.log(' > receive response:', response.status, body)
 
       this.enterContext(new Context('response'))
 
@@ -525,7 +539,9 @@ export default class Runner {
         this.leaveContext()
       }
     } else {
-      throw new ScenarioRuntimeError(`Scenario not found: ${name}${typeof this.root == 'undefined' ? '- undefined root node' : ''}`)
+      const message = `Scenario not found: ${name}${typeof this.root == 'undefined' ? '- undefined root node' : ''}`
+      this.log(' >', message)
+      throw new ScenarioRuntimeError(message, this.spawnInspector())
     }
   }
 
