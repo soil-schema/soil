@@ -2,6 +2,7 @@ import pluralize from 'pluralize'
 
 /**
  * @returns {string}
+ * @memberof String
  */
 String.prototype.classify = function () {
   var classify = ''

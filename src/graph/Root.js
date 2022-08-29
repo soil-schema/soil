@@ -26,6 +26,10 @@ export default class Root extends Node {
     return this.root.children.filter(child => child instanceof Scenario)
   }
 
+  get entityPath () {
+    return undefined
+  }
+
   /**
    * 
    * @param {string} method 

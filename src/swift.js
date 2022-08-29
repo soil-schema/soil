@@ -243,10 +243,10 @@ Writer.prototype.swift_Struct = function (context) {
 Field.prototype.swift_Member = function (context = {}) {
   const { writer, entity } = context
   var scope = 'public'
-  var type = this.type.resolveSwift(context)
+  var type = this.type.swift_TypeDefinition()
 
   if (writer) {
-    const reference = this.type.reference
+    const reference = this.resolve(this.type.referenceName)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
     }
@@ -287,10 +287,10 @@ Field.prototype.swift_Member = function (context = {}) {
 
 Field.prototype.renderArgumentSignature = function (context) {
   const { writer } = context
-  var type = convertType(this.type)
+  var type = this.type.swift_TypeDefinition()
   var defaultValue = ''
   if (writer) {
-    const reference = this.type.reference
+    const reference = this.resolve(this.type.referenceName)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
     }
@@ -385,7 +385,6 @@ Endpoint.prototype.swift_QueryInitializer = function () {
 
 Query.prototype.swift_Member = function (context) {
   var type = this.isRequired ? this.type : this.type.toOptional()
-  console.log(this.type.swift_TypeDefinition(), this.type.referenceName)
   var result = [
     `public var ${this.name.camelize()}: ${type.swift_TypeDefinition()}${this.isRequired ? '' : ' = nil'} {`,
     'didSet {',
@@ -398,6 +397,10 @@ Query.prototype.swift_Member = function (context) {
 }
 
 Query.prototype.swift_StringifyValue = function () {
+
+  if (this.type.isEnum) {
+    return `${this.name.camelize()}.rawValue`
+  }
 
   if (this.type.referenceName == 'Boolean') {
     const { booleanQuery } = this.config.api
@@ -415,10 +418,6 @@ Query.prototype.swift_StringifyValue = function () {
       'only-key': '""',
     }
     return valueCodeTable[booleanQuery]
-  }
-
-  if (this.type.isEnum) {
-    return `${this.name.camelize()}.rawValue`
   }
 
   if (this.type.isList && this.type.referenceName == 'String') {
@@ -600,7 +599,13 @@ Type.prototype.resolveSwift = function (context) {
  * Return type definition for swift code.
  */
 Type.prototype.swift_TypeDefinition = function () {
-  var type = this.referenceName
+  var type = this.fullReferenceName
+  if (this.isAutoDefiningType) {
+    type = this.owner.name.classify()
+  }
+  if (this.isEnum) {
+    type = `${type}Value`
+  }
   if (this.isDefinedType) {
     switch (type) {
       case 'Integer':

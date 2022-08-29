@@ -269,10 +269,13 @@ test('mock with inner type', t => {
     ],
   })
   const mock = person.mock()
-  t.assert('name' in mock)
-  t.assert('contact' in mock)
-  t.assert('kind' in mock.contact)
-  t.assert('body' in mock.contact)
+  t.deepEqual(mock, {
+    name: 'string',
+    contact: {
+      kind: 'string',
+      body: 'string',
+    },
+  })
 })
 
 test('mock with global entity and entity list', t => {
