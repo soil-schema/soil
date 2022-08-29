@@ -366,6 +366,11 @@ export const parseEndpoint = function (storage) {
         schema.set(name.value, storage, 'property')
         continue
       }
+      if (storage.hitAny('keyword.flag')) {
+        const name = storage.load()
+        schema.set(name.value, true)
+        continue
+      }
       storage.putOffIf('annotation', 'description')
       if (storage.hitAny('directive.parameter')) {
         schema.push('parameters', parseParameter(storage))
