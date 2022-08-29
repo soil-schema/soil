@@ -25,7 +25,7 @@ export default class Field extends Node {
 
   get type () {
     // @ts-ignore
-    return new Type(this.schema.type.replace('*', this.name.classify()), this)
+    return new Type(this.schema.type, this)
   }
 
   /**
@@ -60,7 +60,7 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get isSelfDefined () {
-    return ['*', 'List<*>', '*?', 'List<*>?', 'Enum'].indexOf(this.schema.type) != -1
+    return this.type.isAutoDefiningType
   }
 
   /**
@@ -75,7 +75,7 @@ export default class Field extends Node {
    */
   captureSubschemas () {
     const subschemas = []
-    if (this.isSelfDefined && this.schema.schema) {
+    if (this.type.isAutoDefiningType && this.schema.schema) {
       // @ts-ignore
       subschemas.push({ ...this.schema.schema, name: this.name.classify() })
     }
@@ -97,7 +97,7 @@ export default class Field extends Node {
   /**
    * @type {boolean}
    */
-   get isEnum () {
+  get isEnum () {
     return this.type.isEnum
   }
 

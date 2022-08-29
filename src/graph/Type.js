@@ -28,39 +28,73 @@ export default class Type {
     Object.defineProperty(this, 'owner', { value: owner, enumerable: false })
   }
 
+  /**
+   * Definition body (remove optional `?` from `schema.definition`)
+   * @type {string}
+   */
+  get definitionBody () {
+    return this.definition.replace(/\??$/, '')
+  }
+
   get referenceName () {
+    var name = this.definitionBody
+
     if (this.isList) {
-      return this.definition.replace(/^List<(.+)\??>\??/, '$1')
+      name = name.replace(/^List<(.+)\??>/, '$1')
     }
-    if (/^Enum\??$/.test(this.definition)) {
-      if (this.owner) {
-        // @ts-ignore
-        return `${this.owner.name.classify()}Value`
-      }
+
+    // // If: Auto defining enum
+    // if (this.definitionBody == 'Enum') {
+    //   if (this.owner) { // Expect: owner is Field
+    //     // @ts-ignore
+    //     return `${this.owner.name.classify()}Value`
+    //   }
+    // }
+
+    // const reference = this.owner?.resolve(this.definitionBody)
+    // if (reference instanceof Field && reference.type !== this) {
+    //   return reference.type.referenceName
+    // }
+
+    if (name == '*') {
+      // @ts-ignore
+      name = this.owner?.name?.classify()
     }
-    const reference = this.owner?.resolve(this.definition.replace(/\?$/, ''))
-    if (reference instanceof Field && reference.type !== this) {
-      return reference.type.referenceName
-    }
-    return this.definition.replace(/\?$/, '')
+
+    return name
   }
 
   /**
    * @type {Node|undefined}
    */
   get reference () {
-    if (this.isDefinedType || this.isEnum) {
+    if (!this.isReference) {
       return void 0
-    } else {
-      if (typeof this.owner == 'undefined') {
-        throw new UnresolvedReferenceError(`Unresolve reference: ${this.referenceName} (nobody owner)`)
-      }
-      const result = this.owner.resolve(this.referenceName)
-      if (typeof result == 'undefined') {
-        throw new UnresolvedReferenceError(`Unresolve reference: ${this.referenceName}`)
-      }
-      return result
     }
+
+    if (typeof this.owner == 'undefined') {
+      throw new UnresolvedReferenceError(`Unresolve reference: ${this.referenceName} (nobody owner)`)
+    }
+    const result = this.owner.resolve(this.referenceName)
+    if (typeof result == 'undefined') {
+      throw new UnresolvedReferenceError(`Unresolve reference: ${this.owner?.entityPath}.${this.referenceName}`)
+    }
+    return result
+  }
+
+  get fullReferenceName () {
+    if (!this.isReference) {
+      return this.referenceName
+    }
+    const reference = this.reference
+    if (reference instanceof Field) {
+      // @ts-ignore
+      return reference.entityPath.replace(reference.name, reference.name.classify())
+    }
+    if (reference instanceof Node) {
+      return reference.entityPath
+    }
+    return this.referenceName
   }
 
   /**
@@ -71,15 +105,23 @@ export default class Type {
   }
 
   /**
+   * If type is NOT default defined type or automatically defining type,
+   * it's reference. (`.isReference` is `true`)
+   * @type {boolean}
+   */
+  get isReference () {
+    return !this.isDefinedType && !this.isAutoDefiningType
+  }
+
+  /**
    * @type {boolean}
    */
   get isEnum () {
-    if (/^Enum\??$/.test(this.definition)) {
+    if (this.definitionBody == 'Enum') {
       return true
     }
-    const reference = this.owner?.resolve(this.referenceName)
+    const reference = this.owner?.resolve(this.definitionBody)
     if (reference instanceof Field) {
-      console.log(reference, reference.type.isEnum)
       return reference.type.isEnum
     }
     return false
@@ -89,14 +131,14 @@ export default class Type {
    * @type {boolean}
    */
   get isDefinedType () {
-    return DEFINED_TYPES.indexOf(this.referenceName) != -1
+    return DEFINED_TYPES.includes(this.referenceName)
   }
 
   /**
    * @type {boolean}
    */
   get isAutoDefiningType () {
-    return ['*', 'List<*>', '*?', 'List<*>?', 'Enum'].indexOf(this.definition) != -1
+    return ['*', 'List<*>', 'Enum'].includes(this.definitionBody)
   }
 
   /**
@@ -140,6 +182,16 @@ export default class Type {
           return 1.0
         case 'Boolean':
           return true
+      }
+    }
+    if (this.isAutoDefiningType) {
+      // @ts-ignore
+      const name = this.owner?.name.classify()
+      const reference = this.owner?.resolve(name)
+      // @ts-ignore
+      if (typeof reference?.mock == 'function') {
+        // @ts-ignore
+        return reference.mock()
       }
     }
     if (typeof this.reference == 'object') {

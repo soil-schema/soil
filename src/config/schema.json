@@ -80,6 +80,16 @@
             }
           },
           "additionalProperties": false
+        },
+        "propertyWrappers": {
+          "type": "object",
+          "properties": {
+            "reference": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "additionalProperties": false
         }
       }
     },

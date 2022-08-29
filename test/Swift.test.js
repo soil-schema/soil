@@ -138,7 +138,7 @@ test('Referenced enum type query', t => {
         type: 'Status',
       },
     ],
-    inner: [
+    subtypes: [
       {
         name: 'Status',
         type: 'Enum',
@@ -148,6 +148,9 @@ test('Referenced enum type query', t => {
   })
 
   target.moveToParent(configNode)
+
+  t.assert(target.resolve('Account') instanceof Entity)
+  t.assert(target.resolve('Status') instanceof Entity)
 
   t.snapshot(target.renderSwiftFile(context))
 })

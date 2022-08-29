@@ -6,7 +6,7 @@ import https from 'node:https'
 
 /**
  * Promise http request.
- * @param {{ url: string, method: string, body: string, headers: { [key: string]: string } }}} request 
+ * @param {{ url: string, method: string, body: string, headers: Object.<string, string> }} request 
  */
 export const httpRequest = function (request) {
 

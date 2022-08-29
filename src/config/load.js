@@ -58,6 +58,10 @@ export const applyDefaultSwift = (config) => {
       response: 'Decodable',
       ...config.protocols,
     },
+    propertyWrappers: {
+      reference: null,
+      ...config.propertyWrappers,
+    },
   }
 }
 
