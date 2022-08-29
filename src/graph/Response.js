@@ -62,6 +62,9 @@ export default class Response extends Node {
    * @returns {boolean}
    */
   assert (value, path = []) {
+    if (this.fields.length == 0 && typeof value == 'undefined') {
+      return true
+    }
     if (typeof value != 'object') {
       throw new AssertionError(`Expect object, but actual response is not object (${typeof value}) at ${path.join('.')}`)
     }

@@ -2,6 +2,7 @@
 
 import { DEFINED_TYPES } from "../const.js"
 import UnresolvedReferenceError from "../errors/UnresolvedReferenceError.js"
+import Field from "./Field.js"
 
 import Node from './Node.js'
 
@@ -37,6 +38,10 @@ export default class Type {
         return `${this.owner.name.classify()}Value`
       }
     }
+    const reference = this.owner?.resolve(this.definition.replace(/\?$/, ''))
+    if (reference instanceof Field && reference.type !== this) {
+      return reference.type.referenceName
+    }
     return this.definition.replace(/\?$/, '')
   }
 
@@ -69,7 +74,15 @@ export default class Type {
    * @type {boolean}
    */
   get isEnum () {
-    return /^Enum\??$/.test(this.definition)
+    if (/^Enum\??$/.test(this.definition)) {
+      return true
+    }
+    const reference = this.owner?.resolve(this.referenceName)
+    if (reference instanceof Field) {
+      console.log(reference, reference.type.isEnum)
+      return reference.type.isEnum
+    }
+    return false
   }
 
   /**

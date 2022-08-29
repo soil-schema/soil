@@ -295,7 +295,9 @@ Field.prototype.renderArgumentSignature = function (context) {
       type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
     }
     if (typeof this.defaultValue != 'undefined') {
-      if (this.type.referenceName == 'String') {
+      if (this.type.isEnum) {
+        defaultValue = ` = .${this.defaultValue}`
+      } else if (this.type.referenceName == 'String') {
         defaultValue = ` = "${this.defaultValue}"`
       } else {
         // [!] Integer, Number, Boolean
@@ -377,18 +379,25 @@ Endpoint.prototype.swift_Queries = function () {
 
 Endpoint.prototype.swift_QueryInitializer = function () {
   return this.query.filter(query => query.isRequired)
-    .map(query => `self.${query.name.camelize()} = ${query.name.camelize()}\nself.queryData["${query.name}"] = ${query.name.camelize()}`)
+    .map(query => `self.${query.name.camelize()} = ${query.name.camelize()}\nself.queryData["${query.name}"] = ${query.swift_StringifyValue()}`)
     .joinCode()
 }
 
 Query.prototype.swift_Member = function (context) {
   var type = this.isRequired ? this.type : this.type.toOptional()
+  console.log(this.type.swift_TypeDefinition(), this.type.referenceName)
   var result = [
     `public var ${this.name.camelize()}: ${type.swift_TypeDefinition()}${this.isRequired ? '' : ' = nil'} {`,
     'didSet {',
     this.swift_RemoveHelper(),
   ]
-  var valueCode = this.name.camelize()
+
+  result.push(`self.queryData["${this.name}"] = ${this.swift_StringifyValue()}`, '}', '}', this.swift_Enum())
+
+  return result.joinCode()
+}
+
+Query.prototype.swift_StringifyValue = function () {
 
   if (this.type.referenceName == 'Boolean') {
     const { booleanQuery } = this.config.api
@@ -405,28 +414,26 @@ Query.prototype.swift_Member = function (context) {
       // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
       'only-key': '""',
     }
-    valueCode = valueCodeTable[booleanQuery]
+    return valueCodeTable[booleanQuery]
+  }
+
+  if (this.type.isEnum) {
+    return `${this.name.camelize()}.rawValue`
   }
 
   if (this.type.isList && this.type.referenceName == 'String') {
-    valueCode = `${this.name.camelize()}.joined(separator: "+")`
+    return `${this.name.camelize()}.joined(separator: "+")`
   }
 
   if (this.type.referenceName == 'Integer' || this.type.referenceName == 'Number') {
     if (this.type.isList) {
-      valueCode = `${this.name.camelize()}.map { "\\($0)" }.joined(separator: "+")`
+      return `${this.name.camelize()}.map { "\\($0)" }.joined(separator: "+")`
     } else {
-      valueCode = `"\\(${this.name.camelize()})"`
+      return `"\\(${this.name.camelize()})"`
     }
   }
 
-  if (this.isEnum) {
-    valueCode = `${this.name.camelize()}.rawValue`
-  }
-
-  result.push(`self.queryData["${this.name}"] = ${valueCode}`, '}', '}', this.swift_Enum())
-
-  return result.joinCode()
+  return this.name.camelize()
 }
 
 Query.prototype.swift_RemoveHelper = function (context) {
@@ -537,7 +544,7 @@ RequestBody.prototype.swift_Struct = function (context) {
   const parameters = this.resolveParameters(context)
   return [
     docc(this),
-    struct('public', 'RequestBody', ...protocolMerge(context, 'requestBody')),
+    struct('public', 'RequestBody', ...protocolMerge(context, 'request')),
 
     ...parameters.map(parameter => readOnlyMember(null, parameter.name, convertType(parameter.type))),
 

@@ -70,7 +70,7 @@ export default class Schema {
       const file = path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`)
       try {
         const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
-        await fs.writeFile(file, body, this.config.core.encode)
+        await fs.writeFile(file, body, this.config.encode)
         console.log(chalk.green('[Swift]', '-', file))
       } catch (error) {
         console.error(chalk.red('[Swift]', `Failure exporting to ${file}`))

@@ -124,3 +124,30 @@ test('type reference to another entity', t => {
   configNode.addChild(content)
   t.snapshot(wrapper.renderSwiftFile({ ...context, entities: [wrapper, content] }))
 })
+
+test('Referenced enum type query', t => {
+  const target = new Entity({
+    name: 'Account',
+    fields: [
+      {
+        name: 'name',
+        type: 'String',
+      },
+      {
+        name: 'status',
+        type: 'Status',
+      },
+    ],
+    inner: [
+      {
+        name: 'Status',
+        type: 'Enum',
+        enum: ['item1', 'item2'],
+      },
+    ],
+  })
+
+  target.moveToParent(configNode)
+
+  t.snapshot(target.renderSwiftFile(context))
+})
