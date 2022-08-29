@@ -245,6 +245,10 @@ Field.prototype.swift_Member = function (context = {}) {
   var scope = 'public'
   var type = this.type.swift_TypeDefinition()
 
+  if (this.type.isSelfDefinedEnum) {
+    type = `${this.name.classify()}Value`
+  }
+
   if (writer) {
     const reference = this.resolve(this.type.referencePath || this.type.definitionName)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
@@ -316,7 +320,7 @@ Field.prototype.renderArgumentSignature = function (context) {
 
 Field.prototype.swift_Enum = function (context) {
   if (!this.isSelfDefinedEnum) { return null }
-  var type = convertType(this.type)
+  var type = `${this.name.classify()}Value`
   return [
     `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
     ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),

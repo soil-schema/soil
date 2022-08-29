@@ -56,3 +56,5 @@ test('Primitive Types', runner)
 test('Self Defined Type', runner)
 
 test('Reference Type', runner)
+
+test('Simple Enum', runner)
