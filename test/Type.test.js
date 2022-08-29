@@ -7,7 +7,7 @@ import UnresolvedReferenceError from '../src/errors/UnresolvedReferenceError.js'
 test('List', t => {
   const type = new Type('List<Record>')
   t.assert(type.isReference)
-  t.not(type.isDefinedType)
+  t.not(type.isPrimitiveType)
   t.not(type.isOptional)
   t.not(type.isEnum)
   t.assert(type.isList)
@@ -20,7 +20,7 @@ test('List', t => {
 test('String', t => {
   const type = new Type('String')
   t.not(type.isReference)
-  t.assert(type.isDefinedType)
+  t.assert(type.isPrimitiveType)
   t.not(type.isOptional)
   t.not(type.isEnum)
   t.not(type.isList)
@@ -31,7 +31,7 @@ test('String', t => {
 test('Enum', t => {
   const type = new Type('Enum')
   t.not(type.isReference)
-  t.assert(type.isAutoDefiningType)
+  t.assert(type.isSelfDefinedType)
   t.not(type.isOptional)
   t.assert(type.isEnum)
   t.not(type.isList)
@@ -42,7 +42,7 @@ test('Enum', t => {
 test('Integer?', t => {
   const type = new Type('Integer?')
   t.not(type.isReference)
-  t.assert(type.isDefinedType)
+  t.assert(type.isPrimitiveType)
   t.assert(type.isOptional)
   t.not(type.isEnum)
   t.not(type.isList)
@@ -57,7 +57,7 @@ test('resolve entity', t => {
 
   const type = new Type('Author', parent)
   t.assert(type.isReference)
-  t.not(type.isDefinedType)
+  t.not(type.isPrimitiveType)
   t.not(type.isOptional)
   t.not(type.isEnum)
   t.not(type.isList)
@@ -65,38 +65,21 @@ test('resolve entity', t => {
   t.is(type.reference, authorNode)
 })
 
-test('definitionBody', t => {
-  t.is(new Type('String').definitionBody, 'String')
-  t.is(new Type('String?').definitionBody, 'String')
-  t.is(new Type('Integer').definitionBody, 'Integer')
-  t.is(new Type('Integer?').definitionBody, 'Integer')
-  t.is(new Type('List<String>').definitionBody, 'List<String>')
-  t.is(new Type('List<String>?').definitionBody, 'List<String>')
-  t.is(new Type('User.gid').definitionBody, 'User.gid')
-  t.is(new Type('User.gid?').definitionBody, 'User.gid')
-  t.is(new Type('*').definitionBody, '*')
-  t.is(new Type('*?').definitionBody, '*')
-  t.is(new Type('List<*>').definitionBody, 'List<*>')
-  t.is(new Type('List<*>?').definitionBody, 'List<*>')
-  t.is(new Type('Enum').definitionBody, 'Enum')
-  t.is(new Type('Enum?').definitionBody, 'Enum')
+test('isSelfDefinedType', t => {
+  t.not(new Type('String').isSelfDefinedType)
+  t.not(new Type('Integer').isSelfDefinedType)
+  t.not(new Type('List<String>').isSelfDefinedType)
+  t.not(new Type('User.gid').isSelfDefinedType)
+
+  t.assert(new Type('*').isSelfDefinedType)
+  t.assert(new Type('*?').isSelfDefinedType)
+  t.assert(new Type('List<*>').isSelfDefinedType)
+  t.assert(new Type('List<*>?').isSelfDefinedType)
+  t.assert(new Type('Enum').isSelfDefinedType)
+  t.assert(new Type('Enum?').isSelfDefinedType)
 })
 
-test('isAutoDefiningType', t => {
-  t.not(new Type('String').isAutoDefiningType)
-  t.not(new Type('Integer').isAutoDefiningType)
-  t.not(new Type('List<String>').isAutoDefiningType)
-  t.not(new Type('User.gid').isAutoDefiningType)
-
-  t.assert(new Type('*').isAutoDefiningType)
-  t.assert(new Type('*?').isAutoDefiningType)
-  t.assert(new Type('List<*>').isAutoDefiningType)
-  t.assert(new Type('List<*>?').isAutoDefiningType)
-  t.assert(new Type('Enum').isAutoDefiningType)
-  t.assert(new Type('Enum?').isAutoDefiningType)
-})
-
-test('fullReferenceName', t => {
+test('fullreferencePath', t => {
   const parent = new Node('Root', {})
   const authorNode = new Node('Author', {})
   const profileNode = new Node('Profile', {})

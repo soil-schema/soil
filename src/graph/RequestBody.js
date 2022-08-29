@@ -68,7 +68,7 @@ export default class RequestBody extends Node {
     }
     const mock = this.fields
       .reduce((mock, field) => {
-        if (field.type.isDefinedType) {
+        if (field.type.isPrimitiveType) {
           mock[field.name] = field.mock()
         } else {
           const value = field.type.reference

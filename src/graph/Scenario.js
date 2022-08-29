@@ -15,7 +15,7 @@ export default class Scenario extends Node {
     super(schema.name, schema)
 
     const steps = schema.steps
-      .map(step => {
+      ?.map(step => {
         if (step.command) {
           return new CommandStep(step.command, step.args)
         }
@@ -23,7 +23,7 @@ export default class Scenario extends Node {
           return new RequestStep(step.request, step)
         }
       })
-    Object.defineProperty(this, 'steps', { value: steps })
+    Object.defineProperty(this, 'steps', { value: steps || [] })
 
     this.steps
       .filter(step => step instanceof Node)

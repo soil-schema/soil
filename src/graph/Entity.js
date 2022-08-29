@@ -116,7 +116,7 @@ export default class Entity extends Node {
         if (field.mutable || field.writer) return true
       }
       for (var field of this.fields) {
-        const resolved = this.resolve(field.type.referenceName)
+        const resolved = this.resolve(field.referencePath || field.type.definitionBody)
         this._inReference = true
         if (resolved instanceof Entity) {
           if (resolved._inReference == false && resolved.requireWriter) return true
@@ -137,7 +137,7 @@ export default class Entity extends Node {
         if (!field.mutable) return false
       }
       for (var field of this.fields) {
-        const resolved = this.resolve(field.type.referenceName)
+        const resolved = this.resolve(field.type.referencePath || field.type.definitionName)
         this._inReference = true
         if (resolved instanceof Entity) {
           if (resolved._inReference == false && resolved.isWritable == false) return false
@@ -176,7 +176,7 @@ export default class Entity extends Node {
 
   mock () {
     return this.fields.reduce((mock, field) => {
-      const type = this.resolve(field.type.referenceName)
+      const type = this.resolve(field.type.referencePath || field.type.definitionName)
       if (type instanceof Entity) {
         if (field.type.isList) {
           mock[field.name] = [type.mock()]

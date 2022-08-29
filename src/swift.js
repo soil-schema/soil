@@ -246,9 +246,9 @@ Field.prototype.swift_Member = function (context = {}) {
   var type = this.type.swift_TypeDefinition()
 
   if (writer) {
-    const reference = this.resolve(this.type.referenceName)
+    const reference = this.resolve(this.type.referencePath || this.type.definitionName)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
+      type = type.replace(this.type.referencePath, `${this.type.referencePath}.Writer`)
     }
   }
 
@@ -290,14 +290,14 @@ Field.prototype.renderArgumentSignature = function (context) {
   var type = this.type.swift_TypeDefinition()
   var defaultValue = ''
   if (writer) {
-    const reference = this.resolve(this.type.referenceName)
+    const reference = this.resolve(this.type.referencePath || this.type.definitionName)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
+      type = type.replace(this.type.referencePath, `${this.type.referencePath}.Writer`)
     }
     if (typeof this.defaultValue != 'undefined') {
       if (this.type.isEnum) {
         defaultValue = ` = .${this.defaultValue}`
-      } else if (this.type.referenceName == 'String') {
+      } else if (this.type.definitionName == 'String') {
         defaultValue = ` = "${this.defaultValue}"`
       } else {
         // [!] Integer, Number, Boolean
@@ -402,7 +402,7 @@ Query.prototype.swift_StringifyValue = function () {
     return `${this.name.camelize()}.rawValue`
   }
 
-  if (this.type.referenceName == 'Boolean') {
+  if (this.type.definitionName == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (booleanQuery == 'not-accepted') {
       throw new Error('config.api.booleanQuery is `not-accepted`, but use boolean query in your soil schema.\n@see https://github.com/niaeashes/soil/issues/32')
@@ -420,11 +420,11 @@ Query.prototype.swift_StringifyValue = function () {
     return valueCodeTable[booleanQuery]
   }
 
-  if (this.type.isList && this.type.referenceName == 'String') {
+  if (this.type.isList && this.type.definitionName == 'String') {
     return `${this.name.camelize()}.joined(separator: "+")`
   }
 
-  if (this.type.referenceName == 'Integer' || this.type.referenceName == 'Number') {
+  if (this.type.definitionName == 'Integer' || this.type.definitionName == 'Number') {
     if (this.type.isList) {
       return `${this.name.camelize()}.map { "\\($0)" }.joined(separator: "+")`
     } else {
@@ -441,7 +441,7 @@ Query.prototype.swift_RemoveHelper = function (context) {
    * If this is boolean query and config.api.booleanQuery is `set-only-true` or `only-key`,
    * insert boolean specialized removing helper.
    */
-  if (this.type.referenceName == 'Boolean') {
+  if (this.type.definitionName == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (['set-only-true', 'only-key'].includes(booleanQuery)) { // Remove key when false
       return [
@@ -599,14 +599,14 @@ Type.prototype.resolveSwift = function (context) {
  * Return type definition for swift code.
  */
 Type.prototype.swift_TypeDefinition = function () {
-  var type = this.fullReferenceName
-  if (this.isAutoDefiningType) {
+  var type = this.definitionBody
+  if (this.isSelfDefinedType) {
     type = this.owner.name.classify()
   }
   if (this.isEnum) {
     type = `${type}Value`
   }
-  if (this.isDefinedType) {
+  if (this.isPrimitiveType) {
     switch (type) {
       case 'Integer':
         type = 'Int'

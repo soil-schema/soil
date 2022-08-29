@@ -248,7 +248,7 @@ export default class Endpoint extends Model {
 
       if (typeof value == 'undefined') return result
 
-      if (query.type.referenceName == 'Boolean') {
+      if (query.type.referencePath == 'Boolean') {
         // Apply config.api.booleanQuery strategy
         if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return result
         switch (booleanQuery) {	
