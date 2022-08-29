@@ -399,7 +399,7 @@ export default class Runner {
   async command_request (requestStep) {
     requestStep.prepare()
 
-    const BASE_URL = this.config.api.base
+    const { base } = this.config.api
     this.enterContext(new Context('request'))
 
     try {
@@ -411,7 +411,7 @@ export default class Runner {
       const endpoint = requestStep.endpoint
       const path = this.interpolate(requestStep.path)
       const queryString = requestStep.endpoint?.buildQueryString(name => this.getVar(`$${name}`)) || ''
-      const url = `${BASE_URL}${path}${queryString}`
+      const url = `${base}${path}${queryString}`
       const request = {
         method: requestStep.method,
         url,
@@ -494,6 +494,12 @@ export default class Runner {
       } finally {
         this.leaveContext()
       }
+    } catch (error) { // Catch errors in http request process
+      if (error.case == 'ERR_INVALID_URL') {
+        throw new ScenarioRuntimeError(`Request invalid url: `, this.spawnInspector())
+      }
+      if (error instanceof ScenarioRuntimeError) throw error
+      throw new ScenarioRuntimeError(error.message, this.spawnInspector())
     } finally {
       this.leaveContext()
     }
