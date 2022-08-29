@@ -49,3 +49,11 @@ public final class Comment: Decodable {
     }
 }
 ```
+
+### mock
+
+```json
+{
+  "body": "string"
+}
+```

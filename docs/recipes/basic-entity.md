@@ -27,3 +27,12 @@ public final class User: Decodable {
     public let name: String
 }
 ```
+
+### mock
+
+```mock
+{
+  "id": 1,
+  "name": "string"
+}
+```

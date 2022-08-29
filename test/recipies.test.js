@@ -36,7 +36,9 @@ const promises = files.map(async file => {
       if (current.name == 'pre') {
         current.children.forEach(element => {
           if (element.name != 'code') return
-          block[element.attribs['class'].replace('language-', '')] = element.firstChild.data
+          let generate = element.attribs['class'].replace('language-', '')
+          if (generate == 'json') generate = 'mock'
+          block[generate] = element.firstChild.data
         })
       }
     }
@@ -52,12 +54,14 @@ const blocks = (await Promise.all(promises))
 const config = await loadConfig({ encoding: 'utf-8' })
 
 Object.values(blocks).forEach(block => {
-  test(block.name, async t => {
+  test(`${block.name} in ${block.uri}`, async t => {
 
     const schema = new Schema(config)
     const result = new Parser().parse(new Tokenizer(block.uri, block.soil).tokenize())
 
     schema.parse(result)
+
+    t.assert(schema.entities.length == 1, 'Single recipe only supports single entity directive.')
 
     const entity = schema.entities[0]
 
@@ -66,8 +70,15 @@ Object.values(blocks).forEach(block => {
     if ('swift' in block) {
       t.is(block.swift.trim(), swift.trim())
     } else {
-      console.log(block.name, '[Swift]')
-      console.log(swift)
+      t.fail(`Swift expectation not found:\r\n${swift}`)
+    }
+
+    const mock = JSON.stringify(entity.mock(), null, 2)
+
+    if ('mock' in block) {
+      t.is(block.mock.trim(), mock.trim())
+    } else {
+      t.fail(`JSON mock expectation not found:\r\n${mock}`)
     }
 
     t.pass()
