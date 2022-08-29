@@ -53,17 +53,21 @@ const config = await loadConfig({ encoding: 'utf-8' })
 
 Object.values(blocks).forEach(block => {
   test(block.name, async t => {
-    console.log(block.name)
 
     const schema = new Schema(config)
     const result = new Parser().parse(new Tokenizer(block.uri, block.soil).tokenize())
 
     schema.parse(result)
 
+    const entity = schema.entities[0]
+
+    const swift = await entity.renderSwiftFile({ config, entities: schema.entities })
+
     if ('swift' in block) {
-      const entity = schema.entities[0]
-      const body = await entity.renderSwiftFile({ config, entities: schema.entities })
-      t.is(block.swift.trim(), body.trim())
+      t.is(block.swift.trim(), swift.trim())
+    } else {
+      console.log(block.name, '[Swift]')
+      console.log(swift)
     }
 
     t.pass()

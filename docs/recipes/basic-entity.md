@@ -2,6 +2,8 @@
 
 `Entity` is a single resource of your REST Api.
 
+`Field` is a property definition on entity or another object schema in soil.
+
 ## User Entity
 
 ### soil
