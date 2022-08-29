@@ -1,9 +1,9 @@
 import test from 'ava'
 import { config, blocks } from './recipes.loader.js'
 
-import Schema from '../src/graph/Schema.js'
-import Tokenizer from '../src/parser/Tokenizer.js'
-import Parser from '../src/parser/Parser.js'
+import Schema from '../../src/graph/Schema.js'
+import Tokenizer from '../../src/parser/Tokenizer.js'
+import Parser from '../../src/parser/Parser.js'
 
 const runner = async t => {
   /*
@@ -58,3 +58,9 @@ test('Self Defined Type', runner)
 test('Reference Type', runner)
 
 test('Simple Enum', runner)
+
+/**
+ * Actual Cases
+ */
+
+test('YouTube Playlist Entity', runner)

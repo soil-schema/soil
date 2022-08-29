@@ -629,6 +629,9 @@ Type.prototype.swift_TypeDefinition = function () {
   if (this.isList) {
     type = `Array<${type}>`
   }
+  if (this.isMap) {
+    type = `Dictionary<String, ${type}>`
+  }
   if (this.isOptional) {
     type = `${type}?`
   }

@@ -183,6 +183,8 @@ export default class Entity extends Node {
         if (type instanceof Entity) {
           if (field.type.isList) {
             mock[field.name] = [type.mock()]
+          } else if (field.type.isMap) {
+              mock[field.name] = { key: type.mock() }
           } else {
             mock[field.name] = type.mock()
           }

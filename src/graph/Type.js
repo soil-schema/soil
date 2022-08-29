@@ -28,6 +28,12 @@ export default class Type {
     */
   isList
 
+   /**
+    * Type definition has Map wrapper.
+    * @type {boolean}
+    */
+  isMap
+
   /**
    * @type {Node}
    * @readonly
@@ -41,6 +47,7 @@ export default class Type {
   constructor (definition, owner = undefined) {
     Object.defineProperty(this, 'isOptional', { value: /\?$/.test(definition) })
     Object.defineProperty(this, 'isList', { value: /^List<.+>\??$/.test(definition) })
+    Object.defineProperty(this, 'isMap', { value: /^Map<(?:String), ?.+>\??$/.test(definition) })
     Object.defineProperty(this, 'definition', { value: definition, enumerable: true })
     Object.defineProperty(this, 'owner', { value: owner, enumerable: false })
   }
@@ -53,6 +60,9 @@ export default class Type {
     var body = this.definition.replace(/\??$/, '')
     if (this.isList) {
       body = body.replace(/^List<([^>\?]+)\??>$/, '$1')
+    }
+    if (this.isMap) {
+      body = body.replace(/^Map<(?:String), ?([^>\?]+)\??>$/, '$1')
     }
     return body
   }
@@ -69,6 +79,10 @@ export default class Type {
 
   get isOptionalList () {
     return this.isList && /^List<.+\?>/.test(this.definition)
+  }
+
+  get isOptionalMap () {
+    return this.isMap && /^Map<(?:String), ?.+\?>/.test(this.definition)
   }
 
   /**
@@ -119,11 +133,17 @@ export default class Type {
     if (this.isOptionalList) {
       return [null]
     }
+    if (this.isOptionalMap) {
+      return { key: null }
+    }
     if (this.isReference || this.isSelfDefinedEnum) {
       return
     }
     if (this.isList) {
       return [this.mockValue()]
+    }
+    if (this.isMap) {
+      return { key: this.mockValue() }
     }
     return this.mockValue()
   }

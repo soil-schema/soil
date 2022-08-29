@@ -5,10 +5,7 @@ import { pathToFileURL } from 'node:url'
 import { marked } from 'marked'
 import { parseDocument as parseHtmlDocument } from 'htmlparser2'
 
-import { loadConfig } from '../src/config/load.js'
-import Schema from '../src/graph/Schema.js'
-import Tokenizer from '../src/parser/Tokenizer.js'
-import Parser from '../src/parser/Parser.js'
+import { loadConfig } from '../../src/config/load.js'
 
 const recipesPath = path.join(process.cwd(), 'docs/recipes')
 const files = await fs.readdir(recipesPath)

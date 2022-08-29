@@ -148,6 +148,41 @@ test('List<String?>', t => {
   t.deepEqual(target.mock(), [null])
 })
 
+test('Map<String, String>', t => {
+  const target = new Type('Map<String, String>')
+
+  t.is(target.definitionBody, 'String')
+  t.assert(target.isMap)
+  t.not(target.isOptional)
+  t.not(target.isReference)
+
+  t.deepEqual(target.mock(), { key: 'string' })
+})
+
+test('Map<String, String>?', t => {
+  const target = new Type('Map<String, String>?')
+
+  t.is(target.definitionBody, 'String')
+  t.assert(target.isMap)
+  t.assert(target.isOptional)
+  t.not(target.isOptionalMap)
+  t.not(target.isReference)
+
+  t.deepEqual(target.mock(), null)
+})
+
+test('Map<String, String?>', t => {
+  const target = new Type('Map<String, String?>')
+
+  t.is(target.definitionBody, 'String')
+  t.assert(target.isMap)
+  t.not(target.isOptional)
+  t.assert(target.isOptionalMap)
+  t.not(target.isReference)
+
+  t.deepEqual(target.mock(), { key: null })
+})
+
 test('User (Entity Reference)', t => {
   const target = new Type('User')
 
@@ -227,6 +262,18 @@ test('List<Comment> (List Entity Reference)', t => {
   t.assert(target.isList)
   t.not(target.isOptional)
   t.not(target.isOptionalList)
+  t.assert(target.isReference)
+
+  t.deepEqual(target.mock(), undefined)
+})
+
+test('Map<String, Localization> (Map Entity Reference)', t => {
+  const target = new Type('Map<String, Localization>')
+
+  t.is(target.definitionBody, 'Localization')
+  t.assert(target.isMap)
+  t.not(target.isOptional)
+  t.not(target.isOptionalMap)
   t.assert(target.isReference)
 
   t.deepEqual(target.mock(), undefined)
