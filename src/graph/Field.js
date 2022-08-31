@@ -63,6 +63,11 @@ export default class Field extends Node {
     }
   }
 
+  get fullName () {
+    // @ts-ignore
+    return this.entityPath.replace(this.name, this.name.classify())
+  }
+
   /**
    * @type {boolean}
    */

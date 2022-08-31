@@ -51,6 +51,8 @@ test('User Entity', runner)
 
 test('User Endpoints', runner)
 
+test('Standard CRUD', runner)
+
 test('Primitive Types', runner)
 
 test('Self Defined Type', runner)
@@ -58,6 +60,10 @@ test('Self Defined Type', runner)
 test('Reference Type', runner)
 
 test('Simple Enum', runner)
+
+test('Search with q query string API', runner)
+
+test('Auto Query Stringify', runner)
 
 /**
  * Actual Cases

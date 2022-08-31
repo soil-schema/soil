@@ -18,13 +18,11 @@ export default class Parameter extends Node {
   options
 
   /**
-   * @param {string} name 
-   * @param {string} definition 
    * @param {object} schema 
    */
-  constructor (name, definition, schema) {
-    super(name, schema)
-    this.definition = definition
+  constructor (schema) {
+    super(schema.name, schema)
+    this.definition = schema.type
   }
 
   /**
@@ -53,10 +51,10 @@ export default class Parameter extends Node {
   }
 
   get enumValues () {
-    if (this.type.isEnum) {
+    if (this.type.isSelfDefinedEnum) {
       return this.schema.enum
     }
-    return void 0
+    return []
   }
 
   /**
@@ -71,7 +69,7 @@ export default class Parameter extends Node {
       case 'Integer':
         return /^[0-9]+$/.test(string)
       case 'Enum':
-        return this.enumValues.indexOf(string) != -1
+        return this.enumValues.includes(string)
       default:
         return false
     }

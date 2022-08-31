@@ -6,14 +6,6 @@ import Response from './Response.js'
 import Field from './Field.js'
 import Query from './Query.js'
 import Parameter from './Parameter.js'
-import {
-  HTTP_METHOD_GET,
-  HTTP_METHOD_POST,
-  HTTP_METHOD_PUT,
-  HTTP_METHOD_PATCH,
-  HTTP_METHOD_DELETE,
-  HTTP_METHOD_HEAD,
-} from "../const.js"
 
 import '../extension.js'
 
@@ -40,6 +32,9 @@ export default class Endpoint extends Model {
     this.schema.query?.forEach(query => {
       this.addChild(new Query(query.name, query))
     })
+    this.schema.parameters?.forEach(parameter => {
+      this.addChild(new Parameter(parameter))
+    })
 
     Object.defineProperty(this, 'requestBody', { value: new RequestBody(schema.request), enumerable: true })
     Object.defineProperty(this, 'successResponse', { value: new Response(schema.success), enumerable: true })
@@ -56,14 +51,19 @@ export default class Endpoint extends Model {
    * @returns {string}
    */
   get signature () {
+    const name = this.schema.name
+      ?.replaceAll(/[A-Z]/g, match => ` ${match[0]}`)
+    if (name) {
+      // @ts-ignore
+      return `${name} Endpoint`.classify()
+    }
     const summary = this.schema.summary
     if (summary) {
       // @ts-ignore
       return `${summary} Endpoint`.classify()
-    } else {
-      // @ts-ignore
-      return `${this.path.replaceAll('/', ' ').replaceAll(/\$([a-zA-Z_\-]+)/g, '$1').replaceAll(/\{([a-zA-Z_\-]+)\}/g, ' $1')} Endpoint`.classify()
     }
+    // @ts-ignore
+    return `${this.path.replaceAll('/', ' ').replaceAll(/\$([a-zA-Z_\-]+)/g, '$1').replaceAll(/\{([a-zA-Z_\-]+)\}/g, ' $1')} Endpoint`.classify()
   }
 
   /**
@@ -140,6 +140,15 @@ export default class Endpoint extends Model {
   }
 
   /**
+   * 
+   * @param {string} name 
+   * @returns {Parameter|undefined}
+   */
+  findParameter (name) {
+    return this.schema.parameters?.find(parameter => parameter.name == name)
+  }
+
+  /**
    * @returns {Array<Parameter>}
    */
   resolvePathParameters() {
@@ -149,21 +158,15 @@ export default class Endpoint extends Model {
       .filter(token => /^[\{\$][a-zA-Z_\-]+\}?$/.test(token))
       .map(token => {
         const name = token.replace(/\$([a-zA-Z_\-]+)/g, '$1').replace(/^\{([a-zA-Z_\-]+)\}$/g, '$1')
-        const parameter = (this.schema.parameters || {})[name]
-        const definition = typeof parameter == 'object' ? parameter.type : name
-        if (typeof definition != 'string') {
-          throw new Error(`Invalid parameter definition: ${this.method.toUpperCase()} ${this.path} ${token}`)
-        }
-        const field = this.resolve(definition)
+        const parameter = this.findParameter(name)
+        const { definition } = parameter || {}
+        const field = this.resolve(definition || name)
         if (field instanceof Field) {
-          return new Parameter(name, field.type.definition, { ...parameter, token })
-        } else if (typeof parameter == 'string') {
-          return new Parameter(name, parameter, { type: parameter, token })
+          return new Parameter({ ...parameter, token, name, type: field.type.definition })
         } else if (parameter) {
-          return new Parameter(name, parameter.type, { ...parameter, token })
-        } else {
-          return new Parameter(name, 'String', { token })
+          return new Parameter({ ...parameter.schema, name, type: parameter.type, token })
         }
+        return new Parameter({ name, type: 'String', token })
       })
       .filter(param => param != null)
   }
@@ -216,41 +219,21 @@ export default class Endpoint extends Model {
 
   /**
    * 
-   * @param {object} override 
-   * @returns 
-   */
-  requestMock (override) {
-    if (typeof this.requestBody == 'undefined') {
-      return {}
-    }
-    const mock = this.requestBody.mock()
-    if (typeof override == 'object' && typeof mock == 'object') {
-      const overrideMock = (obj) => Object.keys(obj).forEach(key => {
-        if (typeof override[key] != 'undefined') { obj[key] = override[key] }
-        if (typeof obj[key] == 'object' && obj[key] !== null) { overrideMock(obj[key]) }
-      })
-      overrideMock(mock)
-    }
-    return mock
-  }
-
-  /**
-   * 
    * @param {(name: string) => any} queryProvider 
    * @returns {string}
    */
   buildQueryString (queryProvider) {
-    const { booleanQuery } = this.config.api
 
     const query = this.query.reduce((/** @type {string[]} */ result, query) => {
 
-      var value = queryProvider(query.name)
+      var value = queryProvider(query.name)?.toString()
 
       if (typeof value == 'undefined') return result
 
-      if (query.type.referencePath == 'Boolean') {
+      if (query.type.definitionBody == 'Boolean') {
+        const { booleanQuery } = this.config.api
         // Apply config.api.booleanQuery strategy
-        if (value == 'false' && ['set-only-ture', 'only-key'].includes(booleanQuery)) return result
+        if (value == 'false' && ['set-only-true', 'only-key'].includes(booleanQuery)) return result
         switch (booleanQuery) {	
           // true sets query value 1, false sets query value 0.
           case 'numeric':

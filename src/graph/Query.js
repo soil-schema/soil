@@ -28,7 +28,7 @@ export default class Query extends Node {
 
   get enumValues () {
     const enumValues = this.schema.enum
-    if (Array.isArray(enumValues) && this.type.isEnum) {
+    if (Array.isArray(enumValues) && this.type.isSelfDefinedEnum) {
       return enumValues
     }
     return []
@@ -59,10 +59,7 @@ export default class Query extends Node {
    * @returns {boolean}
    */
   get required () {
-    if (this.schema.required == true) {
-      return true
-    }
-    return false
+    return this.schema.required == true
   }
 }
 
