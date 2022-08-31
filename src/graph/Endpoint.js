@@ -145,7 +145,10 @@ export default class Endpoint extends Model {
    * @returns {Parameter|undefined}
    */
   findParameter (name) {
-    return this.schema.parameters?.find(parameter => parameter.name == name)
+    // @ts-ignore
+    return this
+      .findAny(child => child instanceof Parameter)
+      .find(parameter => parameter.name == name)
   }
 
   /**
@@ -162,9 +165,9 @@ export default class Endpoint extends Model {
         const { definition } = parameter || {}
         const field = this.resolve(definition || name)
         if (field instanceof Field) {
-          return new Parameter({ ...parameter, token, name, type: field.type.definition })
+          return new Parameter({ ...parameter?.schema, token, name, type: field.type.definition })
         } else if (parameter) {
-          return new Parameter({ ...parameter.schema, name, type: parameter.type, token })
+          return new Parameter({ ...parameter.schema, name, token })
         }
         return new Parameter({ name, type: 'String', token })
       })
