@@ -103,7 +103,7 @@ test('.score', t => {
     method: 'GET',
     path: '/resources/$filter',
     parameters: [
-      { name: 'filter', type: 'Enum', schema: { enum: ['metal', 'carbon'] } },
+      { name: 'filter', type: 'Enum', enum: ['metal', 'carbon'] },
     ],
   })
   t.assert(filter.score('GET', '/resources/metal') > fetchSingle.score('GET', '/resources/metal'))

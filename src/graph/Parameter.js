@@ -22,7 +22,7 @@ export default class Parameter extends Node {
    */
   constructor (schema) {
     super(schema.name, schema)
-    this.definition = schema.type
+    Object.defineProperty(this, 'definition', { value: schema.type, enumerable: true })
   }
 
   /**
