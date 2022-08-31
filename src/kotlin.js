@@ -213,11 +213,11 @@ Field.prototype.kt_Annotation = function (config) {
   // Use 'kotlin-serialization'
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
     // Timestamp -> java.time.LocalDateTime, and apply custom serializer.
-    if (this.type.referenceName == 'Timestamp') {
+    if (this.type.referencePath == 'Timestamp') {
       annotations.push(`@Serializable(with = TimestampAsStringSerializer::class)`)
     }
     // URL -> java.net.URL, and apply custom serializer.
-    if (this.type.referenceName == 'URL') {
+    if (this.type.referencePath == 'URL') {
       annotations.push(`@Serializable(with = UrlAsStringSerializer::class)`)
     }
   }
@@ -236,7 +236,7 @@ Field.prototype.kt_Attribute = function () {
 Field.prototype.kt_DefaultValue = function () {
   if (typeof this.defaultValue == 'undefined') return ''
   if (typeof this.defaultValue == 'string') {
-    switch (this.type.referenceName) {
+    switch (this.type.referencePath) {
       case 'String':
         return ` = "${this.defaultValue}"`
       case 'Integer':
@@ -433,7 +433,7 @@ Query.prototype.kt_Observer = function () {
   var removalHelper = !this.isRequired
   var valueCode = removalHelper ? "it" : "new"
   var setCode = `queryData["${this.name}"] = ${valueCode}`
-  if (this.type.referenceName == 'Boolean') {
+  if (this.type.referencePath == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
     }
@@ -543,8 +543,8 @@ Type.prototype.kt_TypeArgument = function () {
 }
 
 Type.prototype.kt_TypeDefinition = function () {
-  var type = this.referenceName
-  if (this.isDefinedType) {
+  var type = this.referencePath
+  if (this.isPrimitiveType) {
     switch (type) {
       case 'Integer':
         type = 'Int'

@@ -1,6 +1,6 @@
 export default {
   files: [
-    "test/**/*",
+    "test/**/*.test.js",
     "!test/mock/**/*",
   ],
 }

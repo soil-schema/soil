@@ -216,7 +216,7 @@ Entity.prototype.swift_Struct = function (context) {
     defineIf(this.isWritable, () => {
       return [
         docc({ parameters: this.fields }),
-        init('public', ...this.fields.map(field => field.renderArgumentSignature(nextContext))),
+        init('public', ...this.fields.map(field => field.swift_ArgumentSignature(nextContext))),
           ...this.fields.map(field => `self.${field.name.camelize()} = ${field.name.camelize()}`),
         end,
       ].joinCode()
@@ -233,7 +233,7 @@ Writer.prototype.swift_Struct = function (context) {
     struct('public', 'Writer', ...protocolMerge(nextContext, 'writer')),
     ...this.fields.map(field => field.swift_Member(nextContext)),
     docc({ parameters: this.fields }),
-    init('public', ...this.fields.map(field => field.renderArgumentSignature(nextContext))),
+    init('public', ...this.fields.map(field => field.swift_ArgumentSignature(nextContext))),
       ...this.fields.map(field => `self.${field.name.camelize()} = ${field.name.camelize()}`),
     end,
     end,
@@ -246,9 +246,13 @@ Field.prototype.swift_Member = function (context = {}) {
   var type = this.type.swift_TypeDefinition()
 
   if (writer) {
-    const reference = this.resolve(this.type.referenceName)
+    var finder = this.type.definitionBody
+    if (this.type.isSelfDefinedType) {
+      finder = this.referencePath
+    }
+    const reference = this.resolve(finder)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
+      type = type.replace(this.referencePath, `${this.referencePath}.Writer`)
     }
   }
 
@@ -285,19 +289,23 @@ Field.prototype.swift_Member = function (context = {}) {
 
 }
 
-Field.prototype.renderArgumentSignature = function (context) {
+Field.prototype.swift_ArgumentSignature = function (context) {
   const { writer } = context
   var type = this.type.swift_TypeDefinition()
   var defaultValue = ''
   if (writer) {
-    const reference = this.resolve(this.type.referenceName)
+    var finder = this.type.definitionBody
+    if (this.type.isSelfDefinedType) {
+      finder = this.referencePath
+    }
+    const reference = this.resolve(finder)
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
-      type = type.replace(this.type.referenceName, `${this.type.referenceName}.Writer`)
+      type = type.replace(this.referencePath, `${this.referencePath}.Writer`)
     }
     if (typeof this.defaultValue != 'undefined') {
-      if (this.type.isEnum) {
+      if (this.type.isSelfDefinedEnum) {
         defaultValue = ` = .${this.defaultValue}`
-      } else if (this.type.referenceName == 'String') {
+      } else if (this.type.definitionBody == 'String') {
         defaultValue = ` = "${this.defaultValue}"`
       } else {
         // [!] Integer, Number, Boolean
@@ -312,16 +320,6 @@ Field.prototype.renderArgumentSignature = function (context) {
     type = `${type}?`
   }
   return `${this.name.camelize()}: ${type}${defaultValue}`
-}
-
-Field.prototype.swift_Enum = function (context) {
-  if (!this.isSelfDefinedEnum) { return null }
-  var type = convertType(this.type)
-  return [
-    `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
-    ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),
-    '}',
-  ].joinCode()
 }
 
 Endpoint.prototype.swift_Struct = function (context) {
@@ -385,8 +383,28 @@ Endpoint.prototype.swift_QueryInitializer = function () {
 
 Query.prototype.swift_Member = function (context) {
   var type = this.isRequired ? this.type : this.type.toOptional()
+  var type = type.swift_TypeDefinition()
+
+  if (this.type.isSelfDefinedEnum) {
+    type = `${this.name.classify()}Value`
+  }
+
+  if (this.type.isReference) {
+    const reference = this.resolve(this.type.definitionBody)
+    if (reference instanceof Field) {
+      type = reference.fullName
+      if (reference.type.isSelfDefinedEnum) {
+        type = `${type}Value`
+      }
+    }
+  }
+
+  if (this.isRequired == false && !/\?$/.test(type)) {
+    type = `${type}?`
+  }
+
   var result = [
-    `public var ${this.name.camelize()}: ${type.swift_TypeDefinition()}${this.isRequired ? '' : ' = nil'} {`,
+    `public var ${this.name.camelize()}: ${type}${this.isRequired ? '' : ' = nil'} {`,
     'didSet {',
     this.swift_RemoveHelper(),
   ]
@@ -398,11 +416,18 @@ Query.prototype.swift_Member = function (context) {
 
 Query.prototype.swift_StringifyValue = function () {
 
-  if (this.type.isEnum) {
+  if (this.type.isSelfDefinedEnum) {
     return `${this.name.camelize()}.rawValue`
   }
 
-  if (this.type.referenceName == 'Boolean') {
+  if (this.type.isReference) {
+    const reference = this.resolve(this.type.definitionBody)
+    if (reference instanceof Field && reference.type.isSelfDefinedEnum) {
+      return `${this.name.camelize()}.rawValue`
+    }
+  }
+
+  if (this.type.definitionBody == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (booleanQuery == 'not-accepted') {
       throw new Error('config.api.booleanQuery is `not-accepted`, but use boolean query in your soil schema.\n@see https://github.com/niaeashes/soil/issues/32')
@@ -420,11 +445,11 @@ Query.prototype.swift_StringifyValue = function () {
     return valueCodeTable[booleanQuery]
   }
 
-  if (this.type.isList && this.type.referenceName == 'String') {
+  if (this.type.isList && this.type.definitionBody == 'String') {
     return `${this.name.camelize()}.joined(separator: "+")`
   }
 
-  if (this.type.referenceName == 'Integer' || this.type.referenceName == 'Number') {
+  if (this.type.definitionBody == 'Integer' || this.type.definitionBody == 'Number') {
     if (this.type.isList) {
       return `${this.name.camelize()}.map { "\\($0)" }.joined(separator: "+")`
     } else {
@@ -441,7 +466,7 @@ Query.prototype.swift_RemoveHelper = function (context) {
    * If this is boolean query and config.api.booleanQuery is `set-only-true` or `only-key`,
    * insert boolean specialized removing helper.
    */
-  if (this.type.referenceName == 'Boolean') {
+  if (this.type.definitionBody == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (['set-only-true', 'only-key'].includes(booleanQuery)) { // Remove key when false
       return [
@@ -473,22 +498,8 @@ Query.prototype.swift_InitializeParameter = function () {
   return `${this.name.camelize()}: ${this.type.swift_TypeDefinition()}`
 }
 
-Query.prototype.swift_Enum = function () {
-  if (!this.isSelfDefinedEnum) { return null }
-  return [
-    `public enum ${this.type.swift_TypeDefinition()}: String {`,
-    ...this.enumValues.map(value => `case ${/^[a-z_]+$/.test(value) ? value : `\`${value}\``}`),
-    '}'
-  ].joinCode()
-}
-
 Parameter.prototype.swift_InitializeParameter = function (context) {
   return `${this.name.camelize()}: ${this.type.swift_TypeDefinition()}`
-}
-
-Parameter.prototype.swift_Enum = function (context) {
-  if (!this.isSelfDefinedEnum) { return null }
-  return `public enum ${this.type.swift_TypeDefinition()}: String { case ${this.enumValues.map(value => `\`${value}\``).join(', ')} }`
 }
 
 Parameter.prototype.swift_StringifyToken = function () {
@@ -596,17 +607,34 @@ Type.prototype.resolveSwift = function (context) {
 }
 
 /**
+ * Swift Enum
+ * @returns 
+ */
+const swift_Enum = function (context) {
+  if (!this.isSelfDefinedEnum) { return null }
+  var type = `${this.name.classify()}Value`
+  return [
+    `public enum ${type.replace(/\?$/, '')}: String, Codable {`,
+    ...this.enumValues.map(value => `case ${value.camelize()} = "${value}"`),
+    '}',
+  ].joinCode()
+}
+Field.prototype.swift_Enum = swift_Enum
+Query.prototype.swift_Enum = swift_Enum
+Parameter.prototype.swift_Enum = swift_Enum
+
+/**
  * Return type definition for swift code.
  */
 Type.prototype.swift_TypeDefinition = function () {
-  var type = this.fullReferenceName
-  if (this.isAutoDefiningType) {
+  var type = this.definitionBody
+  if (this.isSelfDefinedType) {
     type = this.owner.name.classify()
   }
-  if (this.isEnum) {
+  if (this.isSelfDefinedEnum) {
     type = `${type}Value`
   }
-  if (this.isDefinedType) {
+  if (this.isPrimitiveType) {
     switch (type) {
       case 'Integer':
         type = 'Int'
@@ -624,6 +652,9 @@ Type.prototype.swift_TypeDefinition = function () {
   }
   if (this.isList) {
     type = `Array<${type}>`
+  }
+  if (this.isMap) {
+    type = `Dictionary<String, ${type}>`
   }
   if (this.isOptional) {
     type = `${type}?`

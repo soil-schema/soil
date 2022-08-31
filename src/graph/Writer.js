@@ -38,7 +38,7 @@ export default class Writer extends Node {
 
   mock () {
     return this.fields.reduce((mock, field) => {
-      const type = this.resolve(field.type.referenceName)
+      const type = this.resolve(field.type.referencePath)
       if (type instanceof Entity) {
         if (field.type.isList) {
           mock[field.name] = [type.mock()]

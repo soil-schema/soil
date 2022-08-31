@@ -1,4 +1,4 @@
-export const DEFINED_TYPES = [
+export const PRIMITIVE_TYPES = [
   'String',
   'Integer',
   'Number',

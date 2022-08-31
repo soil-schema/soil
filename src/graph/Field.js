@@ -50,6 +50,25 @@ export default class Field extends Node {
   }
 
   /**
+   * @type {string|undefined}
+   */
+  get referencePath () {
+    if (this.type.isSelfDefinedType) {
+      // @ts-ignore
+      return this.name.classify()
+    }
+    if (this.type.isReference) {
+      // @ts-ignore
+      return this.entityPath.replace(this.name, this.name.classify())
+    }
+  }
+
+  get fullName () {
+    // @ts-ignore
+    return this.entityPath.replace(this.name, this.name.classify())
+  }
+
+  /**
    * @type {boolean}
    */
   get optional () {
@@ -60,7 +79,7 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get isSelfDefined () {
-    return this.type.isAutoDefiningType
+    return this.type.isSelfDefinedType
   }
 
   /**
@@ -75,7 +94,7 @@ export default class Field extends Node {
    */
   captureSubschemas () {
     const subschemas = []
-    if (this.type.isAutoDefiningType && this.schema.schema) {
+    if (this.type.isSelfDefinedType && this.schema.schema) {
       // @ts-ignore
       subschemas.push({ ...this.schema.schema, name: this.name.classify() })
     }
@@ -98,7 +117,16 @@ export default class Field extends Node {
    * @type {boolean}
    */
   get isEnum () {
-    return this.type.isEnum
+    if (this.type.isSelfDefinedEnum) {
+      return true
+    }
+    if (this.referencePath) {
+      const reference = this.resolve(this.referencePath)
+      if (reference instanceof Field && reference !== this) {
+        return reference.isEnum
+      }
+    }
+    return false
   }
 
   /**
@@ -149,31 +177,31 @@ export default class Field extends Node {
     }
 
     if (typeof value == 'string') {
-      if (this.type.referenceName == 'String') {
+      if (this.type.definitionBody == 'String') {
         return true
-      } else if (this.type.referenceName == 'Integer') {
+      } else if (this.type.definitionBody == 'Integer') {
         if (/^-?(0|[1-9][0-9]*)$/.test(value) == false) {
           throw new AssertionError(`Invalid Number value ${value} at ${path.join('.')}`)
         }
-      } else if (this.type.referenceName == 'Number') {
+      } else if (this.type.definitionBody == 'Number') {
         if (/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([Ee][\-+]?[0-9]+)?$/.test(value) == false) {
           throw new AssertionError(`Invalid Number value ${value} at ${path.join('.')}`)
         }
-      } else if (this.type.referenceName == 'Boolean') {
+      } else if (this.type.definitionBody == 'Boolean') {
         if (/^(true|false)$/.test(value) == false) {
           throw new AssertionError(`Invalid Boolean value ${value} at ${path.join('.')}`)
         }
-      } else if (this.type.isEnum) {
+      } else if (this.isEnum) {
         if (this.enumValues.includes(value) == false) {
-          throw new AssertionError(`Incorrect enum value "${value}", ${this.type.referenceName} allows only ${this.enumValues.join(', ')} at ${path.join('.')}`)
+          throw new AssertionError(`Incorrect enum value "${value}", ${this.type.definitionBody} allows only ${this.enumValues.join(', ')} at ${path.join('.')}`)
         }
-      } else if (this.type.referenceName == 'URL') {
+      } else if (this.type.definitionBody == 'URL') {
         try {
           new URL(value)
         } catch {
           throw new AssertionError(`Incorrect url value "${value}" at ${path.join('.')}`)
         }
-      } else if (this.type.referenceName == 'Timestamp') {
+      } else if (this.type.definitionBody == 'Timestamp') {
         try {
           // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse
           Date.parse(value)
@@ -181,16 +209,16 @@ export default class Field extends Node {
           throw new AssertionError(`Incorrect timestamp value "${value}" (supports only iso 8601 format) at ${path.join('.')}`)
         }
       } else {
-        throw new AssertionError(`Actual String value, but expected not string (${this.type.referenceName}) at ${path.join('.')}`)
+        throw new AssertionError(`Actual String value, but expected not string (${this.type.definitionBody}) at ${path.join('.')}`)
       }
     }
 
-    if (typeof value == 'boolean' && this.type.referenceName != 'Boolean') {
-      throw new AssertionError(`Actual Boolean value, but expected not boolean (${this.type.referenceName}) at ${path.join('.')}`)
+    if (typeof value == 'boolean' && this.type.definitionBody != 'Boolean') {
+      throw new AssertionError(`Actual Boolean value, but expected not boolean (${this.type.definitionBody}) at ${path.join('.')}`)
     }
 
     if (typeof value == 'object') {
-      const reference = this.type.reference
+      const reference = this.resolve(this.type.definitionBody)
 
       if (reference instanceof Entity) {
         if (this.type.isList) {

@@ -9,10 +9,13 @@ export default class Root extends Node {
   constructor (config = {}) {
     super('Root', {})
     Object.defineProperty(this, 'config', { value: config })
+
+    // Allow mocking for tests
+    this.__Node_resolve = super.resolve.bind(this)
   }
 
   get entities () {
-    return this.root.children.filter(child => child instanceof Entity)
+    return this.findAny(child => child instanceof Entity)
   }
 
   /**
@@ -23,7 +26,7 @@ export default class Root extends Node {
   }
 
   get scenarios () {
-    return this.root.children.filter(child => child instanceof Scenario)
+    return this.findAny(child => child instanceof Scenario)
   }
 
   get entityPath () {
@@ -59,21 +62,25 @@ export default class Root extends Node {
   }
 
   /**
+   * Resolve reference path or endpoint definition string.
+   * 
+   * If `referenceBody` is reference path with dot notation,
+   * delegate this method to `Node.resolve` method.
+   * 
+   * If `referenceBody` formats `<http-method> <http-path>` string,
+   * find the endpoint match http-method and http-math with scoring logic.
+   * See more info: {@link Root.findEndpoint}
+   * 
    * @param {string} referenceBody 
    * @param {boolean} allowGlobalFinding 
    * @returns {Node|undefined}
    */
   resolve (referenceBody, allowGlobalFinding = false) {
-    const [method] = referenceBody.split(' ')
-    if (/^(GET|POST|PUT|PATCH|DELETE|HEAD)\s+/.test(method)) {
-      return this
-        .entities
-        .flatMap(entity => entity.endpoints)
-        .find(endpoint => {
-          return `${endpoint.method} ${endpoint.path}` == referenceBody
-        })
+    const [method, path] = referenceBody.split(' ')
+    if (/^(GET|POST|PUT|PATCH|DELETE|HEAD)$/.test(method)) {
+      return this.findEndpoint(method, path)
     } else {
-      return super.resolve(referenceBody, allowGlobalFinding)
+      return this.__Node_resolve(referenceBody, allowGlobalFinding)
     }
   }
 }
