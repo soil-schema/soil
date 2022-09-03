@@ -3,7 +3,7 @@
   "version": "0.2.3",
   "type": "module",
   "repository": {
-    "url": "https://github.com/niaeashes/soil",
+    "url": "https://github.com/soil-schema/soil",
     "type": "git"
   },
   "author": "niaeashes <nia.eashes@gmail.com>",
