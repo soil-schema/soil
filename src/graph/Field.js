@@ -153,7 +153,17 @@ export default class Field extends Node {
       }
       return this.schema.examples[0]
     }
-    return this.type.mock()
+    if (this.type.isPrimitiveType) {
+      return this.type.mock()
+    }
+    if (this.type.isReference) {
+      const reference = this.resolve(this.type.definitionBody)
+      // @ts-ignore
+      if (reference && typeof reference.mock == 'function') {
+        // @ts-ignore
+        return reference.mock()
+      }
+    }
   }
 
   /**
@@ -232,15 +242,3 @@ export default class Field extends Node {
     return true
   }
 }
-
-/*
-  ================================
-  Utilities
- */
-
-  /**
-   * 
-   * @param {object} fields 
-   * @returns 
-   */
-Field.parse = fields => Object.keys(fields || {}).map(name => new Field(name, fields[name]))

@@ -68,21 +68,7 @@ export default class RequestBody extends Node {
     }
     const mock = this.fields
       .reduce((mock, field) => {
-        if (field.type.isPrimitiveType) {
-          mock[field.name] = field.mock()
-        } else {
-          const value = field.type.reference
-          if (value instanceof Entity) {
-            if (value.requireWriter) {
-              mock[field.name] = value.writeOnly().mock()
-            } else {
-              // @ts-ignore
-              mock[field.name] = value.mock()
-            }
-          } else {
-            mock[field.name] = field.mock()
-          }
-        }
+        mock[field.name] = field.mock()
         return mock
       }, {})
     if (Object.keys(mock).length == 0) return undefined

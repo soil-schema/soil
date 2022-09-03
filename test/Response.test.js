@@ -43,7 +43,7 @@ test('assert with simple entity', t => {
 import '../src/swift.js'
 
 test('[Swift] with supported mime-type', t => {
-  const response = new Response('mime:application/json')
+  const response = new Response({ mime: 'mime:application/json' })
   const config = {
     ...context.config,
   }
@@ -52,7 +52,7 @@ test('[Swift] with supported mime-type', t => {
 })
 
 test('[Swift] with configured mime-type', t => {
-  const response = new Response('mime:video/mp2t')
+  const response = new Response({ mime: 'mime:video/mp2t' })
   const config = {
     ...context.config,
     api: { ...context.config.api, mime: { 'video/mp2t': 'Video' } },
@@ -62,7 +62,7 @@ test('[Swift] with configured mime-type', t => {
 })
 
 test('[Swift] with unsupported mime-type', t => {
-  const response = new Response('mime:audio/webm')
+  const response = new Response({ mime: 'mime:audio/webm' })
   const config = {
     ...context.config,
   }

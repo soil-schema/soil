@@ -120,7 +120,7 @@ public final class Note: Decodable {
 
     public struct Writer: Encodable {
 
-        public var body: String
+        public let body: String
 
         /// - Parameters:
         ///   - body: {no comment}

@@ -67,7 +67,7 @@ export default class Schema {
 
     await fs.mkdir(swiftExportDir, { recursive: true })
     this.entities.forEach(async (entity) => {
-      const file = path.join(process.cwd(), swiftExportDir, `${entity.name}.swift`)
+      const file = path.join(process.cwd(), swiftExportDir, `${entity.name}+Schema.swift`)
       try {
         const body = await entity.renderSwiftFile({ config: this.config, entities: this.entities, ...contextUtilities })
         await fs.writeFile(file, body, this.config.encode)

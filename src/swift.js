@@ -139,7 +139,7 @@ const pretty = (code, config) => {
         commentBuffer.push(`${indent.repeat(indentLevel)}${line}`)
         continue
     }
-    const hasBlockSignature = /^(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias|enum)\b/.test(line)
+    const hasBlockSignature = /^(?:@[A-Z][a-zA-Z]+ +)?(?:(public|open|internal|private|fileprivate|final)(?:\(set\))?\s+)*(var|let|struct|class|init|deinit|func|protocol|typealias|enum)\b/.test(line)
     if (hasBlockSignature) {
         result.push('')
         result.push(...commentBuffer)
@@ -242,8 +242,9 @@ Writer.prototype.swift_Struct = function (context) {
 
 Field.prototype.swift_Member = function (context = {}) {
   const { writer, entity } = context
-  var scope = 'public'
   var type = this.type.swift_TypeDefinition()
+  var head = 'let'
+  var propertyWrapper = ''
 
   if (writer) {
     var finder = this.type.definitionBody
@@ -260,31 +261,18 @@ Field.prototype.swift_Member = function (context = {}) {
     type = `${type}?`
   }
 
-  if (this.mutable == false) {
-    return [
-      docc(this),
-      readOnlyMember(scope, this.name, type),
-    ].joinCode()
+  if ((typeof writer == 'undefined') && this.mutable) {
+    head = 'var'
   }
 
-  if (writer || this.mutable) {
-    return [
-      docc(this),
-      member(scope, this.name, type),
-    ].joinCode()
-  }
-
-  if (entity && entity.requireWriter) {
-    // If entity require writer, the user modify this field in Writer class instead Entity class.
-    return [
-      docc(this),
-      readOnlyMember(scope, this.name, type),
-    ].joinCode()
+  if (this.schema['swift-property-wrapper']) {
+    propertyWrapper = `${this.schema['swift-property-wrapper']} `
+    head = 'var'
   }
 
   return [
     docc(this),
-    member(scope, this.name, type),
+    `${propertyWrapper}public ${head} ${this.name.camelize()}: ${type}`,
   ].joinCode()
 
 }
@@ -570,9 +558,9 @@ RequestBody.prototype.swift_Struct = function (context) {
 Response.prototype.swift_Struct = function (context) {
   if (this.schema == null) { return 'public typealias Response = Void' }
 
-  if (typeof this.schema == 'string') {
+  if (typeof this.schema.mime == 'string') {
     const { mime } = this.config.api
-    const mimeTypeValue = this.schema.replace(/^mime:/, '')
+    const mimeTypeValue = this.schema.mime.replace(/^mime:/, '')
     if (typeof mime != undefined && mime[mimeTypeValue]) {
       return `public typealias Response = ${mime[mimeTypeValue]}`
     }

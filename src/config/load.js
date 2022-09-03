@@ -57,11 +57,7 @@ export const applyDefaultSwift = (config) => {
       request: 'Encodable',
       response: 'Decodable',
       ...config.protocols,
-    },
-    propertyWrappers: {
-      reference: null,
-      ...config.propertyWrappers,
-    },
+    }
   }
 }
 
