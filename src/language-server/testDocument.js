@@ -57,7 +57,11 @@ export const installListeners = async server => {
         tokenIndex = tokenTypes.indexOf('namespace')
       } else if (token.isSemantic(/type/)) {
         tokenIndex = tokenTypes.indexOf('type')
+      } else if (token.isSemantic(/function\.command/)) {
+        tokenIndex = tokenTypes.indexOf('function')
       } else if (token.isSemantic(/string/)) {
+        tokenIndex = tokenTypes.indexOf('string')
+      } else if (token.isSemantic('parameter.assignment')) {
         tokenIndex = tokenTypes.indexOf('string')
       }
       if (typeof tokenIndex == 'undefined') {

@@ -85,11 +85,11 @@ export default class Server {
     const contentLength = headers['Content-Length']
     if (typeof contentLength == 'undefined') throw new Error('Stop reading message: Content-Length is not found')
 
-    const message = buffer.substring(0, contentLength)
+    const message = Buffer.from(buffer, 'utf-8').subarray(0, contentLength)
     length += contentLength
     if (message.length != contentLength) throw new Error('Stop reading message: Content Length is too short')
 
-    const payload = JSON.parse(message)
+    const payload = JSON.parse(message.toString('utf-8'))
     console.log({ headers, payload })
 
     const { id, method } = payload
