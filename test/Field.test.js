@@ -79,7 +79,7 @@ test('assert boolean field', t => {
   }, { instanceOf: AssertionError })
 })
 
-import '../src/swift.js'
+import '../src/generator/swift.js'
 
 test('[Swift] render as member variable string field', t => {
   const field = new Field('name', { type: 'String' })

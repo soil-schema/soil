@@ -7,8 +7,6 @@ import chalk from 'chalk'
 
 import { program } from 'commander'
 
-import './swift.js'
-
 import { loadConfig } from './config/load.js'
 
 import Schema from './graph/Schema.js'

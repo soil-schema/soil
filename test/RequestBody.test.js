@@ -10,7 +10,7 @@ const context = {
   ...contextUtilities,
 }
 
-import '../src/swift.js'
+import '../src/generator/swift.js'
 
 test('[Swift] with supported mime-type', t => {
   const request = new RequestBody({ mime: 'mime:application/json' })

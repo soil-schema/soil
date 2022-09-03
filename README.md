@@ -194,7 +194,6 @@ Supported targets are:
 
 - Swift (`swift`)
 - Kotlin (`kotlin`)
-- ~~OpenAPISchema~~ WIP (`openapi`) 
 
 ## Swift
 

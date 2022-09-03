@@ -40,7 +40,7 @@ test('assert with simple entity', t => {
   }))
 })
 
-import '../src/swift.js'
+import '../src/generator/swift.js'
 
 test('[Swift] with supported mime-type', t => {
   const response = new Response({ mime: 'mime:application/json' })

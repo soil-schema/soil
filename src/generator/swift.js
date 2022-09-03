@@ -1,13 +1,13 @@
-import UnsupportedKeywordError from './errors/UnsupportedKeywordError.js'
-import Endpoint from './graph/Endpoint.js'
-import Entity from './graph/Entity.js'
-import Field from './graph/Field.js'
-import Parameter from './graph/Parameter.js'
-import Query from './graph/Query.js'
-import RequestBody from './graph/RequestBody.js'
-import Response from './graph/Response.js'
-import Type from './graph/Type.js'
-import Writer from './graph/Writer.js'
+import UnsupportedKeywordError from '../errors/UnsupportedKeywordError.js'
+import Endpoint from '../graph/Endpoint.js'
+import Entity from '../graph/Entity.js'
+import Field from '../graph/Field.js'
+import Parameter from '../graph/Parameter.js'
+import Query from '../graph/Query.js'
+import RequestBody from '../graph/RequestBody.js'
+import Response from '../graph/Response.js'
+import Type from '../graph/Type.js'
+import Writer from '../graph/Writer.js'
 
 /*
   ================================

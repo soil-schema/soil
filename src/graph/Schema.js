@@ -11,8 +11,8 @@ import Scenario from './Scenario.js'
 import Root from './Root.js'
 import Endpoint from './Endpoint.js'
 
-import '../kotlin.js'
-import '../swift.js'
+import '../generator/kotlin.js'
+import '../generator/swift.js'
 
 export default class Schema {
   /**
@@ -52,18 +52,8 @@ export default class Schema {
     return this.root.endpoints
   }
 
-  async exportOpenApiSchema() {
-  }
-
   async exportSwiftCode() {
     const swiftExportDir = this.config.swift.output || this.config.output
-
-    if (this.config.swift == 'soil-swift') {
-      this.config.swift = { use: 'soil-swift' }
-    }
-    if (this.config.swift.use == 'soil-swift') {
-      this.config.swift.protocols.endpoint = 'SoilEndpoint'
-    }
 
     await fs.mkdir(swiftExportDir, { recursive: true })
     this.entities.forEach(async (entity) => {
@@ -87,7 +77,7 @@ export default class Schema {
       const file = path.join(process.cwd(), kotlinExportDir, `${entity.name}.kt`)
       try {
         const body = await entity.renderKotlinFile({ config: this.config, entities: this.entities, ...contextUtilities })
-        await fs.writeFile(file, body, this.config.core.encode)
+        await fs.writeFile(file, body, this.config.encode)
         console.log(chalk.green('[Kotlin]', '-', file))
       } catch (error) {
         console.error(chalk.red('[Kotlin]', `Failure exporting to ${file}`))
