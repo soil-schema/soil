@@ -14,7 +14,6 @@ jobs:
     strategy:
       matrix:
         node-version: [16.x] # https://nodejs.org/en/about/releases/
-        registry-url: 'https://registry.npmjs.org'
 
     steps:
     - uses: actions/checkout@v1
@@ -23,6 +22,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
     - run: npm ci
     - run: npm publish
       env:
