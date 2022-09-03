@@ -2,7 +2,10 @@
   "name": "soil-schema",
   "version": "0.2.0",
   "type": "module",
-  "repository": "git@github.com:niaeashes/soil.git",
+  "repository": {
+    "url": "https://github.com/niaeashes/soil",
+    "type": "git"
+  },
   "author": "niaeashes <nia.eashes@gmail.com>",
   "license": "MIT",
   "bin": {
@@ -24,9 +27,7 @@
   },
   "scripts": {
     "test": "c8 ava",
-    "test:api": "node test/mock/api/server.js",
-    "test:update-snapshot": "ava --update-snapshots",
-    "mock": "node src/soil.js --config test/mock/soil.config.js"
+    "test:update-snapshot": "ava --update-snapshots"
   },
   "engines": {
     "node": ">= 16.0.0"

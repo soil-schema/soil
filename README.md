@@ -2,9 +2,9 @@
 
 soil is schema language for REST and JSON api and swift / kotlin client code generator.
 
-- [x] Short schema based REST api.
-- [ ] Small and flexible client code.
-- [x] Write and run api testing scenario.
+- Short schema based REST api.
+- Small and flexible code generation.
+- Write and run api testing scenarios.
 
 Other tools are more good if you want:
 
@@ -16,7 +16,7 @@ Other tools are more good if you want:
 
 ## Entity
 
-Your REST resource is called Entity in soil.
+Your REST resource is called `Entity` and defined by `entity` keyword in soil.
 For example, `User` resource on your REST api can is defined with .soil file.
 
 ```soil
@@ -29,17 +29,19 @@ entity User {
 
 - `entity`: start of Entity.
 - `User`: entity name.
-- `field id: Integer`: `User` entity has `id` property and it's Integer type.
-- `mutable field name: String`: `User` entity has `name` **mutable** property and it's String type.
+- `field id: Integer`: `User` entity has `id` Integer property.
+- `mutable field name: String`: `User` entity has `name` **mutable** String property.
 
-Single .soil file has multiple entity directive.
+Single .soil file can contain multiple `entity` directives.
+
+- Recipe: [Basic Entity](docs/recipes/basic-entity.md)
 
 ## Endpoint
 
 Entity has mapped any endpoints on REST api.
-You describe these on entity directive in .soil file.
+Each `entity` directives can contain any `endpoint` directives.
 
-```
+```soil
 entity User {
 
   ...
@@ -53,13 +55,14 @@ entity User {
 ```
 
 - `endpoint GET /users`: Endpoint. This endpoint accessed by GET method and `/users` path.
-- `success` directive: successful response (status code 2xx) schema. like entity directive.
+- `success` directive: successful response (status code 2xx) schema. like `entity` directive.
+- Recipe: [Basic Endpoint](docs/recipes/basic-endpoint.md)
 
 ## Request and writer entity
 
 In the REST api, most of the time there are two types of resource fields: writable and read-only.
 In the POST and PUT methods, only the values of writable fields should be sent.
-soil handles this difference by separating " read-time Entity" and "write-time Entity".
+soil handles this difference by separating "read-time Entity" and "write-time Entity".
 
 ```soil
 entity User {
@@ -77,11 +80,11 @@ public final class User: Decodable {
 
     public let id: Int
 
-    public let name: String
+    public var name: String
 
     public struct Writer: Encodable {
 
-        public var name: String
+        public let name: String
 
         /// - Parameters:
         ///   - name: {no comment}
@@ -94,45 +97,19 @@ public final class User: Decodable {
 
 `User` is read-time entity, `User.Writer` is write-time entity.
 
-## Subtypes
+## Others
 
-soil supports tow ways to define subtype in the Entity.
+Each recipe presents a specific sample of soil schema detailed features.
 
-### 1. use anonymous type `field` and `schema` directive
-
-```soil
-entity Book {
-  field title: String
-  field author: * { # `*` is anonymous type
-    schema {
-      field name: String
-    }
-  }
-}
-```
-
-soil detect `Book` entity, and generate `Book.Author` (dynamic naming) inner entity.
-
-### 2. use `inner` directive.
-
-```soil
-entity Book {
-  field title: String
-  field author: Author
-  
-  inner Author {
-    field name: String
-  }
-}
-```
-
-soil detect `Book` entity and `Book.Author` inner entity.
+- [Field](docs/recipes/fields.md)
+- [Query](docs/recipes/query.md)
+- [Enum](docs/recipes/enum.md)
 
 # Installation
 
-soil is written by nodejs.
+soil is written by nodejs and managed by npm.
 
-```
+```bash
 $ npm install -g soil-schema
 ```
 
