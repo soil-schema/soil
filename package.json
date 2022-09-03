@@ -30,8 +30,8 @@
     "test:update-snapshot": "ava --update-snapshots"
   },
   "files": [
-    "./docs",
-    "./src",
+    "docs",
+    "src",
     "*.md"
   ],
   "engines": {
