@@ -21,22 +21,28 @@ const promises = files.map(async file => {
   for (let i = 0; i < result.children.length; i++) {
     const element = result.children[i]
     if (element.name != 'h2') continue
-    let current
+    let currentNode
+    /** @type {string} */
+    let currentName
     const name = element.firstChild.data
     const uri = pathToFileURL(filepath).toString()
     const block = { name, uri }
     while (true) {
       i += 1
-      current = result.children[i]
-      if (current == undefined || current.name == 'h2') {
+      currentNode = result.children[i]
+      if (currentNode == undefined || currentNode.name == 'h2') {
         i -= 1 // Cancel `i++` on for loop.
         break
       }
-      if (current.name == 'pre') {
-        current.children.forEach(element => {
+      if (currentNode.name == 'h3') {
+        currentName = currentNode.firstChild?.data
+      }
+      if (currentNode.name == 'pre') {
+        currentNode.children.forEach(element => {
           if (element.name != 'code') return
           let generate = element.attribs['class'].replace('language-', '')
           if (generate == 'json') generate = 'mock'
+          if (currentName?.toLocaleLowerCase() == 'config') generate = 'config'
           block[generate] = element.firstChild.data
         })
       }
@@ -49,5 +55,3 @@ const promises = files.map(async file => {
 
 export const blocks = (await Promise.all(promises))
   .reduce((result, blocks) => Object.assign(result, blocks), {})
-
-export const config = await loadConfig({ encoding: 'utf-8' })

@@ -55,6 +55,13 @@
             "$ref": "#/definitions/SwiftUse"
           }
         },
+        "observable": {
+          "description": "If observable is true, soil generates entity class with `ObservableObject`.",
+          "type": "boolean"
+        },
+        "endpoint": {
+          "$ref": "#/definitions/SwiftEndpoint"
+        },
         "protocols": {
           "type": "object",
           "properties": {
@@ -88,6 +95,17 @@
       "examples": ["soil-swift"],
       "type": "string",
       "minLength": 1
+    },
+    "SwiftEndpoint": {
+      "description": "Configuration for generated swift `endpoint` code.",
+      "type": "object",
+      "properties": {
+        "mimeTypeMember": {
+          "description": "If present it, add `mimeType` as member named this value on generating endpoint struct.",
+          "type": "string",
+          "nullable": true
+        }
+      }
     },
     "Kotlin": {
       "description": "Configuration for kotlin code generation.",

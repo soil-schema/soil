@@ -49,6 +49,7 @@ export const applyDefaultSwift = (config) => {
     ...config,
     output: config.output || './dist',
     use: config.use || [],
+    observable: config.observable || false,
     imports: config.imports || ['Foundation'],
     protocols: {
       entity: 'Decodable',
@@ -57,7 +58,11 @@ export const applyDefaultSwift = (config) => {
       request: 'Encodable',
       response: 'Decodable',
       ...config.protocols,
-    }
+    },
+    endpoint: {
+      mimeTypeMember: null,
+      ...config.endpoint,
+    },
   }
 }
 

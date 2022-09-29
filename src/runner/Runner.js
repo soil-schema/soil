@@ -454,7 +454,7 @@ export default class Runner {
       try {
         endpoint?.requestBody.assert(this.getVar('$request.body'))
       } catch (error) {
-        throw new ScenarioRuntimeError(`Response assertion failure: ${error.message}`, this.spawnInspector())
+        throw new ScenarioRuntimeError(`Request assertion failure: ${error.message}`, this.spawnInspector())
       }
 
       const response = await httpRequest(this.context.getVar('$request'))

@@ -145,7 +145,11 @@ export default class Field extends Node {
       return this.defaultValue
     }
     if (this.isEnum) {
-      return this.enumValues[0]
+      if (this.type.isList) {
+        return [this.enumValues[0]]
+      } else {
+        return this.enumValues[0]
+      }
     }
     if (typeof this.schema.examples == 'object') {
       if (Array.isArray(this.schema.examples) == false) {

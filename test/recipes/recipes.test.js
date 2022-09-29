@@ -1,9 +1,10 @@
 import test from 'ava'
-import { config, blocks } from './recipes.loader.js'
+import { blocks } from './recipes.loader.js'
 
 import Schema from '../../src/graph/Schema.js'
 import Tokenizer from '../../src/parser/Tokenizer.js'
 import Parser from '../../src/parser/Parser.js'
+import { applyDefaults } from '../../src/config/load.js'
 
 const runner = async t => {
   /*
@@ -13,6 +14,16 @@ const runner = async t => {
   const name = t.title
 
   const block = blocks[name]
+
+  /// Merge config in recipe.
+  let config = applyDefaults({})
+  if ('config' in block) {
+    try {
+      config = applyDefaults(JSON.parse(block.config))
+    } catch (error) {
+      console.error(error.stack)
+    }
+  }
 
   const schema = new Schema(config)
   const result = new Parser().parse(new Tokenizer(block.uri, block.soil).tokenize())
@@ -33,10 +44,8 @@ const runner = async t => {
 
   const mock = JSON.stringify(entity.mock(), null, 2)
 
-  if ('mock' in block) {
+  if (Object.keys(mock).length > 0 && 'mock' in block) {
     t.is(block.mock.trim(), mock.trim())
-  } else {
-    t.fail(`JSON mock expectation not found:\r\n${mock}`)
   }
 
   t.pass()
@@ -64,6 +73,8 @@ test('Simple Enum', runner)
 test('Search with q query string API', runner)
 
 test('Auto Query Stringify', runner)
+
+test('Swift Config: endpoint.mimeTypeMember', runner)
 
 /**
  * Actual Cases

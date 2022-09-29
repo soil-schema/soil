@@ -150,6 +150,16 @@ export default class Entity extends Node {
   }
 
   /**
+   * @type {boolean}
+   */
+  get hasMutableField () {
+    for (var field of this.fields) {
+      if (field.mutable) return true
+    }
+    return false
+  }
+
+  /**
    * @returns {Writer}
    */
   writeOnly () {

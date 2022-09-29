@@ -15,7 +15,7 @@ import '../src/generator/swift.js'
 test('[Swift] with supported mime-type', t => {
   const request = new RequestBody({ mime: 'mime:application/json' })
   Object.defineProperty(request, 'config', { value: context.config })
-  t.is(request.swift_Struct(context), 'public typealias RequestBody = Data')
+  t.is(request.swift_Struct(context), 'public var body: Data')
 })
 
 test('[Swift] with configured mime-type', t => {
@@ -25,7 +25,7 @@ test('[Swift] with configured mime-type', t => {
     api: { ...context.config.api, mime: { 'video/mp2t': 'Video' } },
   }
   Object.defineProperty(request, 'config', { value: config })
-  t.is(request.swift_Struct(context), 'public typealias RequestBody = Video')
+  t.is(request.swift_Struct(context), 'public var body: Video')
 })
 
 test('[Swift] with unsupported mime-type', t => {

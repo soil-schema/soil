@@ -234,6 +234,11 @@ export const parseEntity = function (storage) {
   storage.captureBlock(storage => {
     while (storage.current) {
       storage.putOffIf('annotation', 'description')
+      if (storage.hitAny('keyword.property')) {
+        const name = storage.load()
+        schema.set(name.value, storage, 'property')
+        continue
+      }
       if (storage.hitAny('directive.field')) {
         schema.push('fields', parseField(storage))
         continue
