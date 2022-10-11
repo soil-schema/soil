@@ -69,8 +69,11 @@ const pretty = (code, config) => {
       indentLevel -= 1
       inParameters = false
     }
+    if (indentLevel < 0) {
+      console.log(result.join('\n'))
+    }
     result.push(`${indent.repeat(indentLevel)}${line}`)
-    if (line.endsWith('{') || line.endsWith(' ->')) {
+    if (/ {(\s\/\/.+)?$/.test(line) || / ->(\s\/\/.+)?$/.test(line)) {
       indentLevel += 1
     }
     if (line.endsWith('(')) {
@@ -84,6 +87,44 @@ const pretty = (code, config) => {
     commentBuffer = []
   }
   return result.join('\n')
+}
+
+const srcUrl = import.meta.url.replace(/\/generator\/kotlin\.js$/, '')
+
+const trailMeta = function ({ meta }, depth = 2) {
+  if (meta == false) { return '' }
+  try {
+    const stack = Error().stack
+      .split(/\r?\n/)[depth]
+      .replace(/\s+at\s+/, '')
+      .match(/^(?:(?<function>.+)\s)?\(?(?<url>(file:\/\/)?[^:]+):(?<line>\d+):\d+\)?$/)
+    return ` // ${stack.groups.function || '*'} ${stack.groups.url.replace(srcUrl, '.')}:${stack.groups.line}`
+  } catch (error) {
+    console.error(error.stack)
+    return ' // ' + error.message
+  }
+}
+
+Node.prototype.trailMeta = function() {
+  return trailMeta(this.config.generate, 3)
+}
+
+const innerMeta = function ({ meta }, depth = 2) {
+  if (meta == false) { return '' }
+  try {
+    const stack = Error().stack
+      .split(/\r?\n/)[depth]
+      .replace(/\s+at\s+/, '')
+      .match(/^(?:(?<function>.+)\s)?\(?(?<url>(file:\/\/)?[^:]+):(?<line>\d+):\d+\)?$/)
+    return ` /* ${stack.groups.function || '*'} ${stack.groups.url.replace(srcUrl, '.')}:${stack.groups.line} */`
+  } catch (error) {
+    console.error(error.stack)
+    return ` /* ${error.message} */`
+  }
+}
+
+Node.prototype.innerMeta = function() {
+  return innerMeta(this.config.generate, 3)
 }
 
 /*
@@ -115,6 +156,8 @@ Node.prototype.kt_Formatter = function (config) {
   return 'SoilFormatter /* Unknown formatter, check soil.config.js */'
 }
 
+// ======== Entity
+
 Entity.prototype.renderKotlinFile = function ({ config }) {
   const { kotlin } = config
   return pretty([
@@ -127,36 +170,43 @@ Entity.prototype.renderKotlinFile = function ({ config }) {
 Entity.prototype.ktPackage = function (config) {
   const packageName = config.package
   if (typeof packageName == 'string') {
-    return `package ${packageName}\n\n`
+    return `package ${packageName}${this.trailMeta()}\n\n`
   }
   return ''
 }
 
-Entity.prototype.kt_Imports = function (config) {
-  const { use, imports } = config
-  var result = imports.map(name => `import ${name}`)
+Entity.prototype.kt_Imports = function () {
+  const { use, imports } = this.config.kotlin
+  var result = imports.map(name => `import ${name}${this.trailMeta()}`)
 
   // Delegates use at non-required query to use didSet like code block with Delegates.observable
-  result.push('import kotlin.properties.Delegates')
+  result.push(`import kotlin.properties.Delegates${this.trailMeta()}`)
   
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
-    result.push('import kotlinx.serialization.*')
+    result.push(`import kotlinx.serialization.*${this.trailMeta()}`)
   }
   if (use.indexOf('kotlin-serialization-json') != -1) {
-    result.push('import kotlinx.serialization.json.*')
+    result.push(`import kotlinx.serialization.json.*${this.trailMeta()}`)
   }
   return result.joinCode()
 }
 
 Entity.prototype.kt_DataClass = function (config) {
+  var classDef = [
+    `public data class ${this.name}(`,
+      this.kt_Initializer(config),
+    ') {',
+  ]
+  if (this.fields.length == 0) {
+    classDef = [`public class ${this.name} {${this.trailMeta()}`]
+  }
   return [
     this.kt_DocComment(config),
     this.kt_Annotation(config),
     '@Suppress("unused")',
-    `public data class ${this.name}(`,
-      this.kt_Initializer(config),
-    ') {',
+    ...classDef,
     this.kt_Writer(config),
+    ...this.fields.map(field => field.kt_Enum()),
     this.kt_InnerType(config),
     this.kt_Endpoints(config),
     '}',
@@ -182,7 +232,7 @@ Entity.prototype.kt_Initializer = function (config) {
 }
 
 Entity.prototype.kt_Writer = function (config) {
-  return this.requireWriter ? this.writeOnly().kt_DataClass(config) : null
+  return this.isWritable ? this.writeOnly().kt_DataClass(config) : null
 }
 
 Entity.prototype.kt_InnerType = function (config) {
@@ -213,11 +263,11 @@ Field.prototype.kt_Annotation = function (config) {
   // Use 'kotlin-serialization'
   if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
     // Timestamp -> java.time.LocalDateTime, and apply custom serializer.
-    if (this.type.referencePath == 'Timestamp') {
+    if (this.type.definitionBody == 'Timestamp') {
       annotations.push(`@Serializable(with = TimestampAsStringSerializer::class)`)
     }
     // URL -> java.net.URL, and apply custom serializer.
-    if (this.type.referencePath == 'URL') {
+    if (this.type.definitionBody == 'URL') {
       annotations.push(`@Serializable(with = UrlAsStringSerializer::class)`)
     }
   }
@@ -281,9 +331,10 @@ Writer.prototype.kt_InitializerParameters = function (config) {
 
 Endpoint.prototype.kt_Definition = function (config) {
   return [
-    `public class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.signature}.Response> {`,
+    `public class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.kt_ResponseType()}> {`,
     `override val path: String = "${this.kt_ParameterizedPath()}"`,
     `override val method: String = "${this.method.toUpperCase()}"`,
+    ...this.query.map(field => field.kt_Enum()),
     this.kt_QueryData(config),
     this.kt_QueryMembers(config),
     this.kt_FunGetBody(config),
@@ -292,6 +343,14 @@ Endpoint.prototype.kt_Definition = function (config) {
     this.kt_Response(config),
     '}',
   ].joinCode()
+}
+
+Endpoint.prototype.kt_ResponseType = function () {
+  if (this.successResponse.schema == null) {
+    return 'Unit'
+  } else {
+    return `${this.signature}.Response`
+  }
 }
 
 Endpoint.prototype.kt_Initializer = function (config) {
@@ -373,7 +432,7 @@ Endpoint.prototype.kt_FunDecode = function (config) {
     if (this.hasResponse) {
       return `${annotations.joinCode()}\noverride fun decode(formatter: ${this.kt_Formatter(config)}, body: String): Response = formatter.decodeFromString(body)`
     } else {
-      return `${annotations.joinCode()}\noverride fun decode(formatter: ${this.kt_Formatter(config)}, body: String): Unit = ()`
+      return `${annotations.joinCode()}\noverride fun decode(formatter: ${this.kt_Formatter(config)}, body: String): Unit = Unit`
     }
   }
   return '// No decode method.'
@@ -388,8 +447,8 @@ Endpoint.prototype.kt_Request = function (config) {
 }
 
 Endpoint.prototype.kt_Response = function (config) {
-  if (typeof this.successResponse == 'undefined') {
-    return 'public data class Response'
+  if (typeof this.successResponse == 'undefined' || this.successResponse.schema == null) {
+    return null
   } else {
     return this.successResponse.kt_DataClass(config)
   }
@@ -409,6 +468,7 @@ Query.prototype.kt_EndpointClassParameter = function () {
 
 Query.prototype.kt_EndpointMember = function () {
   return [
+    this.trailMeta(),
     `var ${this.name.camelize()}: ${this.kt_TypeDefinition()} by Delegates.observable(${this.kt_DefaultValue()}) { _, _, new ->`,
     this.kt_Observer(),
     '}',
@@ -432,27 +492,40 @@ Query.prototype.kt_DefaultValue = function () {
 Query.prototype.kt_Observer = function () {
   var removalHelper = !this.isRequired
   var valueCode = removalHelper ? "it" : "new"
-  var setCode = `queryData["${this.name}"] = ${valueCode}`
+  var setCode = `queryData["${this.name}"] = ${valueCode}${this.innerMeta()}`
   if (this.type.referencePath == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
     }
     const valueCodeTable = {
       // true sets query value 1, false sets query value 0.
-      'numeric': `queryData["${this.name}"] = if (${valueCode}) "1" else "0"`,
+      'numeric': `queryData["${this.name}"] = if (${valueCode}) "1" else "0"${this.trailMeta()}`,
       // Boolean value convert to string like "true" or "false".
-      'stringify': `queryData["${this.name}"] = if (${valueCode}) ? "true" else "false"`,
+      'stringify': `queryData["${this.name}"] = if (${valueCode}) ? "true" else "false"${this.trailMeta()}`,
       // true sets query value 1, but false remove key from query string. (add removing helper)
-      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "1" } else { queryData.remove("${this.name}") }`,
+      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "1" } else { queryData.remove("${this.name}") }${this.trailMeta()}`,
       // true sets key but no-value likes `?key`. false remove key from query string. (add removing helper)
-      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "" } else { queryData.remove("${this.name}") }`,
+      'set-only-true': `if (${valueCode}) { queryData["${this.name}"] = "" } else { queryData.remove("${this.name}") }${this.trailMeta()}`,
     }
     setCode = valueCodeTable[booleanQuery]
   }
+  if (this.type.definitionBody == 'Integer') {
+    setCode = `queryData["${this.name}"] = ${valueCode}.toString()${this.innerMeta()}`
+  }
+  if (this.type.definitionBody == 'Number') {
+    setCode = `queryData["${this.name}"] = ${valueCode}.toString()${this.innerMeta()}`
+  }
+  if (this.type.isSelfDefinedEnum) {
+    setCode = `queryData["${this.name}"] = ${valueCode}.rawValue${this.innerMeta()}`
+  }
   if (removalHelper) {
-    return `new?.let { ${setCode} } ?: queryData.remove("${this.name}")`
+    return [
+      `new?.let { ${setCode} } ?: queryData.remove("${this.name}")${this.innerMeta()}`,
+    ].joinCode()
   } else {
-    return setCode
+    return [
+      setCode
+    ].joinCode()
   }
 }
 
@@ -465,7 +538,18 @@ Query.prototype.kt_SetQueryData = function () {
 }
 
 Query.prototype.kt_MutableListMember = function () {
-  return `"${this.name}" to ${this.name.camelize()}`
+  return `"${this.name}" to ${this.kt_Stringify()},${this.trailMeta()}`
+}
+
+Query.prototype.kt_Stringify = function () {
+  switch (this.type.definitionBody) {
+    case "String":
+      return `${this.name.camelize()}${this.innerMeta()}`
+    case "Integer":
+    case "Number":
+      return `${this.name.camelize()}.toString()${this.innerMeta()}`
+  }
+  return `${this.name.camelize()}${this.innerMeta()}`
 }
 
 RequestBody.prototype.kt_DataClass = function (config) {
@@ -543,7 +627,13 @@ Type.prototype.kt_TypeArgument = function () {
 }
 
 Type.prototype.kt_TypeDefinition = function () {
-  var type = this.referencePath
+  var type = this.definitionBody
+  if (this.isSelfDefinedType) {
+    type = this.owner.name.classify()
+  }
+  if (this.isSelfDefinedEnum) {
+    type = `${type}Value`
+  }
   if (this.isPrimitiveType) {
     switch (type) {
       case 'Integer':
@@ -567,3 +657,22 @@ Type.prototype.kt_TypeDefinition = function () {
   }
   return type
 }
+
+// Enum
+
+/**
+ * Kotlin Enum
+ * @returns 
+ */
+ const kt_Enum = function () {
+  if (!this.isSelfDefinedEnum) { return null }
+  var type = `${this.name.classify()}Value`
+  return [
+    `public enum class ${type.replace(/\?$/, '')}(val rawValue: String) {`,
+    ...this.enumValues.map(value => `${value.toUpperCase().replace('-', '_')}("${value}"),`),
+    '}',
+  ].joinCode()
+}
+Field.prototype.kt_Enum = kt_Enum
+Query.prototype.kt_Enum = kt_Enum
+Parameter.prototype.kt_Enum = kt_Enum

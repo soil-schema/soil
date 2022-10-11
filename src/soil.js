@@ -28,6 +28,7 @@ program
   .option('-c, --config <file>', 'config file path', 'soil.config.js')
   .option('--verbose')
   .option('--dump')
+  .option('--meta')
   .option('--debug')
   .action(async (options, args) => {
     const config = await loadConfig(options)

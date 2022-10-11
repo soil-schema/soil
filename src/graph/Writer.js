@@ -16,6 +16,7 @@ export default class Writer extends Node {
   constructor(entity) {
     super(`WriteOnly${entity.name}`, entity.schema)
     Object.defineProperty(this, 'entity', { value: entity })
+    entity.addChild(this)
   }
 
   /**

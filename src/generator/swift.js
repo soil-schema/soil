@@ -257,7 +257,7 @@ Entity.prototype.swift_Protocols = function () {
 Writer.prototype.swift_Struct = function (context) {
   const nextContext = { ...context, writer: this }
   return [
-    struct('public', 'Writer', ...protocolMerge(nextContext, 'writer')),
+    classDef('public', 'Writer', ...this.swift_Protocols()),
     ...this.fields.map(field => field.swift_Member(nextContext)),
     docc({ parameters: this.fields }),
     init('public', ...this.fields.map(field => field.swift_ArgumentSignature(nextContext))),
@@ -265,6 +265,28 @@ Writer.prototype.swift_Struct = function (context) {
     end,
     end,
   ].joinCode()
+}
+
+Writer.prototype.swift_Protocols = function () {
+  const { observable } = this.config?.swift || {}
+
+  var protocols = [this.config?.swift?.protocols?.writer]
+
+  if (observable) {
+    // If swift.observable config is true, uses ObservableObject
+    // @see https://developer.apple.com/documentation/combine/observableobject
+    protocols.push('ObservableObject')
+  }
+
+  // Encodable & Decodable -> Codable
+  if (protocols.includes('Decodable') && protocols.includes('Encodable')) {
+    protocols = protocols
+      .filter(protocol => protocol != 'Decodable' && protocol != 'Encodable')
+    protocols.push('Codable')
+  }
+
+  return protocols
+    .filter(protocol => typeof protocol == 'string')
 }
 
 Field.prototype.swift_Member = function (context = {}) {
@@ -280,6 +302,7 @@ Field.prototype.swift_Member = function (context = {}) {
   const reference = this.resolve(finder)
 
   if (writer) {
+    head = 'var'
     if (reference instanceof Entity && reference.requireWriter && reference.isWritable == false) {
       type = type.replace(this.referencePath, `${this.referencePath}.Writer`)
     }
@@ -299,6 +322,15 @@ Field.prototype.swift_Member = function (context = {}) {
   }
 
   if (writer) {
+    if (this.schema['swift-property-wrapper']) {
+      propertyWrapper = `${this.schema['swift-property-wrapper']} `
+      head = 'var'
+    }
+    const { observable } = this.config?.swift || {}
+    if (this.mutable && propertyWrapper == '' && observable) {
+      propertyWrapper = '@Published '
+      head = 'var'
+    }
   } else {
     if (this.schema['swift-property-wrapper']) {
       propertyWrapper = `${this.schema['swift-property-wrapper']} `

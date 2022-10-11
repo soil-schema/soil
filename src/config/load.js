@@ -27,6 +27,7 @@ export const applyDefaults = (config) => {
   return {
     ...config,
     entry: config.entry || '.',
+    generate: config.generate || {},
     output: config.output || './dist',
     encoding: config.encoding || 'utf-8',
     api: applyDefaultApi(config.api || {}),
@@ -71,6 +72,7 @@ export const applyDefaultKotlin = (config) => {
     ...config,
     output: config.output || './dist',
     use: config.use || [],
+    imports: config.imports || [],
     annotations: {
       entity: undefined,
       writer: undefined,
@@ -106,6 +108,10 @@ export const loadConfig = async (options) => {
 
   const schema = JSON.parse(await fs.readFile(schemaFile, { encoding: 'utf-8' }))
   const config = applyDefaults(userConfig)
+
+  if (options.meta) {
+    config.generate.meta = true
+  }
 
   try {
     const ajv = new Ajv()

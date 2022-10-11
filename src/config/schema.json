@@ -17,9 +17,24 @@
       ]
     },
     "Generate": {
-      "description": "Generating codes types.",
-      "type": "string",
-      "enum": ["swift", "kotlin"]
+      "description": "Generating options.",
+      "type": "object",
+      "properties": {
+        "meta": {
+          "description": "If meta = true, export generating scripts info for each codes as comment.",
+          "type": "boolean",
+          "default": false
+        },
+        "targets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["swift", "kotlin"]
+          }
+        }
+      }
+    },
+    "GenerateOption": {
     },
     "Output": {
       "description": "Output base directory path.",
@@ -114,10 +129,28 @@
         "output": {
           "$ref": "#/definitions/Output"
         },
+        "use": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KotlinUse"
+          }
+        },
+        "imports": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "serialization": {
           "$ref": "#/definitions/KotlinSerialization"
         }
       }
+    },
+    "KotlinUse": {
+      "description": "Using packages for generated kotlin code.",
+      "examples": ["kotlin-serialization"],
+      "type": "string",
+      "minLength": 1
     },
     "KotlinSerialization": {
       "description": "Kotlin generation code uses kotlin-serialization",

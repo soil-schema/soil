@@ -35,6 +35,14 @@ String.prototype.camelize = function () {
   return camelize
 }
 
+/**
+ * @returns {string}
+ */
+String.prototype.sourceComment = function () {
+  console.log(Error().stack)
+  return ""
+}
+
 Array.prototype.joinCode = function (separator = '\n') {
   return this
     .filter(item => item != null && item != '')
