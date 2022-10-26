@@ -126,6 +126,10 @@
       "description": "Configuration for kotlin code generation.",
       "type": "object",
       "properties": {
+        "package": {
+          "description": "Package name of generated kotlin files.",
+          "type": "string"
+        },
         "output": {
           "$ref": "#/definitions/Output"
         },

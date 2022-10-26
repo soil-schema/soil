@@ -37,6 +37,9 @@ export default class RequestBody extends Node {
         if (reference instanceof Entity && reference.requireWriter && !reference.isWritable) {
           return { ...schema, name, type: `${reference.name}.Writer${optional ? '?' : ''}` }
         }
+        if (reference instanceof Field) {
+          return { ...schema, name, type: reference }
+        }
 
         return { ...schema, name, type: definition }
       })

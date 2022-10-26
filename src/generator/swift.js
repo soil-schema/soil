@@ -118,6 +118,9 @@ const convertType = (type) => {
   if (type instanceof Entity) {
     return convertType(type.name)
   }
+  if (type instanceof Field) {
+    return type.swift_Type()
+  }
   if (SWIFT_TYPE_TABLE[type]) {
     return SWIFT_TYPE_TABLE[type]
   }
@@ -310,6 +313,13 @@ Field.prototype.swift_Member = function (context = {}) {
     if (reference instanceof Entity && reference.schema['swift-property-wrapper']) {
       propertyWrapper = `${reference.schema['swift-property-wrapper']} `
       head = 'var'
+    }
+    if (reference instanceof Field && reference.isSelfDefined) {
+      type = reference.swift_Type()
+      head = 'var'
+      if (this.type.isList) {
+        type = `Array<${type.replace(/\?$/, '')}>`
+      }
     }
   }
 

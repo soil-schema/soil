@@ -92,7 +92,7 @@ const pretty = (code, config) => {
 const srcUrl = import.meta.url.replace(/\/generator\/kotlin\.js$/, '')
 
 const trailMeta = function ({ meta }, depth = 2) {
-  if (meta == false) { return '' }
+  if (meta != true) { return '' }
   try {
     const stack = Error().stack
       .split(/\r?\n/)[depth]
@@ -110,7 +110,7 @@ Node.prototype.trailMeta = function() {
 }
 
 const innerMeta = function ({ meta }, depth = 2) {
-  if (meta == false) { return '' }
+  if (meta != true) { return '' }
   try {
     const stack = Error().stack
       .split(/\r?\n/)[depth]
@@ -161,14 +161,14 @@ Node.prototype.kt_Formatter = function (config) {
 Entity.prototype.renderKotlinFile = function ({ config }) {
   const { kotlin } = config
   return pretty([
-    this.ktPackage(kotlin),
+    this.ktPackage(),
     this.kt_Imports(kotlin),
     this.kt_DataClass(kotlin),
   ].joinCode(), config)
 }
 
-Entity.prototype.ktPackage = function (config) {
-  const packageName = config.package
+Entity.prototype.ktPackage = function () {
+  const packageName = this.config.kotlin.package
   if (typeof packageName == 'string') {
     return `package ${packageName}${this.trailMeta()}\n\n`
   }
@@ -193,12 +193,12 @@ Entity.prototype.kt_Imports = function () {
 
 Entity.prototype.kt_DataClass = function (config) {
   var classDef = [
-    `public data class ${this.name}(`,
+    `data class ${this.name}(`,
       this.kt_Initializer(config),
     ') {',
   ]
   if (this.fields.length == 0) {
-    classDef = [`public class ${this.name} {${this.trailMeta()}`]
+    classDef = [`class ${this.name} {${this.trailMeta()}`]
   }
   return [
     this.kt_DocComment(config),
@@ -236,7 +236,7 @@ Entity.prototype.kt_Writer = function (config) {
 }
 
 Entity.prototype.kt_InnerType = function (config) {
-  return this.subtypes.map(subtype => subtype.kt_DataClass(config))
+  return this.subtypes.map(subtype => subtype.kt_DataClass(config)).joinCode()
 }
 
 Entity.prototype.kt_Endpoints =  function (config) {
@@ -302,7 +302,7 @@ Field.prototype.kt_DefaultValue = function () {
 Writer.prototype.kt_DataClass = function (config) {
   return `
 ${this.kt_Annotation(config)}
-public data class Writer(
+data class Writer(
   ${this.kt_InitializerParameters(config)}
 ) {}`
 }
@@ -331,7 +331,7 @@ Writer.prototype.kt_InitializerParameters = function (config) {
 
 Endpoint.prototype.kt_Definition = function (config) {
   return [
-    `public class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.kt_ResponseType()}> {`,
+    `class ${this.signature}${this.kt_Initializer()}: ApiEndpoint<${this.kt_ResponseType()}> {`,
     `override val path: String = "${this.kt_ParameterizedPath()}"`,
     `override val method: String = "${this.method.toUpperCase()}"`,
     ...this.query.map(field => field.kt_Enum()),
@@ -348,9 +348,21 @@ Endpoint.prototype.kt_Definition = function (config) {
 Endpoint.prototype.kt_ResponseType = function () {
   if (this.successResponse.schema == null) {
     return 'Unit'
-  } else {
-    return `${this.signature}.Response`
   }
+
+  if (typeof this.successResponse.schema.mime == 'string') {
+    const { mime } = this.config.api
+    const mimeTypeValue = this.successResponse.schema.mime.replace(/^mime:/, '')
+    if (typeof mime != undefined && mime[mimeTypeValue]) {
+      return `${mime[mimeTypeValue]}`
+    }
+    if (mimeTypeValue == 'application/json') { return 'String' }
+    if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return 'String' }
+    throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
+  }
+
+  return `${this.signature}.Response`
 }
 
 Endpoint.prototype.kt_Initializer = function (config) {
@@ -396,7 +408,7 @@ Endpoint.prototype.kt_FunGetBody = function (config) {
 
   let annotations = []
 
-  if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
+  if (use.includes(USE_KOTLIN_SERIALIZATION)) {
     // [!] StringFormat is not stable, should set @ExperimentalSerializationApi annotation.
     // @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
     if (serialization.format == 'StringFormat') {
@@ -422,7 +434,19 @@ Endpoint.prototype.kt_FunDecode = function (config) {
 
   let annotations = []
 
-  if (use.indexOf(USE_KOTLIN_SERIALIZATION) != -1) {
+  if (typeof this.successResponse.schema?.mime == 'string') {
+    const { mime } = this.config.api
+    const mimeTypeValue = this.successResponse.schema.mime.replace(/^mime:/, '')
+    if (typeof mime != undefined && mime[mimeTypeValue]) {
+      return `${mime[mimeTypeValue]}`
+    }
+    if (mimeTypeValue == 'application/json') { return `override fun decode(formatter: ${this.kt_Formatter(config)}, body: String): Response = body /* JSON String */` }
+    // if (/^image\/(jpe?g|gif|png|webp|bmp)$/.test(mimeTypeValue)) { return 'Data' }
+    if (/^text\/(plain|html)$/.test(mimeTypeValue)) { return `override fun decode(formatter: ${this.kt_Formatter(config)}, body: String): Response = body` }
+    throw new UnsupportedKeywordError(`Unsupported mime-type: ${mimeTypeValue}`)
+  }
+
+  if (use.includes(USE_KOTLIN_SERIALIZATION)) {
     // [!] StringFormat is not stable, thereforeinsert @ExperimentalSerializationApi annotation.
     // @see https://kotlinlang.org/api/kotlinx.serialization/kotlinx-serialization-core/kotlinx.serialization/-string-format/
     if (serialization.format == 'StringFormat') {
@@ -476,7 +500,28 @@ Query.prototype.kt_EndpointMember = function () {
 }
 
 Query.prototype.kt_TypeDefinition = function () {
-  return `${this.type.kt_TypeDefinition()}${this.isRequired ? '' : '?'}`
+  var type = this.isRequired ? this.type : this.type.toOptional()
+  var type = type.kt_TypeDefinition()
+
+  if (this.type.isSelfDefinedEnum) {
+    type = `${this.name.classify()}Value`
+  }
+
+  if (this.type.isReference) {
+    const reference = this.resolve(this.type.definitionBody)
+    if (reference instanceof Field) {
+      type = reference.fullName
+      if (reference.type.isSelfDefinedEnum) {
+        type = `${type}Value`
+      }
+    }
+  }
+
+  if (this.isRequired == false && !/\?$/.test(type)) {
+    type = `${type}?`
+  }
+
+  return type
 }
 
 Query.prototype.kt_DefaultValue = function () {
@@ -493,7 +538,7 @@ Query.prototype.kt_Observer = function () {
   var removalHelper = !this.isRequired
   var valueCode = removalHelper ? "it" : "new"
   var setCode = `queryData["${this.name}"] = ${valueCode}${this.innerMeta()}`
-  if (this.type.referencePath == 'Boolean') {
+  if (this.type.definitionBody == 'Boolean') {
     const { booleanQuery } = this.config.api
     if (['set-only-ture', 'only-key'].includes(booleanQuery)) { // Remove key when false
     }
@@ -517,6 +562,14 @@ Query.prototype.kt_Observer = function () {
   }
   if (this.type.isSelfDefinedEnum) {
     setCode = `queryData["${this.name}"] = ${valueCode}.rawValue${this.innerMeta()}`
+  }
+  if (this.type.isReference) {
+    const reference = this.resolve(this.type.definitionBody)
+    if (reference instanceof Field) {
+      if (reference.type.isSelfDefinedEnum) {
+        setCode = `queryData["${this.name}"] = ${valueCode}.rawValue${this.innerMeta()}`
+      }
+    }
   }
   if (removalHelper) {
     return [
@@ -549,13 +602,29 @@ Query.prototype.kt_Stringify = function () {
     case "Number":
       return `${this.name.camelize()}.toString()${this.innerMeta()}`
   }
+
+  var type = this.type.kt_TypeDefinition()
+
+  if (this.type.isSelfDefinedEnum) {
+    return `${this.name.camelize()}.rawValue${this.innerMeta()}`
+  }
+
+  if (this.type.isReference) {
+    const reference = this.resolve(this.type.definitionBody)
+    if (reference instanceof Field) {
+      if (reference.type.isSelfDefinedEnum) {
+        return `${this.name.camelize()}.rawValue${this.innerMeta()}`
+      }
+    }
+  }
+
   return `${this.name.camelize()}${this.innerMeta()}`
 }
 
 RequestBody.prototype.kt_DataClass = function (config) {
   return `
 ${this.kt_Annotation(config)}
-public data class RequestBody(
+data class RequestBody(
   ${this.kt_InitializerParameters(config)}
 )
 `
@@ -592,9 +661,13 @@ RequestBody.prototype.kt_InitializerParameters = function (config) {
 }
 
 Response.prototype.kt_DataClass = function (config) {
+  if (typeof this.schema.mime == 'string') {
+    return ''
+  }
+
   return `
 ${this.kt_Annotation(config)}
-public data class Response(
+data class Response(
   ${this.kt_InitializerParameters(config)}
 )
 `
@@ -628,6 +701,7 @@ Type.prototype.kt_TypeArgument = function () {
 
 Type.prototype.kt_TypeDefinition = function () {
   var type = this.definitionBody
+  console.log(this.definitionBody)
   if (this.isSelfDefinedType) {
     type = this.owner.name.classify()
   }
@@ -668,7 +742,7 @@ Type.prototype.kt_TypeDefinition = function () {
   if (!this.isSelfDefinedEnum) { return null }
   var type = `${this.name.classify()}Value`
   return [
-    `public enum class ${type.replace(/\?$/, '')}(val rawValue: String) {`,
+    `enum class ${type.replace(/\?$/, '')}(val rawValue: String) {`,
     ...this.enumValues.map(value => `${value.toUpperCase().replace('-', '_')}("${value}"),`),
     '}',
   ].joinCode()

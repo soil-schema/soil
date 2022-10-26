@@ -118,9 +118,9 @@ public final class Note: Decodable {
 
     public var body: String
 
-    public struct Writer: Encodable {
+    public class Writer: Encodable {
 
-        public let body: String
+        public var body: String
 
         /// - Parameters:
         ///   - body: {no comment}
